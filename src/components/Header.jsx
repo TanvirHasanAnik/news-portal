@@ -20,34 +20,32 @@ export default function Header() {
   return (
     <header className="w-full bg-white border-b border-slate-200">
       {/* 1. BRAND LOGO & MASTHEAD */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-5">
-        <div className="flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-5">
+        <div className="flex items-center justify-between gap-1.5 sm:gap-4">
           {/* Mobile Hamburger toggle */}
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="lg:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-600"
+            className="lg:hidden p-1.5 sm:p-2 rounded-lg text-slate-700 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-600 shrink-0"
             aria-label="মেনু খুলুন"
           >
-            <Menu className="w-6 h-6" />
+            <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
 
           {/* Central / Left Brand Logo */}
-          <div className="flex-1 lg:flex-none text-center lg:text-left">
-            <a href="/" className="inline-flex flex-col items-center lg:items-start group">
-              <div className="flex items-center gap-2.5 sm:gap-3">
-                {/* Logo Icon Glyph */}
-                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-gradient-to-br from-red-600 to-red-800 text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
-                  <span className="font-serif-bangla text-2xl sm:text-3xl font-black">খ</span>
-                </div>
-                {/* Brand Title */}
-                <div>
-                  <h1 className="font-serif-bangla text-2xl sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight leading-none group-hover:text-red-700 transition-colors">
-                    দৈনিক খবর প্রবাহ
-                  </h1>
-                  <p className="text-[11px] sm:text-xs font-medium text-slate-500 tracking-wider mt-0.5 sm:mt-1">
-                    সত্য ও সাহসের অগ্রদূত • THE LEADING NATIONAL BANGLA DAILY
-                  </p>
-                </div>
+          <div className="flex-1 lg:flex-none flex justify-center lg:justify-start overflow-hidden">
+            <a href="/" className="inline-flex items-center gap-2 sm:gap-3 group text-left">
+              {/* Logo Icon Glyph */}
+              <div className="h-9 w-9 sm:h-12 sm:w-12 shrink-0 rounded-lg bg-gradient-to-br from-red-600 to-red-800 text-white flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
+                <span className="font-serif-bangla text-xl sm:text-3xl font-black">খ</span>
+              </div>
+              {/* Brand Title & Tagline */}
+              <div className="text-left min-w-0">
+                <h1 className="font-serif-bangla text-xl sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight leading-none group-hover:text-red-700 transition-colors whitespace-nowrap">
+                  দৈনিক খবর প্রবাহ
+                </h1>
+                <p className="text-[8px] min-[380px]:text-[9px] sm:text-xs font-medium text-slate-500 tracking-wider mt-0.5 sm:mt-1 whitespace-nowrap">
+                  সত্য ও সাহসের অগ্রদূত • THE LEADING NATIONAL BANGLA DAILY
+                </p>
               </div>
             </a>
           </div>
@@ -77,10 +75,10 @@ export default function Header() {
           </div>
 
           {/* Mobile Search Toggle */}
-          <div className="lg:hidden flex items-center">
+          <div className="lg:hidden flex items-center shrink-0">
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="p-2 rounded-lg text-slate-700 hover:bg-slate-100"
+              className="p-1.5 sm:p-2 rounded-lg text-slate-700 hover:bg-slate-100"
               aria-label="অনুসন্ধান"
             >
               <Search className="w-5 h-5" />
