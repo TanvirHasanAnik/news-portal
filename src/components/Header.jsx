@@ -41,7 +41,7 @@ export default function Header() {
               {/* Brand Title & Tagline */}
               <div className="text-left min-w-0">
                 <h1 className="font-serif-bangla text-xl sm:text-3xl md:text-4xl font-black text-slate-950 tracking-tight leading-none group-hover:text-red-700 transition-colors whitespace-nowrap">
-                  দৈনিক খবর প্রবাহ
+                  আমাদের সংবাদ
                 </h1>
                 <p className="text-[8px] min-[380px]:text-[9px] sm:text-xs font-medium text-slate-500 tracking-wider mt-0.5 sm:mt-1 whitespace-nowrap">
                   সত্য ও সাহসের অগ্রদূত • THE LEADING NATIONAL BANGLA DAILY
