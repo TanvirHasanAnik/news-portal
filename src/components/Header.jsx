@@ -63,15 +63,6 @@ export default function Header() {
               />
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
             </div>
-
-            {/* Notification Bell */}
-            <button
-              title="বিজ্ঞপ্তি"
-              className="p-2 rounded-full text-slate-600 hover:text-red-600 hover:bg-slate-100 transition-colors relative"
-            >
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-600 ring-2 ring-white"></span>
-            </button>
           </div>
 
           {/* Mobile Search Toggle */}
@@ -156,14 +147,6 @@ export default function Header() {
                   </div>
                 );
               })}
-            </div>
-
-            {/* Desktop Trending Quick Nav */}
-            <div className="flex items-center gap-2 pl-4 text-xs font-semibold text-amber-200">
-              <TrendingUp className="w-3.5 h-3.5" />
-              <a href="#trending-section" className="hover:text-white transition-colors">
-                জনপ্রিয়
-              </a>
             </div>
           </div>
         </div>
