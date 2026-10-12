@@ -1,17 +1,16 @@
 "use client";
 
 import React from "react";
-import { Clock, MapPin, TrendingUp, Flame, ArrowRight } from "lucide-react";
-import NewsArticleCard from "./NewsArticleCard";
-import { leadStory, secondaryLeads, trendingNews } from "../data/newsData";
+import { Clock, MapPin, Flame, Megaphone, ExternalLink } from "lucide-react";
+import { leadStory } from "../data/newsData";
 
 export default function FeaturedHeroSection() {
   return (
     <section className="py-6 border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
           {/* Main Lead Story (Left Col: 7 columns on desktop) */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 flex flex-col">
             <div className="relative group overflow-hidden rounded-xl bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full">
               {/* Lead Image */}
               <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-900">
@@ -67,57 +66,13 @@ export default function FeaturedHeroSection() {
             </div>
           </div>
 
-          {/* Secondary Leads + Trending Sidebar (Right Col: 5 columns on desktop) */}
-          <div className="lg:col-span-5 flex flex-col gap-5">
-            {/* Secondary Lead News Stories */}
-            <div className="flex flex-col gap-4">
-              {secondaryLeads.map((item) => (
-                <NewsArticleCard
-                  key={item.id}
-                  news={item}
-                  variant="horizontal"
-                />
-              ))}
-            </div>
-
-            {/* Trending Quick Widget (সর্বাধিক পঠিত) */}
-            <div id="trending-section" className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-2.5 mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-600"></span>
-                  <h3 className="font-bold text-slate-900 text-sm sm:text-base font-serif-bangla">
-                    সর্বাধিক পঠিত সংবাদ
-                  </h3>
-                </div>
-                <span className="text-xs text-red-600 font-semibold flex items-center gap-1 hover:underline cursor-pointer">
-                  সব দেখুন <ArrowRight className="w-3 h-3" />
-                </span>
-              </div>
-
-              <div className="divide-y divide-slate-200/70">
-                {trendingNews.slice(0, 3).map((item) => (
-                  <div key={item.id} className="py-2.5 first:pt-0 last:pb-0 flex items-start gap-3 group">
-                    <span className="font-black text-lg text-slate-300 group-hover:text-red-600 transition-colors w-5 shrink-0">
-                      {item.rank}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <a
-                        href={`#trending-${item.id}`}
-                        className="font-serif-bangla text-xs sm:text-sm font-semibold text-slate-800 group-hover:text-red-700 transition-colors line-clamp-2 leading-snug"
-                      >
-                        {item.headline}
-                      </a>
-                      <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
-                        <span className="text-red-600 font-medium">{item.category}</span>
-                        <span>•</span>
-                        <span>{item.views}</span>
-                        <span>•</span>
-                        <span>{item.time}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {/* Advertisement Space (Right Col: 5 columns on desktop) */}
+          <div className="lg:col-span-5 flex flex-col justify-between gap-4">
+            <div className="h-full min-h-[350px] lg:min-h-full rounded-xl border-2 border-dashed border-slate-300 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 p-6 flex flex-col items-center justify-center text-center relative overflow-hidden group shadow-2xs hover:border-red-300 transition-colors">
+              {/* Ad badge */}
+              <span className="absolute top-3 right-3 text-[10px] font-semibold text-slate-400 uppercase tracking-widest bg-white/80 px-2 py-0.5 rounded border border-slate-200">
+                বিজ্ঞাপন (ADVERTISEMENT)
+              </span>
             </div>
           </div>
         </div>
@@ -125,4 +80,3 @@ export default function FeaturedHeroSection() {
     </section>
   );
 }
-
