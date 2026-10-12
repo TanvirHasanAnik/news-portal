@@ -34,7 +34,7 @@ export default function Footer() {
             </div>
             <div>
               <h2 className="font-serif-bangla text-2xl sm:text-3xl font-black text-white">
-                দৈনিক খবর প্রবাহ
+                আমাদের সংবাদ
               </h2>
               <p className="text-xs text-slate-400">
                 সত্য ও সাহসের অগ্রদূত • THE LEADING BANGLADESHI DAILY
@@ -227,7 +227,7 @@ export default function Footer() {
         {/* Bottom Copyright & Disclaimer */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <p>
-            © ২০২৬ দৈনিক খবর প্রবাহ। সর্বস্বত্ব সংরক্ষিত। অনুমতি ছাড়া এই ওয়েবসাইটের কোনো লেখা বা ছবি প্রকাশ বেআইনি।
+            © ২০২৬ আমাদের সংবাদ। সর্বস্বত্ব সংরক্ষিত। অনুমতি ছাড়া এই ওয়েবসাইটের কোনো লেখা বা ছবি প্রকাশ বেআইনি।
           </p>
           <div className="flex items-center gap-1.5 text-slate-400 shrink-0">
             <ShieldCheck className="w-4 h-4 text-emerald-500" />
