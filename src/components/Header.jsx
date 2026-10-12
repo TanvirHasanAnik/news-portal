@@ -4,17 +4,11 @@ import React, { useState } from "react";
 import {
   Search,
   Menu,
-  X,
-  Radio,
-  Newspaper,
-  Calendar,
-  CloudSun,
   ChevronDown,
   Bell,
   TrendingUp,
 } from "lucide-react";
-import { FacebookIcon, YoutubeIcon, TwitterXIcon } from "./SocialIcons";
-import { categories, banglaDate } from "../data/newsData";
+import { categories } from "../data/newsData";
 import MobileDrawer from "./MobileDrawer";
 
 export default function Header() {
@@ -25,72 +19,7 @@ export default function Header() {
 
   return (
     <header className="w-full bg-white border-b border-slate-200">
-      {/* 1. TOP UTILITY BAR (Reference: Amar Desh & BD Pratidin top bar) */}
-      <div className="bg-slate-900 text-slate-300 text-xs border-b border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-1.5 flex flex-wrap items-center justify-between gap-y-1">
-          {/* Left: Date, Hijri, Weather */}
-          <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-            <span className="flex items-center gap-1.5 text-slate-200 font-medium">
-              <Calendar className="w-3.5 h-3.5 text-red-500" />
-              <span>{banglaDate.day}, {banglaDate.date}</span>
-            </span>
-            <span className="hidden md:inline text-slate-500">|</span>
-            <span className="hidden md:inline text-slate-400 font-light">
-              {banglaDate.banglaYear} • {banglaDate.hijriYear}
-            </span>
-            <span className="hidden sm:inline text-slate-500">|</span>
-            <span className="hidden sm:flex items-center gap-1 text-slate-300">
-              <CloudSun className="w-3.5 h-3.5 text-amber-400" />
-              <span>{banglaDate.location} {banglaDate.weather}</span>
-            </span>
-          </div>
-
-          {/* Right: Quick Services & Socials */}
-          <div className="flex items-center gap-3 sm:gap-4 ml-auto">
-            {/* Live TV & Epaper buttons */}
-            <a
-              href="#live-tv"
-              className="inline-flex items-center gap-1 text-red-400 hover:text-red-300 font-semibold transition-colors"
-            >
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-              </span>
-              লাইভ টিভি
-            </a>
-            <span className="text-slate-600">|</span>
-            <a
-              href="#epaper"
-              className="inline-flex items-center gap-1 text-slate-300 hover:text-white transition-colors"
-            >
-              <Newspaper className="w-3.5 h-3.5 text-slate-400" />
-              ই-পেপার
-            </a>
-            <span className="text-slate-600">|</span>
-            <a
-              href="#archive"
-              className="hover:text-white transition-colors hidden xs:inline"
-            >
-              আর্কাইভ
-            </a>
-
-            {/* Social Icons */}
-            <div className="hidden sm:flex items-center gap-2.5 text-slate-400 ml-1">
-              <a href="https://facebook.com" aria-label="Facebook" className="hover:text-blue-400 transition-colors">
-                <FacebookIcon className="w-3.5 h-3.5" />
-              </a>
-              <a href="https://youtube.com" aria-label="YouTube" className="hover:text-red-500 transition-colors">
-                <YoutubeIcon className="w-3.5 h-3.5" />
-              </a>
-              <a href="https://twitter.com" aria-label="Twitter / X" className="hover:text-sky-400 transition-colors">
-                <TwitterXIcon className="w-3.5 h-3.5" />
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. BRAND LOGO & MASTHEAD */}
+      {/* 1. BRAND LOGO & MASTHEAD */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-5">
         <div className="flex items-center justify-between gap-4">
           {/* Mobile Hamburger toggle */}
@@ -123,17 +52,8 @@ export default function Header() {
             </a>
           </div>
 
-          {/* Right Desktop Utilities & Banner */}
+          {/* Right Desktop Utilities */}
           <div className="hidden lg:flex items-center gap-4">
-            {/* Quick Live Alert Pill */}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
-              </span>
-              <span>২৪/৭ ব্রেকিং নিউজ আপডেট</span>
-            </div>
-
             {/* Search Bar Input */}
             <div className="relative w-64">
               <input
@@ -186,12 +106,12 @@ export default function Header() {
         )}
       </div>
 
-      {/* 3. CATEGORY & SUBCATEGORY MENU BAR (Desktop Sticky + Dropdowns) */}
-      <nav className="sticky top-0 z-40 bg-red-700 text-white shadow-md">
+      {/* 2. CATEGORY & SUBCATEGORY MENU BAR (Desktop Only - Sticky + Dropdowns) */}
+      <nav className="hidden lg:block sticky top-0 z-40 bg-red-700 text-white shadow-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             {/* Category Links with Hover Subcategory Menus */}
-            <div className="hidden lg:flex items-center divide-x divide-red-800/60 font-semibold text-sm">
+            <div className="flex items-center divide-x divide-red-800/60 font-semibold text-sm">
               <a
                 href="#"
                 className="px-3.5 py-3 hover:bg-red-800 transition-colors flex items-center gap-1"
@@ -241,30 +161,11 @@ export default function Header() {
             </div>
 
             {/* Desktop Trending Quick Nav */}
-            <div className="hidden lg:flex items-center gap-2 pl-4 text-xs font-semibold text-amber-200">
+            <div className="flex items-center gap-2 pl-4 text-xs font-semibold text-amber-200">
               <TrendingUp className="w-3.5 h-3.5" />
               <a href="#trending-section" className="hover:text-white transition-colors">
                 জনপ্রিয়
               </a>
-            </div>
-
-            {/* Mobile Horizontal Swipeable Category Bar */}
-            <div className="lg:hidden flex items-center overflow-x-auto scrollbar-none py-2.5 gap-2 -mx-2 px-2 text-xs font-medium text-white">
-              <a
-                href="#"
-                className="px-3 py-1 rounded bg-red-900 text-white shrink-0 font-bold"
-              >
-                প্রচ্ছদ
-              </a>
-              {categories.map((cat) => (
-                <a
-                  key={cat.id}
-                  href={`#cat-${cat.slug}`}
-                  className="px-2.5 py-1 rounded hover:bg-red-800 text-red-50 shrink-0 transition-colors whitespace-nowrap"
-                >
-                  {cat.name}
-                </a>
-              ))}
             </div>
           </div>
         </div>
@@ -278,4 +179,3 @@ export default function Header() {
     </header>
   );
 }
-
