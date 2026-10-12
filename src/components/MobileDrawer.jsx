@@ -56,26 +56,6 @@ export default function MobileDrawer({ isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Quick Action Badges */}
-        <div className="p-3 grid grid-cols-2 gap-2 bg-slate-50 border-b border-slate-200 text-xs font-medium">
-          <a
-            href="#live-tv"
-            onClick={onClose}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-red-600 text-white shadow-xs"
-          >
-            <Radio className="w-3.5 h-3.5 animate-pulse" />
-            লাইভ টিভি
-          </a>
-          <a
-            href="#epaper"
-            onClick={onClose}
-            className="flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-slate-800 text-white shadow-xs"
-          >
-            <Newspaper className="w-3.5 h-3.5" />
-            ই-পেপার
-          </a>
-        </div>
-
         {/* Navigation Categories List */}
         <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
           <div className="px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
