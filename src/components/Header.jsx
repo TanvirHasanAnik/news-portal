@@ -104,13 +104,13 @@ export default function Header() {
         <div className="hidden lg:grid lg:grid-cols-3 lg:items-center gap-4">
           {/* Left Column: English Date, Bangla Date, Hijri Date stacked vertically in bangla font */}
           <div className="flex flex-col items-start justify-center space-y-1 font-serif-bangla">
-            <span className="text-sm font-bold text-slate-900 tracking-tight">
+            <span className="text-lg font-medium text-slate-900 tracking-tight">
               {dates.english}
             </span>
-            <span className="text-xs font-semibold text-slate-600">
+            <span className="text-base font-medium text-slate-600">
               {dates.bangla}
             </span>
-            <span className="text-xs font-semibold text-slate-600 font-medium">
+            <span className="text-base text-slate-600 font-medium">
               {dates.hijri}
             </span>
           </div>
@@ -148,7 +148,7 @@ export default function Header() {
                 rel="noopener noreferrer"
                 aria-label="Facebook"
                 title="Facebook"
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-[#1877F2] hover:text-white text-slate-600 flex items-center justify-center transition-all duration-200 shadow-xs"
+                className="w-7 h-7 rounded-full bg-[#1877F2] text-white hover:bg-[#166fe5] hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-xs"
               >
                 <FacebookIcon className="w-3.5 h-3.5" />
               </a>
@@ -158,7 +158,7 @@ export default function Header() {
                 rel="noopener noreferrer"
                 aria-label="Twitter"
                 title="Twitter"
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-900 hover:text-white text-slate-600 flex items-center justify-center transition-all duration-200 shadow-xs"
+                className="w-7 h-7 rounded-full bg-slate-900 text-white hover:bg-black hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-xs"
               >
                 <TwitterXIcon className="w-3.5 h-3.5" />
               </a>
@@ -168,7 +168,7 @@ export default function Header() {
                 rel="noopener noreferrer"
                 aria-label="YouTube"
                 title="YouTube"
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-[#FF0000] hover:text-white text-slate-600 flex items-center justify-center transition-all duration-200 shadow-xs"
+                className="w-7 h-7 rounded-full bg-[#FF0000] text-white hover:bg-[#e60000] hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-xs"
               >
                 <YoutubeIcon className="w-3.5 h-3.5" />
               </a>
@@ -178,7 +178,7 @@ export default function Header() {
                 rel="noopener noreferrer"
                 aria-label="Instagram"
                 title="Instagram"
-                className="w-7 h-7 rounded-full bg-slate-100 hover:bg-gradient-to-tr hover:from-[#f09433] hover:via-[#dc2743] hover:to-[#bc1888] hover:text-white text-slate-600 flex items-center justify-center transition-all duration-200 shadow-xs"
+                className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white hover:opacity-90 hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-xs"
               >
                 <InstagramIcon className="w-3.5 h-3.5" />
               </a>
@@ -199,14 +199,13 @@ export default function Header() {
                 className="px-4.5 py-3.5 text-slate-800 hover:text-red-600 hover:bg-slate-50 transition-colors flex items-center gap-2 whitespace-nowrap"
               >
                 <Home className="w-5 h-5 text-red-600 shrink-0" />
-                <span>প্রচ্ছদ</span>
               </a>
 
               {categories.map((cat) => (
                 <a
                   key={cat.id}
                   href={`#cat-${cat.slug}`}
-                  className="px-4.5 py-3.5 text-slate-700 hover:text-red-600 hover:bg-slate-50 transition-colors whitespace-nowrap tracking-wide"
+                  className="px-4.5 py-3.5 text-xl text-slate-950 hover:text-red-600 hover:bg-slate-50 transition-colors whitespace-nowrap tracking-wide"
                 >
                   {cat.name}
                 </a>

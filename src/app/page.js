@@ -1,4 +1,5 @@
 import Header from "../components/Header";
+import NewsTickerSection from "../components/NewsTickerSection";
 import FeaturedHeroSection from "../components/FeaturedHeroSection";
 import LatestMixedSection from "../components/LatestMixedSection";
 import CategoryScrollSection from "../components/CategoryScrollSection";
@@ -11,6 +12,9 @@ export default function Home() {
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
       {/* 1. Header with Brand Logo, Category & Subcategory Navbar */}
       <Header />
+
+      {/* 2. Breaking News & Headline Sliding Tickers */}
+      <NewsTickerSection />
 
       {/* Main Content Flow */}
       <main className="flex-1">

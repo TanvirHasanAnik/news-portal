@@ -51,3 +51,22 @@ body {
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+@keyframes ticker-slide {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-ticker {
+  display: flex;
+  width: max-content;
+  animation: ticker-slide 42s linear infinite;
+}
+
+.animate-ticker:hover {
+  animation-play-state: paused;
+}
