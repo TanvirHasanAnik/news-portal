@@ -8,13 +8,11 @@ import {
   Pause,
   Play,
   Newspaper,
-  Clock,
-  Sparkles,
 } from "lucide-react";
 import { breakingNews, topHeadlines } from "../data/newsData";
 
 export default function NewsTickerSection() {
-  // Breaking News Slider State
+  // 1. Breaking News Slider State
   const [currentBreakingIndex, setCurrentBreakingIndex] = useState(0);
   const [isBreakingPlaying, setIsBreakingPlaying] = useState(true);
   const [isHoveredBreaking, setIsHoveredBreaking] = useState(false);
@@ -40,31 +38,69 @@ export default function NewsTickerSection() {
 
   const currentBreaking = breakingNews[currentBreakingIndex] || breakingNews[0];
 
+  // 2. Headline (শিরোনাম) Continuous Sliding Ticker State & Logic
+  const headlineScrollRef = useRef(null);
+  const [isHeadlineHovered, setIsHeadlineHovered] = useState(false);
+  const [isHeadlinePlaying, setIsHeadlinePlaying] = useState(true);
+
+  // Smooth frame-based continuous horizontal scroll (BD-Pratidin Reference)
+  useEffect(() => {
+    const el = headlineScrollRef.current;
+    if (!el) return;
+
+    let animId;
+    let accumulated = 0;
+
+    const step = () => {
+      if (!isHeadlineHovered && isHeadlinePlaying) {
+        accumulated += 0.85; // smooth speed ~50px/sec
+        if (accumulated >= 1) {
+          const pixels = Math.floor(accumulated);
+          accumulated -= pixels;
+
+          if (el.scrollLeft >= el.scrollWidth / 2) {
+            el.scrollLeft = 0;
+          } else {
+            el.scrollLeft += pixels;
+          }
+        }
+      }
+      animId = requestAnimationFrame(step);
+    };
+
+    animId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(animId);
+  }, [isHeadlineHovered, isHeadlinePlaying]);
+
+  const handleHeadlineScroll = (direction) => {
+    const el = headlineScrollRef.current;
+    if (!el) return;
+    const amount = direction === "left" ? -300 : 300;
+    el.scrollBy({ left: amount, behavior: "smooth" });
+  };
+
   // Duplicate topHeadlines to ensure an infinite seamless loop
   const tickerItems = [...topHeadlines, ...topHeadlines];
 
   return (
     <div className="w-full flex flex-col font-sans">
       {/* ======================================================== */}
-      {/* 1. BREAKING NEWS SECTION (High Attraction / Attention-Grabbing) */}
+      {/* 1. BREAKING NEWS SECTION */}
       {/* ======================================================== */}
       <div
-        className="w-full bg-gradient-to-r from-red-500 to-red-500 text-white shadow-sm border-b border-red-800/80 relative overflow-hidden"
+        className="w-full bg-red-100 border-b border-red-200/60 text-slate-800 relative overflow-hidden"
         onMouseEnter={() => setIsHoveredBreaking(true)}
         onMouseLeave={() => setIsHoveredBreaking(false)}
       >
-        {/* Subtle background ambient pulse glow */}
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-amber-400/10 via-transparent to-transparent pointer-events-none" />
-
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
           <div className="flex items-center gap-2.5 sm:gap-3.5">
-            {/* Eye-Catching Breaking Badge */}
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-black/35 hover:bg-black/45 border border-white/20 rounded-md text-white font-bold text-xs sm:text-sm shrink-0 tracking-wide backdrop-blur-xs shadow-xs transition-colors">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-80"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
+            {/* Clean Breaking Badge */}
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-red-600 rounded text-white font-semibold text-xs sm:text-sm shrink-0 tracking-wide shadow-2xs">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
               </span>
-              {/* <Flame className="w-4 h-4 text-amber-300 shrink-0" /> */}
+              {/* <Flame className="w-3.5 h-3.5 shrink-0" /> */}
               <span className="whitespace-nowrap">ব্রেকিং নিউজ</span>
             </div>
 
@@ -72,11 +108,11 @@ export default function NewsTickerSection() {
             <div className="flex-1 overflow-hidden min-w-0 relative">
               <div
                 key={currentBreakingIndex}
-                className="flex items-center justify-between gap-3 animate-in fade-in slide-in-from-right-3 duration-300"
+                className="flex items-center gap-3 animate-in fade-in slide-in-from-right-3 duration-300"
               >
                 <a
                   href={currentBreaking.url || "#"}
-                  className="text-white hover:text-amber-200 font-medium text-xs sm:text-sm md:text-[15px] truncate transition-colors drop-shadow-xs"
+                  className="text-slate-950 hover:text-red-600 font-medium text-xs sm:text-sm md:text-base truncate transition-colors"
                   title={currentBreaking.headline}
                 >
                   {currentBreaking.headline}
@@ -85,15 +121,15 @@ export default function NewsTickerSection() {
             </div>
 
             {/* Interactive Slide Controls */}
-            <div className="flex items-center gap-1 text-white/90 shrink-0 border-l border-white/20 pl-2">
+            <div className="flex items-center gap-1 text-slate-600 shrink-0 border-l border-slate-300/80 pl-2">
               {/* Pagination index */}
-              <span className="text-[11px] text-white/75 font-mono px-1 hidden sm:inline">
+              <span className="text-[11px] text-slate-500 font-mono px-1 hidden sm:inline">
                 {currentBreakingIndex + 1}/{breakingNews.length}
               </span>
 
               <button
                 onClick={handlePrevBreaking}
-                className="p-1 rounded hover:bg-black/20 text-white/90 hover:text-white transition-colors"
+                className="p-1 rounded hover:bg-slate-200/70 text-slate-600 hover:text-slate-900 transition-colors"
                 aria-label="পূর্ববর্তী ব্রেকিং নিউজ"
                 title="পূর্ববর্তী সংবাদ"
               >
@@ -102,7 +138,7 @@ export default function NewsTickerSection() {
 
               <button
                 onClick={() => setIsBreakingPlaying(!isBreakingPlaying)}
-                className="p-1 rounded hover:bg-black/20 text-white/90 hover:text-white transition-colors"
+                className="p-1 rounded hover:bg-slate-200/70 text-slate-600 hover:text-slate-900 transition-colors"
                 aria-label={isBreakingPlaying ? "বিরতি" : "চালু"}
                 title={isBreakingPlaying ? "বিরতি" : "চালু"}
               >
@@ -115,7 +151,7 @@ export default function NewsTickerSection() {
 
               <button
                 onClick={handleNextBreaking}
-                className="p-1 rounded hover:bg-black/20 text-white/90 hover:text-white transition-colors"
+                className="p-1 rounded hover:bg-slate-200/70 text-slate-600 hover:text-slate-900 transition-colors"
                 aria-label="পরবর্তী ব্রেকিং নিউজ"
                 title="পরবর্তী সংবাদ"
               >
@@ -139,30 +175,39 @@ export default function NewsTickerSection() {
             </div>
 
             {/* Continuous Seamless Sliding Ticker (BD-Pratidin Reference) */}
-            <div className="flex-1 overflow-hidden relative group">
+            <div
+              className="flex-1 overflow-hidden relative group"
+              onMouseEnter={() => setIsHeadlineHovered(true)}
+              onMouseLeave={() => setIsHeadlineHovered(false)}
+            >
               {/* Left/Right Subtle Fade Gradients for Polish */}
-              <div className="absolute left-0 inset-y-0 w-4 bg-gradient-to-r from-slate-100 to-transparent z-1 pointer-events-none" />
-              <div className="absolute right-0 inset-y-0 w-6 bg-gradient-to-l from-slate-100 to-transparent z-1 pointer-events-none" />
+              <div className="absolute left-0 inset-y-0 w-6 bg-gradient-to-r from-slate-100 to-transparent z-1 pointer-events-none" />
+              <div className="absolute right-0 inset-y-0 w-8 bg-gradient-to-l from-slate-100 to-transparent z-1 pointer-events-none" />
 
-              {/* Infinite Continuous Ticker */}
-              <div className="animate-ticker flex items-center gap-6 py-0.5 whitespace-nowrap">
-                {tickerItems.map((item, idx) => (
-                  <div key={`${item.id}-${idx}`} className="flex items-center gap-3 shrink-0">
-                    <a
-                      href={item.url || "#"}
-                      className="text-slate-800 hover:text-red-700 font-medium text-xs sm:text-sm transition-colors flex items-center gap-1.5"
-                    >
-                      {item.category && (
-                        <span className="text-[11px] font-semibold text-slate-500 bg-slate-200/80 px-1.5 py-0.5 rounded">
-                          {item.category}
-                        </span>
-                      )}
-                      <span>{item.title}</span>
-                    </a>
-                    {/* Elegant Separator Diamond */}
-                    <span className="text-red-500 text-[10px] select-none font-bold">◆</span>
-                  </div>
-                ))}
+              {/* Infinite Continuous Ticker Container */}
+              <div
+                ref={headlineScrollRef}
+                className="overflow-x-hidden whitespace-nowrap scrollbar-none py-1 select-none"
+              >
+                <div className="inline-flex items-center gap-6">
+                  {tickerItems.map((item, idx) => (
+                    <div key={`${item.id}-${idx}`} className="inline-flex items-center gap-3 shrink-0">
+                      <a
+                        href={item.url || "#"}
+                        className="text-slate-950 hover:text-red-700 font-medium text-xs sm:text-sm md:text-base transition-colors inline-flex items-center gap-1.5"
+                      >
+                        {item.category && (
+                          <span className="text-[11px] font-semibold text-slate-500 bg-slate-200/80 px-1.5 py-0.5 rounded">
+                            {item.category}
+                          </span>
+                        )}
+                        <span>{item.title}</span>
+                      </a>
+                      {/* Elegant Separator Diamond */}
+                      <span className="text-red-500 text-[10px] select-none font-bold">◆</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -171,4 +216,3 @@ export default function NewsTickerSection() {
     </div>
   );
 }
-
