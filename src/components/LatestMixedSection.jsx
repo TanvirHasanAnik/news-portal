@@ -17,7 +17,7 @@ export default function LatestMixedSection() {
   const firstColumnStories = sortedNews.slice(5, 9);
 
   return (
-    <section id="latest" className="py-6 sm:py-8 bg-white border-b border-slate-200">
+    <section id="latest" className="scroll-mt-14 py-6 sm:py-8 bg-white border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Grid: Column Ratio 1 : 2 : 1 */}
         {/* On desktop (lg): 4 columns total. 

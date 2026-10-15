@@ -46,7 +46,8 @@ export default function Header() {
   };
 
   return (
-    <header className="w-full bg-white border-b border-slate-200">
+    <>
+      <header className="w-full bg-white border-b border-slate-200">
       {/* 1. BRAND LOGO & MASTHEAD */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 lg:py-4">
         {/* Mobile Header Bar (< lg) */}
@@ -186,11 +187,13 @@ export default function Header() {
           </div>
         </div>
       </div>
+    </header>
 
-      {/* 2. CATEGORY MENU BAR (Desktop Only - Sticky, White & Centered) */}
-      <nav className="hidden lg:block sticky top-0 z-40 bg-white border-y border-slate-200 shadow-xs">
+      {/* 2. CATEGORY MENU BAR (Sticky top-0 across page scroll) */}
+      <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center">
+          {/* Desktop Category Bar */}
+          <div className="hidden lg:flex items-center justify-center">
             {/* Centered Category Links with Home button */}
             <div className="flex items-center justify-center flex-wrap divide-x divide-slate-200 text-base font-medium">
               <a
@@ -213,6 +216,26 @@ export default function Header() {
               ))}
             </div>
           </div>
+
+          {/* Mobile Category Bar (Horizontal swipeable so mobile users also get sticky categories) */}
+          <div className="lg:hidden flex items-center overflow-x-auto scrollbar-none py-2.5 gap-2 -mx-2 px-2 text-sm font-medium">
+            <a
+              href="/"
+              className="p-1.5 rounded-lg text-slate-700 hover:text-red-600 hover:bg-slate-100 shrink-0"
+              title="হোম পেজ"
+            >
+              <Home className="w-4 h-4 text-red-600" />
+            </a>
+            {[{ id: "latest", name: "সর্বশেষ", slug: "latest" }, ...categories.filter((c) => c.slug !== "latest")].map((cat) => (
+              <a
+                key={cat.id}
+                href={cat.slug === "latest" ? "#latest" : `#cat-${cat.slug}`}
+                className="px-3 py-1 text-slate-800 hover:text-red-600 hover:bg-slate-100 rounded-md shrink-0 whitespace-nowrap text-sm font-semibold"
+              >
+                {cat.name}
+              </a>
+            ))}
+          </div>
         </div>
       </nav>
 
@@ -221,6 +244,6 @@ export default function Header() {
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
       />
-    </header>
+    </>
   );
 }
