@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 460 76" width="460" height="76" fill="none">
+  <defs>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e11d48" />
+      <stop offset="40%" stop-color="#dc2626" />
+      <stop offset="100%" stop-color="#991b1b" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.15" />
+    </filter>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@500;600;700&amp;family=Noto+Serif+Bengali:wght@700;900&amp;display=swap');
+      .brand-title {
+        font-family: 'Noto Serif Bengali', 'Hind Siliguri', 'SolaimanLipi', 'Kalpurush', serif;
+        font-weight: 900;
+        font-size: 36px;
+        fill: #090d16;
+        letter-spacing: -0.5px;
+      }
+      .brand-tagline {
+        font-family: 'Hind Siliguri', 'Noto Serif Bengali', 'SolaimanLipi', sans-serif;
+        font-weight: 600;
+        font-size: 11px;
+        fill: #64748b;
+        letter-spacing: 0.8px;
+      }
+      .glyph-text {
+        font-family: 'Noto Serif Bengali', 'Hind Siliguri', 'SolaimanLipi', serif;
+        font-weight: 900;
+        font-size: 38px;
+        fill: #ffffff;
+      }
+    </style>
+  </defs>
+
+  <!-- Logo Icon Badge -->
+  <g filter="url(#shadow)">
+    <rect x="2" y="8" width="60" height="60" rx="14" fill="url(#logoGradient)" />
+    <!-- Subtle inner border highlight -->
+    <rect x="2.5" y="8.5" width="59" height="59" rx="13.5" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1" />
+    <!-- Iconic Bengali Glyph 'খ' -->
+    <text x="32" y="52" text-anchor="middle" class="glyph-text">খ</text>
+  </g>
+
+  <!-- Brand Name & Slogan -->
+  <g transform="translate(74, 0)">
+    <!-- Brand Title -->
+    <text x="0" y="44" class="brand-title">আমাদের সংবাদ</text>
+    
+    <!-- Slogan / Tagline -->
+    <text x="0" y="64" class="brand-tagline">সত্য ও সাহসের অগ্রদূত • THE LEADING BANGLA DAILY</text>
+  </g>
+</svg>
+
