@@ -11,6 +11,12 @@ export const banglaDate = {
 
 export const categories = [
   {
+    id: "latest",
+    name: "সর্বশেষ",
+    slug: "latest",
+    subcategories: ["এইমাত্র", "আজকের সংবাদ", "সর্বাধিক পঠিত", "শীর্ষ সংবাদ"],
+  },
+  {
     id: "national",
     name: "জাতীয়",
     slug: "national",

@@ -17,7 +17,7 @@ export default function LatestMixedSection() {
   const firstColumnStories = sortedNews.slice(5, 9);
 
   return (
-    <section className="py-6 sm:py-8 bg-white border-b border-slate-200">
+    <section id="latest" className="py-6 sm:py-8 bg-white border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Grid: Column Ratio 1 : 2 : 1 */}
         {/* On desktop (lg): 4 columns total. 
@@ -162,17 +162,6 @@ export default function LatestMixedSection() {
               <span className="text-[11px] font-semibold text-slate-400 mb-2 uppercase tracking-wider">
                 বিজ্ঞাপন
               </span>
-              <div className="w-full h-full flex flex-col items-center justify-center py-6 px-3 bg-white/70 rounded-xs">
-                <span className="text-xs font-semibold text-slate-700 font-serif-bangla mb-1">
-                  এখানে বিজ্ঞাপন দিন
-                </span>
-                <span className="text-[11px] text-slate-400 mb-3">
-                  ৩০০ × ২৫০ পিক্সেল
-                </span>
-                <span className="inline-block px-3 py-1 bg-red-600 text-white text-xs font-medium rounded-xs hover:bg-red-700 transition-colors cursor-pointer">
-                  যোগাযোগ করুন
-                </span>
-              </div>
             </div>
 
             {/* Secondary / Skyscraper Ad Unit (Filling the remaining vertical space in the column) */}
@@ -180,20 +169,6 @@ export default function LatestMixedSection() {
               <span className="text-[11px] font-semibold text-slate-400 mb-2 uppercase tracking-wider">
                 বিজ্ঞাপন
               </span>
-              <div className="w-full h-full flex flex-col items-center justify-center py-8 px-3 bg-white/70 rounded-xs">
-                <span className="text-xs font-semibold text-slate-700 font-serif-bangla mb-1">
-                  বিশেষ বাণিজ্যিক বিজ্ঞাপন
-                </span>
-                <span className="text-[11px] text-slate-400 mb-4">
-                  ৩০০ × ৬০০ পিক্সেল
-                </span>
-                <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center text-red-600 font-bold text-sm mb-3">
-                  Ad
-                </div>
-                <p className="text-xs text-slate-500 max-w-[180px] leading-relaxed">
-                  আপনার প্রতিষ্ঠানের প্রচার ও প্রসারে আমাদের সাথে যুক্ত হোন
-                </p>
-              </div>
             </div>
           </div>
 

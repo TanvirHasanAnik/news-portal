@@ -201,10 +201,11 @@ export default function Header() {
                 <Home className="w-5 h-5 text-red-600 shrink-0" />
               </a>
 
-              {categories.map((cat) => (
+              {/* Latest (সর্বশেষ) as first category, followed by other categories */}
+              {[{ id: "latest", name: "সর্বশেষ", slug: "latest" }, ...categories.filter((c) => c.slug !== "latest")].map((cat) => (
                 <a
                   key={cat.id}
-                  href={`#cat-${cat.slug}`}
+                  href={cat.slug === "latest" ? "#latest" : `#cat-${cat.slug}`}
                   className="px-4.5 py-3.5 text-xl text-slate-950 hover:text-red-600 hover:bg-slate-50 transition-colors whitespace-nowrap tracking-wide"
                 >
                   {cat.name}
