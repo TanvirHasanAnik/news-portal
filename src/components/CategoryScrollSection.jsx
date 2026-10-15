@@ -1,13 +1,18 @@
 "use client";
 
 import React from "react";
-import { ArrowRight, ChevronRight, Layers, Sparkles } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import NewsArticleCard from "./NewsArticleCard";
 import { categories, categoryNewsData } from "../data/newsData";
 
 /**
  * Requirement 3:
- * Scroll For each main category: Latest 3 news emphasizing most recent one with see more.
+ * For every category section:
+ * - 2 same width columns
+ * - 1 news: takes 1st column only
+ * - 2 news: takes both 1st latest and 2nd latest column
+ * - 3 news: adds another row on the bottom and takes bottom left cell for 3rd latest news
+ * - 4 news: fills the 4th with the 2nd column of the bottom row
  * Bangla font and responsive for both desktop and phone.
  */
 export default function CategoryScrollSection() {
@@ -17,14 +22,11 @@ export default function CategoryScrollSection() {
   return (
     <section className="py-8 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Categories Feed: Each main category with Latest 3 news (emphasizing #1) + See more */}
+        {/* Categories Feed: 2 equal-width columns grid per category */}
         <div className="space-y-12">
           {displayCategories.map((cat, catIdx) => {
             const articles = categoryNewsData[cat.slug] || [];
             if (articles.length === 0) return null;
-
-            const emphasizedStory = articles[0]; // #1 Most Recent
-            const companionStories = articles.slice(1, 3); // #2 and #3
 
             // Accent colors per category for visual identity
             const accentColors = [
@@ -84,59 +86,34 @@ export default function CategoryScrollSection() {
                   </div>
                 </div>
 
-                {/* Latest 3 News Grid: Emphasizing #1 most recent item */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-                  {/* #1 MOST RECENT ITEM (EMPHASIZED HERO: 7 Columns) */}
-                  <div className="lg:col-span-7 flex flex-col">
-                    <div className="mb-2 text-xs font-semibold text-slate-500 flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-red-600">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        সাম্প্রতিক প্রধান খবর
-                      </span>
-                      <span className="text-slate-400">সর্বশেষ আপডেট</span>
-                    </div>
-
+                {/* 2 Equal-Width Columns Grid
+                    - 1 news: takes 1st column only (row 1, col 1)
+                    - 2 news: takes 1st latest (row 1, col 1) and 2nd latest (row 1, col 2)
+                    - 3 news: adds another row on the bottom and takes bottom left cell (row 2, col 1) for 3rd latest
+                    - 4 news: fills the 4th with the 2nd column of the bottom row (row 2, col 2)
+                */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+                  {articles.slice(0, 4).map((story) => (
                     <NewsArticleCard
-                      news={emphasizedStory}
-                      variant="emphasized"
+                      key={story.id}
+                      news={story}
+                      variant="standard"
                       showCategory={false}
+                      showTime={true}
                       className="h-full"
                     />
-                  </div>
+                  ))}
+                </div>
 
-                  {/* #2 and #3 COMPANION ITEMS (5 Columns: 2 horizontal cards) */}
-                  <div className="lg:col-span-5 flex flex-col justify-between gap-4">
-                    <div className="text-xs font-semibold text-slate-500 flex items-center justify-between">
-                      <span className="flex items-center gap-1 text-slate-700">
-                        <Layers className="w-3.5 h-3.5 text-slate-400" />
-                        এই বিভাগের আরও খবর
-                      </span>
-                      <span className="text-slate-400">২টি সংবাদ</span>
-                    </div>
-
-                    <div className="flex flex-col gap-4 flex-1">
-                      {companionStories.map((story) => (
-                        <NewsArticleCard
-                          key={story.id}
-                          news={story}
-                          variant="horizontal"
-                          showCategory={false}
-                          className="flex-1"
-                        />
-                      ))}
-                    </div>
-
-                    {/* Bottom Category See More Banner / Link */}
-                    <div className="pt-2 text-right">
-                      <a
-                        href={`#category-${cat.slug}`}
-                        className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-red-700 hover:text-red-800 hover:underline"
-                      >
-                        <span>{cat.name} বিভাগের সব খবর পড়ুন</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </a>
-                    </div>
-                  </div>
+                {/* Bottom Category See More Banner / Link */}
+                <div className="pt-4 text-right">
+                  <a
+                    href={`#category-${cat.slug}`}
+                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-red-700 hover:text-red-800 hover:underline"
+                  >
+                    <span>{cat.name} বিভাগের সব খবর পড়ুন</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </a>
                 </div>
               </div>
             );

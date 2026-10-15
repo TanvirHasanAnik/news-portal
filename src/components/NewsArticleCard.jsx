@@ -22,6 +22,7 @@ export default function NewsArticleCard({
   showCategory = true,
   showTime = false,
   className = "",
+  imageClassName = "",
 }) {
   const [copied, setCopied] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
@@ -220,7 +221,9 @@ export default function NewsArticleCard({
       className={`group flex flex-col justify-between overflow-hidden rounded-xl bg-white border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-300 ${className}`}
     >
       {/* Featured Image */}
-      <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
+      <div
+        className={`relative aspect-[16/9] sm:aspect-[2.2/1] max-h-[170px] sm:max-h-[190px] md:max-h-[200px] w-full overflow-hidden bg-slate-100 ${imageClassName}`}
+      >
         <img
           src={image}
           alt={headline}
@@ -230,6 +233,12 @@ export default function NewsArticleCard({
         {showCategory && category && (
           <span className="absolute top-2.5 left-2.5 rounded bg-red-600 px-2 py-0.5 text-[11px] font-semibold text-white shadow-xs">
             {category}
+          </span>
+        )}
+        {isMostRecent && (
+          <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded bg-amber-500/95 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-slate-900 shadow-xs animate-pulse">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-600"></span>
+            এইমাত্র প্রকাশিত
           </span>
         )}
       </div>
