@@ -1,17 +1,20 @@
-import { Hind_Siliguri, Noto_Serif_Bengali } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const hindSiliguri = Hind_Siliguri({
-  weight: ["300", "400", "500", "600", "700"],
-  subsets: ["bengali", "latin"],
-  variable: "--font-hind-siliguri",
-  display: "swap",
-});
-
-const notoSerifBengali = Noto_Serif_Bengali({
-  weight: ["400", "600", "700"],
-  subsets: ["bengali", "latin"],
-  variable: "--font-noto-serif-bengali",
+const solaimanLipi = localFont({
+  src: [
+    {
+      path: "../fonts/SolaimanLipi-Normal.woff2",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../fonts/SolaimanLipi-Bold.woff2",
+      weight: "700",
+      style: "normal",
+    },
+  ],
+  variable: "--font-solaiman-lipi",
   display: "swap",
 });
 
@@ -24,7 +27,7 @@ export default function RootLayout({ children }) {
   return (
     <html
       lang="bn"
-      className={`${hindSiliguri.variable} ${notoSerifBengali.variable} h-full antialiased`}
+      className={`${solaimanLipi.variable} font-sans h-full antialiased`}
     >
       <body className="min-h-full font-sans bg-slate-50 text-slate-900 selection:bg-red-500 selection:text-white flex flex-col">{children}</body>
     </html>

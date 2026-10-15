@@ -8,12 +8,12 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-hind-siliguri), 'Hind Siliguri', 'SolaimanLipi', 'Kalpurush', system-ui, -apple-system, sans-serif;
-  --font-serif: var(--font-noto-serif-bengali), 'Noto Serif Bengali', 'SutonnyMJ', serif;
+  --font-sans: var(--font-solaiman-lipi), 'SolaimanLipi', system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-solaiman-lipi), 'SolaimanLipi', serif;
 }
 
 body {
-  font-family: var(--font-sans), 'Hind Siliguri', 'SolaimanLipi', 'Kalpurush', sans-serif;
+  font-family: var(--font-solaiman-lipi), 'SolaimanLipi', sans-serif;
   background-color: #f8fafc;
   color: #0f172a;
   -webkit-font-smoothing: antialiased;
@@ -21,7 +21,7 @@ body {
 
 /* Custom newspaper styling */
 .font-serif-bangla {
-  font-family: var(--font-serif), 'Noto Serif Bengali', serif;
+  font-family: var(--font-solaiman-lipi), 'SolaimanLipi', serif;
 }
 
 /* Custom scrollbar for horizontal category tabs */
