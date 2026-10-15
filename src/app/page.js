@@ -1,6 +1,5 @@
 import Header from "../components/Header";
 import NewsTickerSection from "../components/NewsTickerSection";
-import FeaturedHeroSection from "../components/FeaturedHeroSection";
 import LatestMixedSection from "../components/LatestMixedSection";
 import CategoryScrollSection from "../components/CategoryScrollSection";
 import OpinionSection from "../components/OpinionSection";
@@ -19,7 +18,6 @@ export default function Home() {
       {/* Main Content Flow */}
       <main className="flex-1">
         {/* 3. Featured / Lead News Section (শীর্ষ সংবাদ) */}
-        <FeaturedHeroSection />
 
         {/* 4. Requirement 2: Latest Mixed Category Published Section */}
         {/* Latest 3 news emphasizing the most recent one with See More */}
