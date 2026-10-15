@@ -10,10 +10,10 @@ export default function LatestMixedSection() {
   // #1 Most recent news
   const mostRecentStory = sortedNews[0];
 
-  // 2nd, 3rd, 4th, 5th news (for 2nd column square layout)
+  // 2nd, 3rd, 4th, 5th news (2nd column)
   const secondColumnStories = sortedNews.slice(1, 5);
 
-  // 6th to 9th news (for 1st column)
+  // 6th to 9th news (1st column)
   const firstColumnStories = sortedNews.slice(5, 9);
 
   return (
@@ -68,32 +68,78 @@ export default function LatestMixedSection() {
             <div className="border-b border-slate-200" />
 
             {/* 2. UNDER LATEST NEWS CARD LAYOUT: 1st Column (Ratio 1) & 2nd Column (Ratio 2) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+            {/* Equal height container: items-stretch ensures both columns have the exact same height */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
               
               {/* 1ST COLUMN: Ratio 1 (takes 1 of 3 parts in news area) */}
-              {/* Rows of 4 small horizontal cards holding 6th to 9th news */}
-              {/* Card layout: first row only image, second row: headline, third row summary */}
-              <div className="md:col-span-1 flex flex-col gap-6">
+              {/* Card design swapped from 2nd col: first row image left headline right, second row summary */}
+              <div className="md:col-span-1 flex flex-col justify-between h-full gap-4 lg:gap-5">
                 {firstColumnStories.map((news) => (
-                  <article key={news.id} className="group flex flex-col">
-                    {/* First row: only image */}
-                    <div className="w-full aspect-[16/10] overflow-hidden bg-slate-100">
-                      <a href={`#news-${news.id}`} className="block h-full w-full">
-                        <img
-                          src={news.image}
-                          alt={news.headline}
-                          loading="lazy"
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      </a>
+                  <article
+                    key={news.id}
+                    className="group flex flex-col justify-between flex-1 py-0.5"
+                  >
+                    {/* First row: image left, headline right */}
+                    <div className="flex flex-row gap-3 items-start">
+                      {/* Image left */}
+                      <div className="w-24 h-16 sm:w-26 sm:h-18 md:w-20 md:h-16 lg:w-24 lg:h-18 shrink-0 overflow-hidden bg-slate-100">
+                        <a href={`#news-${news.id}`} className="block h-full w-full">
+                          <img
+                            src={news.image}
+                            alt={news.headline}
+                            loading="lazy"
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                        </a>
+                      </div>
+
+                      {/* Headline right */}
+                      <h3 className="font-serif-bangla text-sm lg:text-[15px] font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors line-clamp-2 flex-1 min-w-0">
+                        <a href={`#news-${news.id}`}>
+                          {news.headline}
+                        </a>
+                      </h3>
                     </div>
 
-                    {/* Second row: headline */}
-                    <h3 className="font-serif-bangla text-base font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors line-clamp-2 mt-2.5">
-                      <a href={`#news-${news.id}`}>
-                        {news.headline}
-                      </a>
-                    </h3>
+                    {/* Second row: summary */}
+                    {news.summary && (
+                      <p className="text-xs sm:text-[13px] text-slate-600 line-clamp-2 leading-relaxed mt-2 font-normal">
+                        {news.summary}
+                      </p>
+                    )}
+                  </article>
+                ))}
+              </div>
+
+              {/* 2ND COLUMN: Ratio 2 (takes 2 of 3 parts in news area) */}
+              {/* Card design swapped from 1st col: first row only image, second row headline, third row summary */}
+              {/* 2x2 grid kept at same height matching 1st column */}
+              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6 h-full content-between">
+                {secondColumnStories.map((news) => (
+                  <article
+                    key={news.id}
+                    className="group flex flex-col justify-between h-full"
+                  >
+                    <div>
+                      {/* First row: only image */}
+                      <div className="w-full aspect-[16/10] overflow-hidden bg-slate-100">
+                        <a href={`#news-${news.id}`} className="block h-full w-full">
+                          <img
+                            src={news.image}
+                            alt={news.headline}
+                            loading="lazy"
+                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                        </a>
+                      </div>
+
+                      {/* Second row: headline */}
+                      <h3 className="font-serif-bangla text-base font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors line-clamp-2 mt-2.5">
+                        <a href={`#news-${news.id}`}>
+                          {news.headline}
+                        </a>
+                      </h3>
+                    </div>
 
                     {/* Third row: summary */}
                     {news.summary && (
@@ -103,46 +149,6 @@ export default function LatestMixedSection() {
                     )}
                   </article>
                 ))}
-              </div>
-
-              {/* 2ND COLUMN: Ratio 2 (takes 2 of 3 parts in news area) */}
-              {/* Holds square sized news card of 2nd, 3rd, 4th, 5th news in square layout (2x2) */}
-              {/* Card layout: first row image left headline right, second row: summary */}
-              <div className="md:col-span-2">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-7">
-                  {secondColumnStories.map((news) => (
-                    <article key={news.id} className="group flex flex-col justify-between">
-                      {/* First row: image left, headline right */}
-                      <div className="flex flex-row gap-3 items-start">
-                        {/* Image left */}
-                        <div className="w-24 h-18 sm:w-28 sm:h-20 shrink-0 overflow-hidden bg-slate-100">
-                          <a href={`#news-${news.id}`} className="block h-full w-full">
-                            <img
-                              src={news.image}
-                              alt={news.headline}
-                              loading="lazy"
-                              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            />
-                          </a>
-                        </div>
-
-                        {/* Headline right */}
-                        <h3 className="font-serif-bangla text-sm sm:text-base font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors line-clamp-3 flex-1 min-w-0">
-                          <a href={`#news-${news.id}`}>
-                            {news.headline}
-                          </a>
-                        </h3>
-                      </div>
-
-                      {/* Second row: summary */}
-                      {news.summary && (
-                        <p className="text-xs sm:text-sm text-slate-600 line-clamp-3 leading-relaxed mt-2.5 font-normal">
-                          {news.summary}
-                        </p>
-                      )}
-                    </article>
-                  ))}
-                </div>
               </div>
 
             </div>
