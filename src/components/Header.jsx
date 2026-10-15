@@ -65,8 +65,8 @@ export default function Header() {
             <a href="/" className="inline-block">
               <img
                 src="/brand-logo.svg"
-                alt="আমাদের সংবাদ"
-                className="h-9 sm:h-11 w-auto max-w-[220px] sm:max-w-[280px] object-contain"
+                alt="আলো আসবে"
+                className="h-10 sm:h-12 w-auto max-w-[240px] sm:max-w-[290px] object-contain"
               />
             </a>
           </div>
@@ -110,7 +110,7 @@ export default function Header() {
             <span className="text-xs font-semibold text-slate-600">
               {dates.bangla}
             </span>
-            <span className="text-xs text-slate-500 font-medium">
+            <span className="text-xs font-semibold text-slate-600 font-medium">
               {dates.hijri}
             </span>
           </div>
@@ -120,7 +120,7 @@ export default function Header() {
             <a href="/" className="inline-block group focus:outline-none">
               <img
                 src="/brand-logo.svg"
-                alt="আমাদের সংবাদ - সত্য ও সাহসের অগ্রদূত"
+                alt="আলো আসবে - সত্য ও সাহসের অগ্রদূত"
                 className="h-14 xl:h-16 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
               />
             </a>
@@ -192,11 +192,11 @@ export default function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-center">
             {/* Centered Category Links with Home button */}
-            <div className="flex items-center justify-center flex-wrap divide-x divide-slate-200 text-base font-bold">
+            <div className="flex items-center justify-center flex-wrap divide-x divide-slate-200 text-base font-medium">
               <a
                 href="/"
                 title="হোম পেজ"
-                className="px-4.5 py-3.5 text-slate-800 hover:text-red-600 hover:bg-slate-50 transition-colors flex items-center gap-2 whitespace-nowrap tracking-wide"
+                className="px-4.5 py-3.5 text-slate-800 hover:text-red-600 hover:bg-slate-50 transition-colors flex items-center gap-2 whitespace-nowrap"
               >
                 <Home className="w-5 h-5 text-red-600 shrink-0" />
                 <span>প্রচ্ছদ</span>

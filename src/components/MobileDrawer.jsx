@@ -27,11 +27,14 @@ export default function MobileDrawer({ isOpen, onClose }) {
         {/* Drawer Header */}
         <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
           <div>
-            <span className="font-serif-bangla text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
-              <span className="h-6 w-6 rounded bg-red-600 flex items-center justify-center text-xs font-black">খ</span>
-              আমাদের সংবাদ
-            </span>
-            <p className="text-[11px] text-slate-400 mt-0.5">{banglaDate.date} • {banglaDate.banglaYear}</p>
+            <a href="/" onClick={onClose} className="inline-block bg-white px-2.5 py-1.5 rounded-lg shadow-sm">
+              <img
+                src="/brand-logo.svg"
+                alt="আলো আসবে"
+                className="h-8 w-auto object-contain"
+              />
+            </a>
+            <p className="text-[11px] text-slate-400 mt-1.5">{banglaDate.date} • {banglaDate.banglaYear}</p>
           </div>
           <button
             onClick={onClose}
@@ -121,7 +124,7 @@ export default function MobileDrawer({ isOpen, onClose }) {
 
         {/* Drawer Footer */}
         <div className="p-4 bg-slate-100 border-t border-slate-200 text-center text-xs text-slate-500">
-          <p className="font-serif-bangla text-slate-700 font-medium">আমাদের সংবাদ অনলাইন সংস্করণ</p>
+          <p className="font-serif-bangla text-slate-700 font-medium">আলো আসবে অনলাইন সংস্করণ</p>
           <p className="text-[11px] text-slate-400 mt-0.5">কপিরাইট © ২০২৬ সর্ত্ব সংরক্ষিত</p>
         </div>
       </div>
