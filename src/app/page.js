@@ -31,12 +31,6 @@ export default function Home() {
 
         {/* Latest 3 news emphasizing the most recent one with See More */}
         <CategoryScrollSection />
-
-        {/* 6. Editorial Opinion & Columns (সম্পাদকীয় ও মতামত) */}
-        <OpinionSection />
-
-        {/* 7. Multimedia Gallery (ভিডিও ও ছবির গল্প) */}
-        <MediaGallery />
       </main>
 
       {/* 8. Professional Newspaper Footer */}
