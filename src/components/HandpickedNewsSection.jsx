@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
-import { TrendingUp } from "lucide-react";
 import { handpickedNewsList } from "../data/handpickedNewsData";
-import { trendingNews } from "../data/newsData";
+import { categories, categoryNewsData } from "../data/newsData";
+import { temporaryNewsList } from "../data/temporaryNewsData";
+
 
 /**
  * HandpickedNewsSection (বাছাইকৃত সংবাদ)
@@ -12,16 +13,56 @@ import { trendingNews } from "../data/newsData";
  * - First column (Width 2): Handpicked news
  *   - 1 news: Takes the whole space
  *   - 2 news: Divides space and takes horizontal space (side-by-side)
- *   - 3 or 4 news: 2x2 grid with equal square spaces for each corner
- *   - #No borders, no other informations on the card (only image and headline)
- * - Second column (Width 1): Complementary sidebar (Trending / Most Read news)
+ *   - 3 or 4 news: 2x2 grid with equal space for each corner
+ *   - #No borders, only image, headline, and summary lines
+ * - Second column (Width 1): Latest single news from each category
+ *   - Takes the exact same height as the first column
+ *   - Has its own scrollbar
+ *   - Card: Left side image, right side headline with category name at bottom
  */
 export default function HandpickedNewsSection({ newsList = handpickedNewsList }) {
   // Ensure we display up to 4 items in the handpicked section
   const displayNews = newsList.slice(0, 4);
   const count = displayNews.length;
 
+  // Extract latest single news from each category
+  const latestCategoryNews = React.useMemo(() => {
+    const result = [];
+    const seenCategories = new Set();
+
+    categories.forEach((cat) => {
+      if (cat.slug === "latest") return;
+      const list = categoryNewsData[cat.slug];
+      if (list && list.length > 0) {
+        result.push({
+          id: list[0].id,
+          headline: list[0].headline,
+          image: list[0].image,
+          category: list[0].category || cat.name,
+          categorySlug: cat.slug,
+        });
+        seenCategories.add(cat.slug);
+      }
+    });
+
+    temporaryNewsList.forEach((news) => {
+      if (news.categorySlug && !seenCategories.has(news.categorySlug)) {
+        result.push({
+          id: news.id,
+          headline: news.headline,
+          image: news.image,
+          category: news.category,
+          categorySlug: news.categorySlug,
+        });
+        seenCategories.add(news.categorySlug);
+      }
+    });
+
+    return result;
+  }, []);
+
   if (count === 0) return null;
+
 
   return (
     <section id="handpicked" className="py-6 sm:py-8 bg-white border-b border-slate-200">
@@ -135,51 +176,57 @@ export default function HandpickedNewsSection({ newsList = handpickedNewsList })
           </div>
 
           {/* =========================================================================
-              SECOND COLUMN (Ratio 1) - Sidebar (সর্বাধিক পঠিত / Trending News)
+              SECOND COLUMN (Ratio 1) - Latest Single News From Each Category
+              Takes the exact same height as the first column with its own scroll bar
              ========================================================================= */}
-          <div className="lg:col-span-1 flex flex-col gap-6">
-            
-            {/* Sidebar Header */}
-            <div className="flex items-center gap-2 border-b-2 border-slate-900 pb-3">
-              <TrendingUp className="w-5 h-5 text-red-600" />
-              <h3 className="font-serif-bangla text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-                সর্বাধিক পঠিত
-              </h3>
-            </div>
+          <div className="lg:col-span-1 relative min-h-[380px] lg:min-h-0 lg:h-full">
+            <div className="flex flex-col h-full lg:absolute lg:inset-0">
+              
+              {/* Sidebar Header */}
+              <div className="flex items-center gap-2.5 border-b-2 border-slate-900 pb-3 mb-3 shrink-0">
+                <span className="w-2.5 h-6 bg-red-600 inline-block"></span>
+                <h3 className="font-serif-bangla text-2xl font-bold text-slate-900 tracking-tight">
+                  বিভাগ অনুযায়ী সর্বশেষ
+                </h3>
+              </div>
 
-            {/* Trending News List */}
-            <div className="flex flex-col divide-y divide-slate-100">
-              {trendingNews.slice(0, 5).map((item) => (
-                <article key={item.id} className="group py-3 first:pt-0 last:pb-0 flex items-start gap-3.5">
-                  {/* Rank indicator */}
-                  <span className="font-serif-bangla font-extrabold text-2xl text-slate-300 group-hover:text-red-600 transition-colors shrink-0 w-6 text-center leading-none mt-0.5">
-                    {item.rank}
-                  </span>
-                  
-                  {/* Headline & views */}
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-serif-bangla text-sm sm:text-[15px] font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors line-clamp-2">
-                      <a href={`#trending-${item.id}`}>
-                        {item.headline}
+              {/* Scrollable News List */}
+              <div className="flex-1 min-h-0 overflow-y-auto pr-2 divide-y divide-slate-100 custom-scrollbar">
+                {latestCategoryNews.map((item) => (
+                  <article
+                    key={`${item.categorySlug}-${item.id}`}
+                    className="group flex flex-row items-center gap-3 py-3 first:pt-0 last:pb-0"
+                  >
+                    {/* Image on the left side */}
+                    <div className="w-24 h-16 sm:w-28 sm:h-18 shrink-0 overflow-hidden bg-slate-100">
+                      <a href={`#news-${item.id}`} className="block w-full h-full">
+                        <img
+                          src={item.image}
+                          alt={item.headline}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
                       </a>
-                    </h4>
-                    {item.views && (
-                      <span className="text-[11px] text-slate-400 mt-1 inline-block">
-                        {item.views}
-                      </span>
-                    )}
-                  </div>
-                </article>
-              ))}
-            </div>
+                    </div>
 
-            {/* Complementary Advertisement Block */}
-            <div className="w-full bg-slate-100/90 rounded-xs flex flex-col items-center justify-center p-4 min-h-[160px] text-center border-dashed border-2 border-slate-200 mt-2">
-              <span className="text-[11px] font-semibold text-slate-400 mb-1 uppercase tracking-wider">
-                বিজ্ঞাপন
-              </span>
-            </div>
+                    {/* Right side: headline and category name on bottom */}
+                    <div className="flex flex-col justify-between flex-1 min-w-0 h-full py-0.5">
+                      <h4 className="font-serif-bangla text-sm sm:text-[15px] font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors line-clamp-2">
+                        <a href={`#news-${item.id}`}>
+                          {item.headline}
+                        </a>
+                      </h4>
+                      <div className="mt-1.5 flex items-center">
+                        <span className="text-xs font-semibold text-red-600 hover:underline">
+                          {item.category}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
 
+            </div>
           </div>
 
         </div>
