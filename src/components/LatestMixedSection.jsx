@@ -46,21 +46,6 @@ export default function LatestMixedSection() {
                 />
               ))}
             </div>
-
-            {/* Bottom See More Banner */}
-            <div className="bg-gradient-to-r from-red-600 to-red-700 rounded-xl p-3.5 text-white flex items-center justify-between shadow-xs">
-              <div>
-                <h4 className="font-bold text-sm font-serif-bangla">সব বিভাগের সর্বশেষ খবর পেতে চান?</h4>
-                <p className="text-[11px] text-red-100">প্রতি মিনিটে আপডেট হচ্ছে আমাদের সংবাদ প্রবাহ</p>
-              </div>
-              <a
-                href="#all-latest"
-                className="shrink-0 bg-white text-red-700 hover:bg-red-50 text-xs font-bold px-3 py-1.5 rounded-md shadow-xs transition-colors flex items-center gap-1"
-              >
-                আরও দেখুন
-                <ArrowRight className="w-3.5 h-3.5" />
-              </a>
-            </div>
           </div>
         </div>
       </div>

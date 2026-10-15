@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { ArrowRight, ChevronRight, Layers, Sparkles, SlidersHorizontal } from "lucide-react";
+import React from "react";
+import { ArrowRight, ChevronRight, Layers, Sparkles } from "lucide-react";
 import NewsArticleCard from "./NewsArticleCard";
 import { categories, categoryNewsData } from "../data/newsData";
 
@@ -11,69 +11,12 @@ import { categories, categoryNewsData } from "../data/newsData";
  * Bangla font and responsive for both desktop and phone.
  */
 export default function CategoryScrollSection() {
-  const [activeCategoryFilter, setActiveCategoryFilter] = useState("all");
-
-  // Filtered categories to display (or all main categories)
-  const displayCategories = activeCategoryFilter === "all"
-    ? categories.filter((c) => categoryNewsData[c.slug])
-    : categories.filter((c) => c.slug === activeCategoryFilter && categoryNewsData[c.slug]);
-
-  const scrollToCategory = (catSlug) => {
-    const el = document.getElementById(`cat-${catSlug}`);
-    if (el) {
-      const yOffset = -70; // offset for sticky navbar
-      const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
-      window.scrollTo({ top: y, behavior: "smooth" });
-    }
-  };
+  // All main categories with news data
+  const displayCategories = categories.filter((c) => categoryNewsData[c.slug]);
 
   return (
     <section className="py-8 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Sticky / Quick Jump Bar for Category Scroll */}
-        <div className="sticky top-12 z-30 bg-white/95 backdrop-blur-md py-3 border-y border-slate-200 mb-8 -mx-4 px-4 sm:mx-0 sm:px-0 sm:rounded-xl sm:border shadow-2xs">
-          <div className="flex items-center justify-between gap-3 overflow-x-auto scrollbar-none">
-            <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 shrink-0">
-              <SlidersHorizontal className="w-4 h-4 text-red-600" />
-              <span className="hidden sm:inline">বিভাগভিত্তিক স্ক্রল:</span>
-            </div>
-
-            <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
-              <button
-                onClick={() => setActiveCategoryFilter("all")}
-                className={`px-3 py-1 text-xs font-semibold rounded-full transition-all shrink-0 ${
-                  activeCategoryFilter === "all"
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                সব বিভাগ স্ক্রল
-              </button>
-
-              {categories
-                .filter((c) => categoryNewsData[c.slug])
-                .map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      if (activeCategoryFilter !== "all") {
-                        setActiveCategoryFilter("all");
-                      }
-                      setTimeout(() => scrollToCategory(cat.slug), 50);
-                    }}
-                    className={`px-3 py-1 text-xs font-medium rounded-full transition-all shrink-0 ${
-                      activeCategoryFilter === cat.slug
-                        ? "bg-red-600 text-white shadow-xs font-bold"
-                        : "bg-slate-100 text-slate-700 hover:bg-red-50 hover:text-red-700"
-                    }`}
-                  >
-                    {cat.name}
-                  </button>
-                ))}
-            </div>
-          </div>
-        </div>
-
         {/* Categories Feed: Each main category with Latest 3 news (emphasizing #1) + See more */}
         <div className="space-y-12">
           {displayCategories.map((cat, catIdx) => {
