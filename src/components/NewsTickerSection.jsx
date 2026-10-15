@@ -49,7 +49,7 @@ export default function NewsTickerSection() {
       {/* 1. BREAKING NEWS SECTION (High Attraction / Attention-Grabbing) */}
       {/* ======================================================== */}
       <div
-        className="w-full bg-gradient-to-r from-red-700 via-red-600 to-rose-700 text-white shadow-sm border-b border-red-800/80 relative overflow-hidden"
+        className="w-full bg-gradient-to-r from-red-500 to-red-500 text-white shadow-sm border-b border-red-800/80 relative overflow-hidden"
         onMouseEnter={() => setIsHoveredBreaking(true)}
         onMouseLeave={() => setIsHoveredBreaking(false)}
       >
@@ -64,7 +64,7 @@ export default function NewsTickerSection() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-300 opacity-80"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
               </span>
-              <Flame className="w-4 h-4 text-amber-300 shrink-0" />
+              {/* <Flame className="w-4 h-4 text-amber-300 shrink-0" /> */}
               <span className="whitespace-nowrap">ব্রেকিং নিউজ</span>
             </div>
 
@@ -81,14 +81,6 @@ export default function NewsTickerSection() {
                 >
                   {currentBreaking.headline}
                 </a>
-
-                {/* Time Stamp Badge */}
-                {currentBreaking.time && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-black/25 text-red-100 text-[11px] font-normal shrink-0 hidden md:inline-flex whitespace-nowrap">
-                    <Clock className="w-3 h-3 text-amber-300" />
-                    {currentBreaking.time}
-                  </span>
-                )}
               </div>
             </div>
 
