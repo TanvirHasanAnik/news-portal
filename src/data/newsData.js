@@ -579,6 +579,8 @@ export const opinionArticles = [
   },
 ];
 
-// Re-export temporary news objects
+// Re-export temporary news objects and handpicked news
 export { temporaryNewsList, getSortedNewsByTime } from "./temporaryNewsData";
+export { handpickedNewsList } from "./handpickedNewsData";
+
 

@@ -1,6 +1,7 @@
 import Header from "../components/Header";
 import NewsTickerSection from "../components/NewsTickerSection";
 import LatestMixedSection from "../components/LatestMixedSection";
+import HandpickedNewsSection from "../components/HandpickedNewsSection";
 import CategoryScrollSection from "../components/CategoryScrollSection";
 import OpinionSection from "../components/OpinionSection";
 import MediaGallery from "../components/MediaGallery";
@@ -23,7 +24,11 @@ export default function Home() {
         {/* Latest 3 news emphasizing the most recent one with See More */}
         <LatestMixedSection />
 
-        {/* 5. Requirement 3: Scroll For each main category */}
+        {/* 5. Handpicked News Section (বাছাইকৃত সংবাদ) - Column ratio 2:1 */}
+        <HandpickedNewsSection />
+
+        {/* 6. Requirement 3: Scroll For each main category */}
+
         {/* Latest 3 news emphasizing the most recent one with See More */}
         <CategoryScrollSection />
 

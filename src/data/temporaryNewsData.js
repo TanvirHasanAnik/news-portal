@@ -138,3 +138,6 @@ export const getSortedNewsByTime = (list = temporaryNewsList) => {
   );
 };
 
+export { handpickedNewsList } from "./handpickedNewsData";
+
+
