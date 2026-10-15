@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import {
   Search,
   Menu,
-  ChevronDown,
+  Home,
 } from "lucide-react";
 import { categories } from "../data/newsData";
 import MobileDrawer from "./MobileDrawer";
@@ -22,7 +22,6 @@ import {
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [hoveredCategory, setHoveredCategory] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [dates, setDates] = useState({
@@ -188,58 +187,30 @@ export default function Header() {
         </div>
       </div>
 
-      {/* 2. CATEGORY & SUBCATEGORY MENU BAR (Desktop Only - Sticky + Dropdowns) */}
-      <nav className="hidden lg:block sticky top-0 z-40 bg-red-700 text-white shadow-md">
+      {/* 2. CATEGORY MENU BAR (Desktop Only - Sticky, White & Centered) */}
+      <nav className="hidden lg:block sticky top-0 z-40 bg-white border-y border-slate-200 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            {/* Category Links with Hover Subcategory Menus */}
-            <div className="flex items-center divide-x divide-red-800/60 font-semibold text-sm">
+          <div className="flex items-center justify-center">
+            {/* Centered Category Links with Home button */}
+            <div className="flex items-center justify-center flex-wrap divide-x divide-slate-200 text-base font-bold">
               <a
-                href="#"
-                className="px-3.5 py-3 hover:bg-red-800 transition-colors flex items-center gap-1"
+                href="/"
+                title="হোম পেজ"
+                className="px-4.5 py-3.5 text-slate-800 hover:text-red-600 hover:bg-slate-50 transition-colors flex items-center gap-2 whitespace-nowrap tracking-wide"
               >
-                প্রচ্ছদ
+                <Home className="w-5 h-5 text-red-600 shrink-0" />
+                <span>প্রচ্ছদ</span>
               </a>
 
-              {categories.map((cat) => {
-                const hasSubs = cat.subcategories && cat.subcategories.length > 0;
-                return (
-                  <div
-                    key={cat.id}
-                    className="relative group"
-                    onMouseEnter={() => setHoveredCategory(cat.id)}
-                    onMouseLeave={() => setHoveredCategory(null)}
-                  >
-                    <a
-                      href={`#cat-${cat.slug}`}
-                      className="px-3.5 py-3 hover:bg-red-800 transition-colors flex items-center gap-1 whitespace-nowrap"
-                    >
-                      {cat.name}
-                      {hasSubs && (
-                        <ChevronDown className="w-3.5 h-3.5 text-red-200 group-hover:rotate-180 transition-transform duration-200" />
-                      )}
-                    </a>
-
-                    {/* Subcategories Dropdown Panel */}
-                    {hasSubs && (
-                      <div className="absolute top-full left-0 w-52 bg-white text-slate-800 shadow-xl rounded-b-lg border-t-2 border-red-600 border-x border-b border-slate-200 py-2 hidden group-hover:block transition-all duration-200 z-50">
-                        <div className="px-3 py-1 text-[11px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1">
-                          {cat.name} উপবিভাগ
-                        </div>
-                        {cat.subcategories.map((sub, idx) => (
-                          <a
-                            key={idx}
-                            href={`#cat-${cat.slug}`}
-                            className="block px-3.5 py-1.5 text-xs text-slate-700 hover:bg-red-50 hover:text-red-700 transition-colors font-medium"
-                          >
-                            {sub}
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {categories.map((cat) => (
+                <a
+                  key={cat.id}
+                  href={`#cat-${cat.slug}`}
+                  className="px-4.5 py-3.5 text-slate-700 hover:text-red-600 hover:bg-slate-50 transition-colors whitespace-nowrap tracking-wide"
+                >
+                  {cat.name}
+                </a>
+              ))}
             </div>
           </div>
         </div>
