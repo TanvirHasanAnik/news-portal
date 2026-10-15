@@ -57,32 +57,6 @@ export default function CategoryScrollSection() {
                         {cat.name}
                       </h3>
                     </div>
-
-                    {/* Subcategories quick links */}
-                    {cat.subcategories && cat.subcategories.length > 0 && (
-                      <div className="hidden md:flex items-center gap-2 pl-3 border-l border-slate-300 text-xs text-slate-500">
-                        {cat.subcategories.slice(0, 4).map((sub, sIdx) => (
-                          <a
-                            key={sIdx}
-                            href={`#${cat.slug}-${sub}`}
-                            className="hover:text-red-600 hover:underline transition-colors"
-                          >
-                            {sub}
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* "See More" Button in Category Header */}
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={`#category-${cat.slug}`}
-                      className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-800 hover:text-red-700 bg-slate-100 hover:bg-red-50 border border-slate-200 hover:border-red-200 px-3 py-1.5 rounded-lg transition-all group"
-                    >
-                      <span>{cat.name} এর আরও সংবাদ</span>
-                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                    </a>
                   </div>
                 </div>
 
@@ -103,17 +77,6 @@ export default function CategoryScrollSection() {
                       className="h-full"
                     />
                   ))}
-                </div>
-
-                {/* Bottom Category See More Banner / Link */}
-                <div className="pt-4 text-right">
-                  <a
-                    href={`#category-${cat.slug}`}
-                    className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-red-700 hover:text-red-800 hover:underline"
-                  >
-                    <span>{cat.name} বিভাগের সব খবর পড়ুন</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </a>
                 </div>
               </div>
             );
