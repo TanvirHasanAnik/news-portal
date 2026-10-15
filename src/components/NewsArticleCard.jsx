@@ -20,6 +20,7 @@ export default function NewsArticleCard({
   news,
   variant = "standard",
   showCategory = true,
+  showTime = false,
   className = "",
 }) {
   const [copied, setCopied] = useState(false);
@@ -35,6 +36,7 @@ export default function NewsArticleCard({
     summary,
     image,
     publishedAt,
+    time,
     author,
     location,
     isMostRecent,
@@ -140,10 +142,12 @@ export default function NewsArticleCard({
               )}
             </div>
 
-            <div className="flex items-center gap-1 font-medium text-slate-500 shrink-0">
-              <Clock className="w-3.5 h-3.5 text-red-600" />
-              <span>{publishedAt}</span>
-            </div>
+            {showTime && (publishedAt || time) && (
+              <div className="flex items-center gap-1 font-medium text-slate-500 shrink-0">
+                <Clock className="w-3.5 h-3.5 text-red-600" />
+                <span>{publishedAt || time}</span>
+              </div>
+            )}
           </div>
         </div>
       </article>
@@ -189,16 +193,19 @@ export default function NewsArticleCard({
             )}
           </div>
 
-          {/* Publish Time & Meta */}
+          {/* Metadata */}
           <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
-            <span className="flex items-center gap-1 text-slate-500">
-              <Clock className="w-3 h-3 text-red-600" />
-              {publishedAt}
-            </span>
-
             {location && (
-              <span className="text-[11px] text-slate-400 hidden xs:inline">
+              <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                <MapPin className="w-3 h-3 text-slate-400" />
                 {location}
+              </span>
+            )}
+
+            {showTime && (publishedAt || time) && (
+              <span className="flex items-center gap-1 text-slate-500">
+                <Clock className="w-3 h-3 text-red-600" />
+                {publishedAt || time}
               </span>
             )}
           </div>
@@ -245,17 +252,19 @@ export default function NewsArticleCard({
           )}
         </div>
 
-        {/* Publish Time Footer */}
+        {/* Footer */}
         <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 text-xs text-slate-500">
-          <div className="flex items-center gap-1">
-            <Clock className="w-3 h-3 text-red-600" />
-            <span>{publishedAt}</span>
-          </div>
-
           {author && (
-            <span className="text-slate-400 text-[11px] truncate max-w-[120px]">
+            <span className="text-slate-600 font-medium text-[11px] truncate max-w-[120px]">
               {author}
             </span>
+          )}
+
+          {showTime && (publishedAt || time) && (
+            <div className="flex items-center gap-1">
+              <Clock className="w-3 h-3 text-red-600" />
+              <span>{publishedAt || time}</span>
+            </div>
           )}
         </div>
       </div>
