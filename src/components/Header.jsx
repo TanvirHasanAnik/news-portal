@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Search,
   Menu,
   Home,
+  ChevronDown,
 } from "lucide-react";
 import { categories } from "../data/newsData";
 import MobileDrawer from "./MobileDrawer";
@@ -29,6 +30,119 @@ export default function Header() {
     bangla: "৩০ আশ্বিন ১৪৩৩ বঙ্গাব্দ",
     hijri: "৪ জমাদিউল আউয়াল ১৪৪৮ হিজরি",
   });
+
+  // All categories for navigation (with Latest/সর্বশেষ first)
+  const allNavCategories = [
+    { id: "latest", name: "সর্বশেষ", slug: "latest" },
+    ...categories.filter((c) => c.slug !== "latest"),
+  ];
+
+  // Overflow categories dropdown state
+  const [visibleCount, setVisibleCount] = useState(allNavCategories.length);
+  const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
+
+  const navContainerRef = useRef(null);
+  const homeRef = useRef(null);
+  const itemRefs = useRef([]);
+  const itemWidthsRef = useRef([]);
+  const moreDropdownRef = useRef(null);
+
+  const visibleCategories = allNavCategories.slice(0, visibleCount);
+  const overflowCategories = allNavCategories.slice(visibleCount);
+
+  // Responsive calculation: if categories overflow header content cap, drop missed into right dropdown
+  const calculateVisible = () => {
+    if (!navContainerRef.current) return;
+    const containerWidth = navContainerRef.current.clientWidth;
+    if (!containerWidth) return;
+
+    // Capture widths of items once
+    if (itemRefs.current.length > 0 && itemWidthsRef.current.length < allNavCategories.length) {
+      const measured = itemRefs.current.map((el) => (el ? el.getBoundingClientRect().width : 0));
+      if (measured.length >= allNavCategories.length && measured.every((w) => w > 0)) {
+        itemWidthsRef.current = measured;
+      }
+    }
+
+    const widths = itemWidthsRef.current;
+    if (!widths || widths.length === 0) return;
+
+    const homeWidth = homeRef.current ? homeRef.current.getBoundingClientRect().width : 56;
+    const moreBtnReserve = 96; // Space for "আরও ▾" button
+
+    const totalNeeded = homeWidth + widths.reduce((sum, w) => sum + w, 0);
+
+    if (totalNeeded <= containerWidth) {
+      setVisibleCount(allNavCategories.length);
+    } else {
+      let available = containerWidth - homeWidth - moreBtnReserve;
+      let count = 0;
+      for (let i = 0; i < widths.length; i++) {
+        if (available - widths[i] < 0) {
+          break;
+        }
+        available -= widths[i];
+        count++;
+      }
+      setVisibleCount(Math.max(1, count));
+    }
+  };
+
+  useEffect(() => {
+    // Initial measurement
+    calculateVisible();
+
+    // Re-measure when fonts finish loading (Bangla font metric changes)
+    if (typeof document !== "undefined" && document.fonts) {
+      document.fonts.ready.then(() => {
+        if (itemRefs.current.length >= allNavCategories.length) {
+          itemWidthsRef.current = itemRefs.current.map((el) => (el ? el.getBoundingClientRect().width : 0));
+        }
+        calculateVisible();
+      });
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      calculateVisible();
+    });
+
+    if (navContainerRef.current) {
+      resizeObserver.observe(navContainerRef.current);
+    }
+
+    window.addEventListener("resize", calculateVisible);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", calculateVisible);
+    };
+  }, []);
+
+  // Close "আরও" dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (moreDropdownRef.current && !moreDropdownRef.current.contains(e.target)) {
+        setMoreDropdownOpen(false);
+      }
+    };
+    if (moreDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [moreDropdownOpen]);
+
+  // Close "আরও" dropdown on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setMoreDropdownOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   useEffect(() => {
     setDates({
@@ -192,28 +306,78 @@ export default function Header() {
       {/* 2. CATEGORY MENU BAR (Sticky top-0 across page scroll) */}
       <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Desktop Category Bar */}
-          <div className="hidden lg:flex items-center justify-center">
-            {/* Centered Category Links with Home button */}
-            <div className="flex items-center justify-center flex-wrap divide-x divide-slate-200 text-base font-medium">
+          {/* Desktop Category Bar with Dynamic Overflow "আরও" Dropdown */}
+          <div ref={navContainerRef} className="hidden lg:flex items-center justify-center w-full min-w-0">
+            {/* Centered Category Links with Home button - flex-nowrap prevents multi-line wrap */}
+            <div className="flex items-center justify-center flex-nowrap divide-x divide-slate-200 text-base font-medium min-w-0">
               <a
+                ref={homeRef}
                 href="/"
                 title="হোম পেজ"
-                className="px-4.5 py-3.5 text-slate-800 hover:text-red-600 hover:bg-slate-50 transition-colors flex items-center gap-2 whitespace-nowrap"
+                className="px-4.5 py-3.5 text-slate-800 hover:text-red-600 hover:bg-slate-50 transition-colors flex items-center gap-2 whitespace-nowrap shrink-0"
               >
                 <Home className="w-5 h-5 text-red-600 shrink-0" />
               </a>
 
-              {/* Latest (সর্বশেষ) as first category, followed by other categories */}
-              {[{ id: "latest", name: "সর্বশেষ", slug: "latest" }, ...categories.filter((c) => c.slug !== "latest")].map((cat) => (
+              {/* Categories that fit inside the header content cap */}
+              {visibleCategories.map((cat, idx) => (
                 <a
                   key={cat.id}
+                  ref={(el) => {
+                    itemRefs.current[idx] = el;
+                  }}
                   href={cat.slug === "latest" ? "#latest" : `#cat-${cat.slug}`}
-                  className="px-4.5 py-3.5 text-xl text-slate-950 hover:text-red-600 hover:bg-slate-50 transition-colors whitespace-nowrap tracking-wide"
+                  className="px-4.5 py-3.5 text-xl text-slate-950 hover:text-red-600 hover:bg-slate-50 transition-colors whitespace-nowrap tracking-wide shrink-0"
                 >
                   {cat.name}
                 </a>
               ))}
+
+              {/* Overflow Dropdown Button on the right for missed categories */}
+              {overflowCategories.length > 0 && (
+                <div className="relative shrink-0" ref={moreDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setMoreDropdownOpen((prev) => !prev)}
+                    className={`px-4.5 py-3.5 text-xl font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap select-none cursor-pointer ${
+                      moreDropdownOpen
+                        ? "text-red-600 bg-red-50/70"
+                        : "text-slate-950 hover:text-red-600 hover:bg-slate-50"
+                    }`}
+                    aria-expanded={moreDropdownOpen}
+                    aria-label="আরও বিভাগ দেখুন"
+                    title="আরও বিভাগ"
+                  >
+                    <span>আরও</span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        moreDropdownOpen ? "rotate-180 text-red-600" : "text-slate-500"
+                      }`}
+                    />
+                  </button>
+
+                  {/* Dropdown Menu of missed categories */}
+                  {moreDropdownOpen && (
+                    <div className="absolute right-0 top-full mt-1 w-48 sm:w-56 bg-white rounded-lg shadow-xl border border-slate-200 py-1.5 z-50 divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2 duration-150">
+                      <div className="px-3.5 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        অন্যান্য বিভাগ
+                      </div>
+                      <div className="py-1">
+                        {overflowCategories.map((cat) => (
+                          <a
+                            key={cat.id}
+                            href={cat.slug === "latest" ? "#latest" : `#cat-${cat.slug}`}
+                            onClick={() => setMoreDropdownOpen(false)}
+                            className="block px-4 py-2 text-base font-semibold text-slate-800 hover:bg-red-50 hover:text-red-600 transition-colors"
+                          >
+                            {cat.name}
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -226,7 +390,7 @@ export default function Header() {
             >
               <Home className="w-4 h-4 text-red-600" />
             </a>
-            {[{ id: "latest", name: "সর্বশেষ", slug: "latest" }, ...categories.filter((c) => c.slug !== "latest")].map((cat) => (
+            {allNavCategories.map((cat) => (
               <a
                 key={cat.id}
                 href={cat.slug === "latest" ? "#latest" : `#cat-${cat.slug}`}

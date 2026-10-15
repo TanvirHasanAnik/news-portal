@@ -3,8 +3,6 @@ import NewsTickerSection from "../components/NewsTickerSection";
 import LatestMixedSection from "../components/LatestMixedSection";
 import HandpickedNewsSection from "../components/HandpickedNewsSection";
 import CategoryScrollSection from "../components/CategoryScrollSection";
-import OpinionSection from "../components/OpinionSection";
-import MediaGallery from "../components/MediaGallery";
 import Footer from "../components/Footer";
 
 export default function Home() {
