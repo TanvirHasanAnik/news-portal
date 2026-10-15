@@ -99,7 +99,7 @@ export default function CategoryScrollSection() {
                       news={story}
                       variant="standard"
                       showCategory={false}
-                      showTime={true}
+                      showTime={false}
                       className="h-full"
                     />
                   ))}

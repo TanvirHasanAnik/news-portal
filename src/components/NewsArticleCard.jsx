@@ -215,67 +215,38 @@ export default function NewsArticleCard({
     );
   }
 
-  // 3. STANDARD VERTICAL VARIANT
+  // 3. STANDARD VERTICAL VARIANT (Editorial layout: Image, Headline, Summary only)
   return (
-    <article
-      className={`group flex flex-col justify-between overflow-hidden rounded-xl bg-white border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-300 ${className}`}
-    >
-      {/* Featured Image */}
+    <article className={`group flex flex-col justify-between bg-transparent ${className}`}>
+      {/* Featured Image - no border radius, no border */}
       <div
         className={`relative aspect-[16/9] sm:aspect-[2.2/1] max-h-[170px] sm:max-h-[190px] md:max-h-[200px] w-full overflow-hidden bg-slate-100 ${imageClassName}`}
       >
-        <img
-          src={image}
-          alt={headline}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-        />
-        {showCategory && category && (
-          <span className="absolute top-2.5 left-2.5 rounded bg-red-600 px-2 py-0.5 text-[11px] font-semibold text-white shadow-xs">
-            {category}
-          </span>
-        )}
-        {isMostRecent && (
-          <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 rounded bg-amber-500/95 backdrop-blur-xs px-2 py-0.5 text-[10px] font-bold text-slate-900 shadow-xs animate-pulse">
-            <span className="h-1.5 w-1.5 rounded-full bg-red-600"></span>
-            এইমাত্র প্রকাশিত
-          </span>
-        )}
+        <a href={`#news-${id}`} className="block h-full w-full">
+          <img
+            src={image}
+            alt={headline}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+          />
+        </a>
       </div>
 
-      {/* Content */}
-      <div className="p-3.5 sm:p-4 flex flex-col flex-1 justify-between">
-        <div>
-          {/* Headline */}
-          <h3 className="font-serif-bangla text-base sm:text-lg font-bold text-slate-900 leading-snug group-hover:text-red-700 transition-colors line-clamp-2 mb-2">
-            <a href={`#news-${id}`} className="focus:outline-none">
-              {headline}
-            </a>
-          </h3>
+      {/* Content: Headline and Summary only */}
+      <div className="pt-3 flex flex-col flex-1">
+        {/* Headline */}
+        <h3 className="font-serif-bangla text-base sm:text-lg lg:text-xl font-bold text-slate-900 leading-snug group-hover:text-red-700 transition-colors line-clamp-2 mb-2">
+          <a href={`#news-${id}`} className="focus:outline-none">
+            {headline}
+          </a>
+        </h3>
 
-          {/* Article Summary Paragraph */}
-          {summary && (
-            <p className="text-slate-600 text-xs sm:text-sm leading-relaxed line-clamp-2 mb-3">
-              {summary}
-            </p>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 text-xs text-slate-500">
-          {author && (
-            <span className="text-slate-600 font-medium text-[11px] truncate max-w-[120px]">
-              {author}
-            </span>
-          )}
-
-          {showTime && (publishedAt || time) && (
-            <div className="flex items-center gap-1">
-              <Clock className="w-3 h-3 text-red-600" />
-              <span>{publishedAt || time}</span>
-            </div>
-          )}
-        </div>
+        {/* Article Summary Paragraph */}
+        {summary && (
+          <p className="text-slate-600 text-xs sm:text-sm leading-relaxed line-clamp-2 font-normal">
+            {summary}
+          </p>
+        )}
       </div>
     </article>
   );
