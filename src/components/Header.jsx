@@ -303,11 +303,11 @@ export default function Header() {
       </div>
     </header>
 
-      {/* 2. CATEGORY MENU BAR (Sticky top-0 across page scroll) */}
-      <nav className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
+      {/* 2. CATEGORY MENU BAR (Sticky top-0 across page scroll on desktop) */}
+      <nav className="hidden lg:block sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Desktop Category Bar with Dynamic Overflow "আরও" Dropdown */}
-          <div ref={navContainerRef} className="hidden lg:flex items-center justify-center w-full min-w-0">
+          <div ref={navContainerRef} className="flex items-center justify-center w-full min-w-0">
             {/* Centered Category Links with Home button - flex-nowrap prevents multi-line wrap */}
             <div className="flex items-center justify-center flex-nowrap divide-x divide-slate-200 text-base font-medium min-w-0">
               <a
@@ -379,26 +379,6 @@ export default function Header() {
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Mobile Category Bar (Horizontal swipeable so mobile users also get sticky categories) */}
-          <div className="lg:hidden flex items-center overflow-x-auto scrollbar-none py-2.5 gap-2 -mx-2 px-2 text-sm font-medium">
-            <a
-              href="/"
-              className="p-1.5 rounded-lg text-slate-700 hover:text-red-600 hover:bg-slate-100 shrink-0"
-              title="হোম পেজ"
-            >
-              <Home className="w-4 h-4 text-red-600" />
-            </a>
-            {allNavCategories.map((cat) => (
-              <a
-                key={cat.id}
-                href={cat.slug === "latest" ? "#latest" : `#cat-${cat.slug}`}
-                className="px-3 py-1 text-slate-800 hover:text-red-600 hover:bg-slate-100 rounded-md shrink-0 whitespace-nowrap text-sm font-semibold"
-              >
-                {cat.name}
-              </a>
-            ))}
           </div>
         </div>
       </nav>
