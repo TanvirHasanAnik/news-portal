@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { categories } from "../data/newsData";
 import MobileDrawer from "./MobileDrawer";
+import NewsTickerSection from "./NewsTickerSection";
 import {
   FacebookIcon,
   TwitterXIcon,
@@ -396,6 +397,9 @@ export default function Header() {
           </div>
         </div>
       </nav>
+
+      {/* 3. News Ticker Section (Breaking News & Headline Tickers) */}
+      <NewsTickerSection />
 
       {/* Mobile Drawer Navigation Modal */}
       <MobileDrawer
