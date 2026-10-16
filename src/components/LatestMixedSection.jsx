@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { temporaryNewsList, getSortedNewsByTime } from "../data/temporaryNewsData";
 

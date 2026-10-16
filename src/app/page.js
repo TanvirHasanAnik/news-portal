@@ -1,34 +1,19 @@
-import Header from "../components/Header";
 import LatestMixedSection from "../components/LatestMixedSection";
 import HandpickedNewsSection from "../components/HandpickedNewsSection";
 import CategoryScrollSection from "../components/CategoryScrollSection";
-import Footer from "../components/Footer";
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
-      {/* 1. Top Banner Ad, Header, Category Navbar & News Tickers */}
-      <Header />
+    <>
+      {/* 1. Requirement 2: Latest Mixed Category Published Section */}
+      <LatestMixedSection />
 
-      {/* Main Content Flow */}
-      <main className="flex-1">
-        {/* 3. Featured / Lead News Section (শীর্ষ সংবাদ) */}
+      {/* 2. Handpicked News Section (বাছাইকৃত সংবাদ) - Column ratio 2:1 */}
+      <HandpickedNewsSection />
 
-        {/* 4. Requirement 2: Latest Mixed Category Published Section */}
-        {/* Latest 3 news emphasizing the most recent one with See More */}
-        <LatestMixedSection />
-
-        {/* 5. Handpicked News Section (বাছাইকৃত সংবাদ) - Column ratio 2:1 */}
-        <HandpickedNewsSection />
-
-        {/* 6. Requirement 3: Scroll For each main category */}
-
-        {/* Latest 3 news emphasizing the most recent one with See More */}
-        <CategoryScrollSection />
-      </main>
-
-      {/* 8. Professional Newspaper Footer */}
-      <Footer />
-    </div>
+      {/* 3. Requirement 3: Categorized news showcase sections */}
+      <CategoryScrollSection />
+    </>
   );
 }
+

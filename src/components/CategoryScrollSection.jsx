@@ -1,6 +1,5 @@
-"use client";
-
 import React from "react";
+import Link from "next/link";
 import { ArrowRight, ChevronRight } from "lucide-react";
 import NewsArticleCard from "./NewsArticleCard";
 import { categories, categoryNewsData } from "../data/newsData";
@@ -14,6 +13,7 @@ import { categories, categoryNewsData } from "../data/newsData";
  * - 3 news: adds another row on the bottom and takes bottom left cell for 3rd latest news
  * - 4 news: fills the 4th with the 2nd column of the bottom row
  * Bangla font and responsive for both desktop and phone.
+ * Rendered as a React Server Component (SSR).
  */
 export default function CategoryScrollSection() {
   // All main categories with news data
@@ -51,13 +51,27 @@ export default function CategoryScrollSection() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-slate-200 pb-3 mb-6">
                   {/* Category Title + Subcategories Pills */}
                   <div className="flex items-center gap-3 flex-wrap">
-                    <div className="flex items-center gap-2">
+                    <Link
+                      href={`/category/${cat.slug}`}
+                      className="flex items-center gap-2 group hover:text-red-600 transition-colors"
+                      title={`${cat.name} বিভাগের সব সংবাদ`}
+                    >
                       <span className={`w-3.5 h-7 rounded-xs ${bgColor}`}></span>
-                      <h3 className="font-serif-bangla text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                      <h3 className="font-serif-bangla text-2xl sm:text-3xl font-extrabold text-slate-900 group-hover:text-red-600 tracking-tight transition-colors">
                         {cat.name}
                       </h3>
-                    </div>
+                      <ChevronRight className="w-5 h-5 text-slate-400 group-hover:text-red-600 group-hover:translate-x-1 transition-all" />
+                    </Link>
                   </div>
+
+                  {/* See more link */}
+                  <Link
+                    href={`/category/${cat.slug}`}
+                    className="text-xs sm:text-sm font-semibold text-slate-600 hover:text-red-600 flex items-center gap-1 group transition-colors self-start sm:self-auto"
+                  >
+                    সব {cat.name} সংবাদ
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </Link>
                 </div>
 
                 {/* 2 Equal-Width Columns Grid

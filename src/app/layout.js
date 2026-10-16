@@ -1,5 +1,7 @@
 import localFont from "next/font/local";
 import "./globals.css";
+import Header from "../components/Header";
+import Footer from "../components/Footer";
 
 const solaimanLipi = localFont({
   src: [
@@ -29,7 +31,19 @@ export default function RootLayout({ children }) {
       lang="bn"
       className={`${solaimanLipi.variable} font-sans h-full antialiased`}
     >
-      <body className="min-h-full font-sans bg-slate-50 text-slate-900 selection:bg-red-500 selection:text-white flex flex-col">{children}</body>
+      <body className="min-h-full font-sans bg-slate-50 text-slate-900 selection:bg-red-500 selection:text-white flex flex-col">
+        {/* 1. Header with Top Ad Banner, Logo, Navigation & Tickers */}
+        <Header />
+
+        {/* 2. Main Page Content (Preserved across shared layout navigation) */}
+        <div className="flex-1">
+          {children}
+        </div>
+
+        {/* 3. Global Newspaper Footer */}
+        <Footer />
+      </body>
     </html>
   );
 }
+

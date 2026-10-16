@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Search,
   Menu,
@@ -22,7 +24,9 @@ import {
   getHijriDate,
 } from "../utils/dateUtils";
 
+
 export default function Header() {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -192,13 +196,13 @@ export default function Header() {
 
           {/* Central Mobile Brand Logo Image */}
           <div className="flex-1 flex justify-center overflow-hidden px-2">
-            <a href="/" className="inline-block">
+            <Link href="/" className="inline-block">
               <img
                 src="/brand-logo.svg"
                 alt="আলো আসবে"
                 className="h-10 sm:h-12 w-auto max-w-[240px] sm:max-w-[290px] object-contain"
               />
-            </a>
+            </Link>
           </div>
 
           {/* Mobile Search Toggle */}
@@ -247,13 +251,13 @@ export default function Header() {
 
           {/* Center Column: Brand logo name slogan as a single image */}
           <div className="flex items-center justify-center">
-            <a href="/" className="inline-block group focus:outline-none">
+            <Link href="/" className="inline-block group focus:outline-none">
               <img
                 src="/brand-logo.svg"
                 alt="আলো আসবে - সত্য ও সাহসের অগ্রদূত"
                 className="h-14 xl:h-16 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
               />
-            </a>
+            </Link>
           </div>
 
           {/* Right Column: Search bar and bottom of it social icons */}
@@ -325,28 +329,39 @@ export default function Header() {
           <div ref={navContainerRef} className="flex items-center justify-center w-full min-w-0">
             {/* Centered Category Links with Home button - flex-nowrap prevents multi-line wrap */}
             <div className="flex items-center justify-center flex-nowrap divide-x divide-slate-200 text-base font-medium min-w-0">
-              <a
+              <Link
                 ref={homeRef}
                 href="/"
                 title="হোম পেজ"
-                className="px-4.5 py-3.5 text-slate-800 hover:text-red-600 hover:bg-slate-50 transition-colors flex items-center gap-2 whitespace-nowrap shrink-0"
+                className={`px-4.5 py-3.5 transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
+                  pathname === "/"
+                    ? "text-red-600 bg-red-50/70 font-bold"
+                    : "text-slate-800 hover:text-red-600 hover:bg-slate-50"
+                }`}
               >
                 <Home className="w-5 h-5 text-red-600 shrink-0" />
-              </a>
+              </Link>
 
               {/* Categories that fit inside the header content cap */}
-              {visibleCategories.map((cat, idx) => (
-                <a
-                  key={cat.id}
-                  ref={(el) => {
-                    itemRefs.current[idx] = el;
-                  }}
-                  href={cat.slug === "latest" ? "#latest" : `#cat-${cat.slug}`}
-                  className="px-4.5 py-3.5 text-xl text-slate-950 hover:text-red-600 hover:bg-slate-50 transition-colors whitespace-nowrap tracking-wide shrink-0"
-                >
-                  {cat.name}
-                </a>
-              ))}
+              {visibleCategories.map((cat, idx) => {
+                const isActive = pathname === `/category/${cat.slug}`;
+                return (
+                  <Link
+                    key={cat.id}
+                    ref={(el) => {
+                      itemRefs.current[idx] = el;
+                    }}
+                    href={`/category/${cat.slug}`}
+                    className={`px-4.5 py-3.5 text-xl whitespace-nowrap tracking-wide shrink-0 transition-colors ${
+                      isActive
+                        ? "text-red-600 font-bold bg-red-50/70 border-b-2 border-red-600"
+                        : "text-slate-950 hover:text-red-600 hover:bg-slate-50"
+                    }`}
+                  >
+                    {cat.name}
+                  </Link>
+                );
+              })}
 
               {/* Overflow Dropdown Button on the right for missed categories */}
               {overflowCategories.length > 0 && (
@@ -355,7 +370,7 @@ export default function Header() {
                     type="button"
                     onClick={() => setMoreDropdownOpen((prev) => !prev)}
                     className={`px-4.5 py-3.5 text-xl font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap select-none cursor-pointer ${
-                      moreDropdownOpen
+                      moreDropdownOpen || overflowCategories.some((c) => pathname === `/category/${c.slug}`)
                         ? "text-red-600 bg-red-50/70"
                         : "text-slate-950 hover:text-red-600 hover:bg-slate-50"
                     }`}
@@ -378,16 +393,23 @@ export default function Header() {
                         অন্যান্য বিভাগ
                       </div>
                       <div className="py-1">
-                        {overflowCategories.map((cat) => (
-                          <a
-                            key={cat.id}
-                            href={cat.slug === "latest" ? "#latest" : `#cat-${cat.slug}`}
-                            onClick={() => setMoreDropdownOpen(false)}
-                            className="block px-4 py-2 text-base font-semibold text-slate-800 hover:bg-red-50 hover:text-red-600 transition-colors"
-                          >
-                            {cat.name}
-                          </a>
-                        ))}
+                        {overflowCategories.map((cat) => {
+                          const isActive = pathname === `/category/${cat.slug}`;
+                          return (
+                            <Link
+                              key={cat.id}
+                              href={`/category/${cat.slug}`}
+                              onClick={() => setMoreDropdownOpen(false)}
+                              className={`block px-4 py-2 text-base font-semibold transition-colors ${
+                                isActive
+                                  ? "bg-red-50 text-red-600 font-bold"
+                                  : "text-slate-800 hover:bg-red-50 hover:text-red-600"
+                              }`}
+                            >
+                              {cat.name}
+                            </Link>
+                          );
+                        })}
                       </div>
                     </div>
                   )}

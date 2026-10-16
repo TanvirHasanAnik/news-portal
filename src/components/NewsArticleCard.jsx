@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { Clock, MapPin, Share2, Bookmark, Check } from "lucide-react";
 
 /**
@@ -76,9 +77,19 @@ export default function NewsArticleCard({
           {/* Badges Overlay */}
           <div className="absolute top-3 left-3 flex flex-wrap gap-2 items-center">
             {showCategory && category && (
-              <span className="inline-block rounded bg-red-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm tracking-wide">
-                {category}
-              </span>
+              categorySlug ? (
+                <Link
+                  href={`/category/${categorySlug}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-block rounded bg-red-600 hover:bg-red-700 px-2.5 py-1 text-xs font-semibold text-white shadow-sm tracking-wide transition-colors"
+                >
+                  {category}
+                </Link>
+              ) : (
+                <span className="inline-block rounded bg-red-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm tracking-wide">
+                  {category}
+                </span>
+              )
             )}
             {isMostRecent && (
               <span className="inline-flex items-center gap-1 rounded bg-amber-500/95 backdrop-blur-sm px-2 py-0.5 text-[11px] font-bold text-slate-900 shadow-sm animate-pulse">

@@ -1,6 +1,5 @@
-"use client";
-
 import React from "react";
+import Link from "next/link";
 import { Feather, ArrowRight, Quote } from "lucide-react";
 import { opinionArticles } from "../data/newsData";
 
@@ -15,13 +14,13 @@ export default function OpinionSection() {
               মতামত ও সম্পাদকীয়
             </h2>
           </div>
-          <a
-            href="#all-opinion"
+          <Link
+            href="/category/opinion"
             className="text-xs sm:text-sm font-semibold text-red-600 hover:text-red-700 flex items-center gap-1 group"
           >
             সব কলাম দেখুন
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </a>
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

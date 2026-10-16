@@ -1,10 +1,14 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { categories, banglaDate } from "../data/newsData";
 
 export default function MobileDrawer({ isOpen, onClose }) {
+  const pathname = usePathname();
+
   if (!isOpen) return null;
 
   return (
@@ -20,13 +24,13 @@ export default function MobileDrawer({ isOpen, onClose }) {
         {/* Drawer Header */}
         <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
           <div>
-            <a href="/" onClick={onClose} className="inline-block bg-white px-2.5 py-1.5 rounded-lg shadow-sm">
+            <Link href="/" onClick={onClose} className="inline-block bg-white px-2.5 py-1.5 rounded-lg shadow-sm">
               <img
                 src="/brand-logo.svg"
                 alt="আলো আসবে"
                 className="h-8 w-auto object-contain"
               />
-            </a>
+            </Link>
             <p className="text-[11px] text-slate-400 mt-1.5">{banglaDate.date} • {banglaDate.banglaYear}</p>
           </div>
           <button
@@ -44,24 +48,35 @@ export default function MobileDrawer({ isOpen, onClose }) {
             প্রধান বিভাগসমূহ
           </div>
 
-          <a
+          <Link
             href="/"
             onClick={onClose}
-            className="block px-4 py-3 text-slate-800 font-semibold hover:bg-red-50 hover:text-red-700 transition-colors"
+            className={`block px-4 py-3 font-semibold transition-colors ${
+              pathname === "/"
+                ? "bg-red-50 text-red-600 font-bold"
+                : "text-slate-800 hover:bg-red-50 hover:text-red-700"
+            }`}
           >
             প্রচ্ছদ (হোম)
-          </a>
+          </Link>
 
-          {categories.map((cat) => (
-            <a
-              key={cat.id}
-              href={cat.slug === "latest" ? "#latest" : `#cat-${cat.slug}`}
-              onClick={onClose}
-              className="block px-4 py-3 font-medium text-slate-800 hover:bg-slate-50 hover:text-red-600 transition-colors"
-            >
-              {cat.name}
-            </a>
-          ))}
+          {categories.map((cat) => {
+            const isActive = pathname === `/category/${cat.slug}`;
+            return (
+              <Link
+                key={cat.id}
+                href={`/category/${cat.slug}`}
+                onClick={onClose}
+                className={`block px-4 py-3 font-medium transition-colors ${
+                  isActive
+                    ? "bg-red-50 text-red-600 font-bold border-l-4 border-red-600 pl-3"
+                    : "text-slate-800 hover:bg-slate-50 hover:text-red-600"
+                }`}
+              >
+                {cat.name}
+              </Link>
+            );
+          })}
         </div>
 
         {/* Drawer Footer */}

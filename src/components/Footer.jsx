@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import {
   MapPin,
   Phone,
@@ -28,19 +29,19 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Top Footer: Brand, Tagline, Socials & Back to Top */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-8 border-b border-slate-800">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-red-600 text-white flex items-center justify-center font-serif-bangla text-2xl font-black shadow-md">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-red-600 text-white flex items-center justify-center font-serif-bangla text-2xl font-black shadow-md group-hover:scale-105 transition-transform">
               খ
             </div>
             <div>
-              <h2 className="font-serif-bangla text-2xl sm:text-3xl font-black text-white">
+              <h2 className="font-serif-bangla text-2xl sm:text-3xl font-black text-white group-hover:text-red-400 transition-colors">
                 আমাদের সংবাদ
               </h2>
               <p className="text-xs text-slate-400">
                 সত্য ও সাহসের অগ্রদূত • THE LEADING BANGLADESHI DAILY
               </p>
             </div>
-          </div>
+          </Link>
 
           {/* Social Links & Back to Top */}
           <div className="flex items-center gap-4 flex-wrap">
@@ -150,9 +151,9 @@ export default function Footer() {
             <ul className="space-y-2 text-xs sm:text-sm text-slate-400">
               {categories.slice(0, 5).map((cat) => (
                 <li key={cat.id}>
-                  <a href={`#cat-${cat.slug}`} className="hover:text-red-400 transition-colors">
+                  <Link href={`/category/${cat.slug}`} className="hover:text-red-400 transition-colors">
                     {cat.name}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -166,9 +167,9 @@ export default function Footer() {
             <ul className="space-y-2 text-xs sm:text-sm text-slate-400">
               {categories.slice(5).map((cat) => (
                 <li key={cat.id}>
-                  <a href={`#cat-${cat.slug}`} className="hover:text-red-400 transition-colors">
+                  <Link href={`/category/${cat.slug}`} className="hover:text-red-400 transition-colors">
                     {cat.name}
-                  </a>
+                  </Link>
                 </li>
               ))}
               <li>

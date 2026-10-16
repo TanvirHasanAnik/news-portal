@@ -1,4 +1,5 @@
 import React from "react";
+import Link from "next/link";
 import { handpickedNewsList } from "../data/handpickedNewsData";
 import { categories, categoryNewsData } from "../data/newsData";
 import { temporaryNewsList } from "../data/temporaryNewsData";
@@ -233,9 +234,12 @@ export default function HandpickedNewsSection({ newsList = handpickedNewsList })
                         </a>
                       </h4>
                       <div className="mt-1.5 flex items-center">
-                        <span className="text-xs font-semibold text-red-600 hover:underline">
+                        <Link
+                          href={`/category/${item.categorySlug}`}
+                          className="text-xs font-semibold text-red-600 hover:underline"
+                        >
                           {item.category}
-                        </span>
+                        </Link>
                       </div>
                     </div>
                   </article>
