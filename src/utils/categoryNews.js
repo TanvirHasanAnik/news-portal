@@ -21,6 +21,7 @@ function normalizeArticle(item, defaultCategory, defaultSlug) {
       "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=800&auto=format&fit=crop",
     category: item.category || defaultCategory,
     categorySlug: item.categorySlug || defaultSlug,
+    subcategory: item.subcategory || "",
     publishedAt: item.publishedAt || (item.time ? String(item.time) : "আজকের সংবাদ"),
     time: item.time,
     author: item.author || "নিজস্ব প্রতিবেদক",
@@ -64,8 +65,6 @@ export function getCategoryNews(categorySlug) {
   if (!categoryName) {
     categoryName = decodedSlug.charAt(0).toUpperCase() + decodedSlug.slice(1);
   }
-
-  const subcategories = matchedCategory?.subcategories || [];
 
   const articles = [];
   const seenIds = new Set();
@@ -116,6 +115,7 @@ export function getCategoryNews(categorySlug) {
           image: op.avatar,
           category: "মতামত",
           categorySlug: "opinion",
+          subcategory: op.time.includes("সম্পাদকীয়") ? "সম্পাদকীয়" : "কলাম",
           publishedAt: op.time,
           time: op.time,
           author: op.author,
@@ -152,6 +152,16 @@ export function getCategoryNews(categorySlug) {
       }
     });
   }
+
+  // Dynamically extract all unique subcategories present in this category's news objects
+  const dynamicSubcategories = Array.from(
+    new Set(articles.map((a) => a.subcategory).filter(Boolean))
+  );
+
+  // Combine dynamic subcategories from actual news data with any defined category subcategories
+  const subcategories = Array.from(
+    new Set([...dynamicSubcategories, ...(matchedCategory?.subcategories || [])])
+  );
 
   return {
     slug: decodedSlug,

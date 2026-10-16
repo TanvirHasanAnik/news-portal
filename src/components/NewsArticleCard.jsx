@@ -34,6 +34,7 @@ export default function NewsArticleCard({
     id,
     category,
     categorySlug,
+    subcategory,
     headline,
     summary,
     image,
@@ -88,6 +89,21 @@ export default function NewsArticleCard({
               ) : (
                 <span className="inline-block rounded bg-red-600 px-2.5 py-1 text-xs font-semibold text-white shadow-sm tracking-wide">
                   {category}
+                </span>
+              )
+            )}
+            {subcategory && (
+              categorySlug ? (
+                <Link
+                  href={`/category/${categorySlug}?sub=${encodeURIComponent(subcategory)}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-block rounded bg-slate-900/80 hover:bg-slate-900 backdrop-blur-xs px-2 py-0.5 text-[11px] font-medium text-white shadow-sm transition-colors"
+                >
+                  {subcategory}
+                </Link>
+              ) : (
+                <span className="inline-block rounded bg-slate-900/80 backdrop-blur-xs px-2 py-0.5 text-[11px] font-medium text-white shadow-sm">
+                  {subcategory}
                 </span>
               )
             )}
@@ -185,6 +201,11 @@ export default function NewsArticleCard({
               {category}
             </span>
           )}
+          {subcategory && (
+            <span className="absolute top-1.5 left-1.5 rounded bg-red-600/90 backdrop-blur-xs px-1.5 py-0.5 text-[10px] font-medium text-white">
+              {subcategory}
+            </span>
+          )}
         </div>
 
         {/* Content Body */}
@@ -241,6 +262,11 @@ export default function NewsArticleCard({
             className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           />
         </a>
+        {subcategory && (
+          <span className="absolute bottom-2 left-2 rounded bg-slate-900/80 backdrop-blur-xs px-2 py-0.5 text-[11px] font-medium text-white shadow-sm pointer-events-none">
+            {subcategory}
+          </span>
+        )}
       </div>
 
       {/* Content: Headline and Summary only */}

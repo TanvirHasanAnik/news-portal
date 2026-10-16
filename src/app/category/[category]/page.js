@@ -32,13 +32,24 @@ export async function generateMetadata({ params }) {
 /**
  * Category Dynamic Page Component (Server Component / SSR)
  */
-export default async function CategoryPage({ params }) {
+export default async function CategoryPage({ params, searchParams }) {
   const { category } = await params;
-  const categoryData = getCategoryNews(category);
-  const { name, articles, subcategories, slug, totalCount } = categoryData;
+  const resolvedSearchParams = (await searchParams) || {};
+  const selectedSub = resolvedSearchParams.sub
+    ? decodeURIComponent(resolvedSearchParams.sub)
+    : null;
 
-  const leadStory = articles.length > 0 ? articles[0] : null;
-  const remainingArticles = articles.length > 1 ? articles.slice(1) : [];
+  const categoryData = getCategoryNews(category);
+  const { name, articles, subcategories, slug } = categoryData;
+
+  // Dynamically filter articles if a subcategory is selected
+  const displayedArticles = selectedSub
+    ? articles.filter((a) => a.subcategory === selectedSub)
+    : articles;
+
+  const totalCount = displayedArticles.length;
+  const leadStory = displayedArticles.length > 0 ? displayedArticles[0] : null;
+  const remainingArticles = displayedArticles.length > 1 ? displayedArticles.slice(1) : [];
 
   // Accent color themes for different categories
   const categoryAccentMap = {
@@ -60,9 +71,8 @@ export default async function CategoryPage({ params }) {
   const [gradientClasses, badgeBg, borderColor, textColor] = accentClass.split(" ");
 
   return (
-    <div className="min-h-screen bg-slate-50 py-6 sm:py-8 font-sans">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        
+    <div className="min-h-screen bg-slate-50 py-4 sm:py-6 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
         {/* 1. Breadcrumbs Navigation */}
         <nav aria-label="ব্রেডক্রাম্ব" className="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
           <Link
@@ -73,9 +83,20 @@ export default async function CategoryPage({ params }) {
             <span>প্রচ্ছদ</span>
           </Link>
           <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          <span className="font-semibold text-slate-900 font-serif-bangla text-sm sm:text-base">
+          <Link
+            href={`/category/${slug}`}
+            className="hover:text-red-600 transition-colors"
+          >
             {name}
-          </span>
+          </Link>
+          {selectedSub && (
+            <>
+              <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span className="font-semibold text-red-600 font-serif-bangla text-sm sm:text-base">
+                {selectedSub}
+              </span>
+            </>
+          )}
         </nav>
 
         {/* 2. Category Header Banner */}
@@ -87,30 +108,69 @@ export default async function CategoryPage({ params }) {
                 <h1 className="font-serif-bangla text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-950 tracking-tight">
                   {name}
                 </h1>
+                {selectedSub && (
+                  <span className="font-serif-bangla text-xl sm:text-2xl font-bold text-red-600">
+                    / {selectedSub}
+                  </span>
+                )}
               </div>
+              <p className="text-xs sm:text-sm text-slate-500 font-medium">
+                {name} বিভাগের সর্বশেষ এবং সর্বাধিক আলোচিত সব খবরাখবর
+              </p>
+            </div>
+
+            {/* Total news count badge */}
+            <div className="flex items-center gap-2 self-start sm:self-end bg-white border border-slate-200 px-3.5 py-1.5 rounded-full shadow-2xs">
+              <Layers className="w-4 h-4 text-slate-500" />
+              <span className="text-xs sm:text-sm font-semibold text-slate-700">
+                মোট {totalCount} টি সংবাদ
+              </span>
             </div>
           </div>
 
-          {/* Subcategories Filter Pills */}
+          {/* Subcategories Selection (Dynamic from News, Bigger, Borderless Design) */}
           {subcategories.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap mt-5 pt-4 border-t border-slate-200/70">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <div className="mt-6 pt-2 flex items-center gap-3 sm:gap-4 flex-wrap">
+              <span className="font-serif-bangla text-base sm:text-lg font-bold text-slate-700 shrink-0">
                 উপ-বিভাগ:
               </span>
-              {subcategories.map((sub, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 rounded-full text-xs font-medium bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 transition-colors cursor-pointer"
+              <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+                {/* All / সব option */}
+                <Link
+                  href={`/category/${slug}`}
+                  className={`px-4.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-serif-bangla text-base sm:text-lg font-bold transition-all cursor-pointer whitespace-nowrap select-none ${
+                    !selectedSub
+                      ? "bg-red-600 text-white shadow-xs"
+                      : "bg-slate-100 hover:bg-red-50 text-slate-800 hover:text-red-600"
+                  }`}
                 >
-                  {sub}
-                </span>
-              ))}
+                  সকল
+                </Link>
+
+                {/* Dynamically extracted subcategories from news data */}
+                {subcategories.map((sub, index) => {
+                  const isSelected = selectedSub === sub;
+                  return (
+                    <Link
+                      key={index}
+                      href={`/category/${slug}?sub=${encodeURIComponent(sub)}`}
+                      className={`px-4.5 sm:px-5 py-2 sm:py-2.5 rounded-xl font-serif-bangla text-base sm:text-lg font-bold transition-all cursor-pointer whitespace-nowrap select-none ${
+                        isSelected
+                          ? "bg-red-600 text-white shadow-xs"
+                          : "bg-slate-100 hover:bg-red-50 text-slate-800 hover:text-red-600"
+                      }`}
+                    >
+                      {sub}
+                    </Link>
+                  );
+                })}
+              </div>
             </div>
           )}
         </header>
 
         {/* 3. News Articles Showcase */}
-        {articles.length === 0 ? (
+        {displayedArticles.length === 0 ? (
           /* Empty State */
           <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4 max-w-2xl mx-auto shadow-2xs my-12">
             <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
@@ -151,11 +211,16 @@ export default async function CategoryPage({ params }) {
                         alt={leadStory.headline}
                         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
-                      <div className="absolute top-4 left-4">
+                      <div className="absolute top-4 left-4 flex items-center gap-2 flex-wrap">
                         <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white shadow-md flex items-center gap-1.5">
                           <Flame className="w-3.5 h-3.5" />
                           প্রধান খবর
                         </span>
+                        {leadStory.subcategory && (
+                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-900/80 backdrop-blur-xs text-white shadow-md">
+                            {leadStory.subcategory}
+                          </span>
+                        )}
                       </div>
                     </div>
 
