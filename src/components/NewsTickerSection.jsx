@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Flame,
   ChevronLeft,
@@ -39,48 +39,14 @@ export default function NewsTickerSection() {
   const currentBreaking = breakingNews[currentBreakingIndex] || breakingNews[0];
 
   // 2. Headline (শিরোনাম) Continuous Sliding Ticker State & Logic
-  const headlineScrollRef = useRef(null);
   const [isHeadlineHovered, setIsHeadlineHovered] = useState(false);
   const [isHeadlinePlaying, setIsHeadlinePlaying] = useState(true);
 
-  // Smooth frame-based continuous horizontal scroll (BD-Pratidin Reference)
-  useEffect(() => {
-    const el = headlineScrollRef.current;
-    if (!el) return;
-
-    let animId;
-    let accumulated = 0;
-
-    const step = () => {
-      if (!isHeadlineHovered && isHeadlinePlaying) {
-        accumulated += 0.85; // smooth speed ~50px/sec
-        if (accumulated >= 1) {
-          const pixels = Math.floor(accumulated);
-          accumulated -= pixels;
-
-          if (el.scrollLeft >= el.scrollWidth / 2) {
-            el.scrollLeft = 0;
-          } else {
-            el.scrollLeft += pixels;
-          }
-        }
-      }
-      animId = requestAnimationFrame(step);
-    };
-
-    animId = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(animId);
-  }, [isHeadlineHovered, isHeadlinePlaying]);
-
-  const handleHeadlineScroll = (direction) => {
-    const el = headlineScrollRef.current;
-    if (!el) return;
-    const amount = direction === "left" ? -300 : 300;
-    el.scrollBy({ left: amount, behavior: "smooth" });
-  };
-
   // Duplicate topHeadlines to ensure an infinite seamless loop
-  const tickerItems = [...topHeadlines, ...topHeadlines];
+  const displayHeadlines =
+    topHeadlines.length < 8
+      ? [...topHeadlines, ...topHeadlines, ...topHeadlines]
+      : [...topHeadlines, ...topHeadlines];
 
   return (
     <div className="w-full flex flex-col font-sans">
@@ -108,7 +74,7 @@ export default function NewsTickerSection() {
             <div className="flex-1 overflow-hidden min-w-0 relative">
               <div
                 key={currentBreakingIndex}
-                className="flex items-center gap-3 animate-in fade-in slide-in-from-right-3 duration-300"
+                className="flex items-center gap-3 animate-slide-in"
               >
                 <a
                   href={currentBreaking.url || "#"}
@@ -184,14 +150,22 @@ export default function NewsTickerSection() {
               <div className="absolute left-0 inset-y-0 w-6 bg-gradient-to-r from-slate-100 to-transparent z-1 pointer-events-none" />
               <div className="absolute right-0 inset-y-0 w-8 bg-gradient-to-l from-slate-100 to-transparent z-1 pointer-events-none" />
 
-              {/* Infinite Continuous Ticker Container */}
+              {/* Infinite Continuous Ticker Container (GPU Compositor Accelerated) */}
               <div
-                ref={headlineScrollRef}
-                className="overflow-x-hidden whitespace-nowrap scrollbar-none py-1 select-none"
+                className="animate-ticker-smooth flex w-max will-change-transform py-1 select-none"
+                style={{
+                  animationDuration: "100s",
+                  animationPlayState:
+                    isHeadlinePlaying && !isHeadlineHovered ? "running" : "paused",
+                }}
               >
-                <div className="inline-flex items-center gap-6">
-                  {tickerItems.map((item, idx) => (
-                    <div key={`${item.id}-${idx}`} className="inline-flex items-center gap-3 shrink-0">
+                {/* Primary Track */}
+                <div className="flex shrink-0 items-center gap-6 pr-6">
+                  {displayHeadlines.map((item, idx) => (
+                    <div
+                      key={`track1-${item.id}-${idx}`}
+                      className="inline-flex items-center gap-3 shrink-0"
+                    >
                       <a
                         href={item.url || "#"}
                         className="text-slate-950 hover:text-red-700 font-medium text-xs sm:text-sm md:text-base transition-colors inline-flex items-center gap-1.5"
@@ -204,7 +178,39 @@ export default function NewsTickerSection() {
                         <span>{item.title}</span>
                       </a>
                       {/* Elegant Separator Diamond */}
-                      <span className="text-red-500 text-[10px] select-none font-bold">◆</span>
+                      <span className="text-red-500 text-[10px] select-none font-bold">
+                        ◆
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Secondary Cloned Track for seamless infinite loop */}
+                <div
+                  className="flex shrink-0 items-center gap-6 pr-6"
+                  aria-hidden="true"
+                >
+                  {displayHeadlines.map((item, idx) => (
+                    <div
+                      key={`track2-${item.id}-${idx}`}
+                      className="inline-flex items-center gap-3 shrink-0"
+                    >
+                      <a
+                        href={item.url || "#"}
+                        tabIndex={-1}
+                        className="text-slate-950 hover:text-red-700 font-medium text-xs sm:text-sm md:text-base transition-colors inline-flex items-center gap-1.5"
+                      >
+                        {item.category && (
+                          <span className="text-[11px] font-semibold text-slate-500 bg-slate-200/80 px-1.5 py-0.5 rounded">
+                            {item.category}
+                          </span>
+                        )}
+                        <span>{item.title}</span>
+                      </a>
+                      {/* Elegant Separator Diamond */}
+                      <span className="text-red-500 text-[10px] select-none font-bold">
+                        ◆
+                      </span>
                     </div>
                   ))}
                 </div>

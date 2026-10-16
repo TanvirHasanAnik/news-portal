@@ -54,12 +54,47 @@ body {
 }
 
 
+/* GPU-Accelerated Hardware Ticker Animations (BD-Pratidin Style) */
+@keyframes ticker-slide {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-ticker-smooth {
+  display: flex;
+  width: max-content;
+  animation: ticker-slide 95s linear infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+.animate-ticker-smooth:hover {
+  animation-play-state: paused;
+}
+
+.animate-ticker {
+  display: flex;
+  width: max-content;
+  animation: ticker-slide 42s linear infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.animate-ticker:hover {
+  animation-play-state: paused;
+}
+
 @keyframes marquee {
   0% {
-    transform: translateX(100%);
+    transform: translate3d(100%, 0, 0);
   }
   100% {
-    transform: translateX(-100%);
+    transform: translate3d(-100%, 0, 0);
   }
 }
 
@@ -67,27 +102,35 @@ body {
   display: inline-block;
   white-space: nowrap;
   animation: marquee 28s linear infinite;
+  will-change: transform;
 }
 
 .animate-marquee:hover {
   animation-play-state: paused;
 }
 
-@keyframes ticker-slide {
-  0% {
-    transform: translateX(0);
+@keyframes slide-in-right {
+  from {
+    transform: translate3d(24px, 0, 0);
+    opacity: 0;
   }
-  100% {
-    transform: translateX(-50%);
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
   }
 }
 
-.animate-ticker {
-  display: flex;
-  width: max-content;
-  animation: ticker-slide 42s linear infinite;
+.animate-slide-in {
+  animation: slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
 }
 
-.animate-ticker:hover {
-  animation-play-state: paused;
+/* Accessibility: Honor prefers-reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .animate-ticker-smooth,
+  .animate-ticker,
+  .animate-marquee,
+  .animate-slide-in {
+    animation-play-state: paused !important;
+  }
 }
