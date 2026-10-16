@@ -1,18 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
-import { X, ChevronDown, ChevronRight, Search, Newspaper, Radio, Flame, Sparkles } from "lucide-react";
+import React from "react";
+import { X } from "lucide-react";
 import { categories, banglaDate } from "../data/newsData";
 
 export default function MobileDrawer({ isOpen, onClose }) {
-  const [openCategory, setOpenCategory] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-
   if (!isOpen) return null;
-
-  const toggleSubcategory = (catId) => {
-    setOpenCategory(openCategory === catId ? null : catId);
-  };
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
@@ -45,81 +38,30 @@ export default function MobileDrawer({ isOpen, onClose }) {
           </button>
         </div>
 
-        {/* Search in Drawer */}
-        <div className="p-3 bg-slate-100 border-b border-slate-200">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="সংবাদ খুঁজুন..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"
-            />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-          </div>
-        </div>
-
         {/* Navigation Categories List */}
         <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
           <div className="px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            প্রধান বিভাগ ও উপবিভাগ
+            প্রধান বিভাগসমূহ
           </div>
 
           <a
-            href="#"
+            href="/"
             onClick={onClose}
             className="block px-4 py-3 text-slate-800 font-semibold hover:bg-red-50 hover:text-red-700 transition-colors"
           >
             প্রচ্ছদ (হোম)
           </a>
 
-          {categories.map((cat) => {
-            const isSubOpen = openCategory === cat.id;
-            return (
-              <div key={cat.id} className="transition-colors">
-                <div className="flex items-center justify-between px-4 py-3 hover:bg-slate-50">
-                  <a
-                    href={`#cat-${cat.slug}`}
-                    onClick={onClose}
-                    className="font-medium text-slate-800 hover:text-red-600 transition-colors flex-1"
-                  >
-                    {cat.name}
-                  </a>
-
-                  {cat.subcategories && cat.subcategories.length > 0 && (
-                    <button
-                      onClick={() => toggleSubcategory(cat.id)}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 rounded-md hover:bg-slate-200/60 transition-colors"
-                      aria-label={`${cat.name} এর উপবিভাগ`}
-                    >
-                      <ChevronDown
-                        className={`w-4 h-4 transition-transform duration-200 ${
-                          isSubOpen ? "rotate-180 text-red-600" : ""
-                        }`}
-                      />
-                    </button>
-                  )}
-                </div>
-
-                {/* Subcategory Accordion */}
-                {isSubOpen && cat.subcategories && (
-                  <div className="bg-slate-50/80 px-4 py-2 border-l-2 border-red-600 ml-4 mb-2 space-y-1.5 rounded-r">
-                    {cat.subcategories.map((sub, idx) => (
-                      <a
-                        key={idx}
-                        href={`#${cat.slug}-${sub}`}
-                        onClick={onClose}
-                        className="flex items-center gap-1.5 py-1 text-xs text-slate-600 hover:text-red-600 transition-colors font-normal"
-                      >
-                        <ChevronRight className="w-3 h-3 text-slate-400" />
-                        {sub}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {categories.map((cat) => (
+            <a
+              key={cat.id}
+              href={cat.slug === "latest" ? "#latest" : `#cat-${cat.slug}`}
+              onClick={onClose}
+              className="block px-4 py-3 font-medium text-slate-800 hover:bg-slate-50 hover:text-red-600 transition-colors"
+            >
+              {cat.name}
+            </a>
+          ))}
         </div>
 
         {/* Drawer Footer */}
