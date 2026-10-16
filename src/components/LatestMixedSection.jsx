@@ -10,10 +10,16 @@ export default function LatestMixedSection() {
   // #1 Most recent news
   const mostRecentStory = sortedNews[0];
 
-  // 2nd, 3rd, 4th, 5th news (2nd column)
+  // Mobile: 2nd to 7th news (6 stories, 3 rows x 2 cols)
+  const mobileGridStories = sortedNews.slice(1, 7);
+
+  // Mobile: 8th and 9th news (2 stories, vertical card in single column on bottom)
+  const mobileBottomStories = sortedNews.slice(7, 9);
+
+  // Desktop: 2nd, 3rd, 4th, 5th news (2nd column)
   const secondColumnStories = sortedNews.slice(1, 5);
 
-  // 6th to 9th news (1st column)
+  // Desktop: 6th to 9th news (1st column)
   const firstColumnStories = sortedNews.slice(5, 9);
 
   return (
@@ -33,43 +39,148 @@ export default function LatestMixedSection() {
           {/* First Two Columns Area (Width ratio 1 + 2 = 3) */}
           <div className="lg:col-span-3 flex flex-col gap-6 lg:gap-8">
             
-            {/* 1. MOST RECENT NEWS CARD: Takes up first two columns at top */}
+            {/* 1. MOST RECENT NEWS CARD */}
             {mostRecentStory && (
-              <article className="group flex flex-col md:flex-row items-stretch gap-5 lg:gap-6 bg-transparent">
-                {/* Left side: Card image takes full space */}
-                <div className="w-full md:w-1/2 lg:w-7/12 shrink-0 overflow-hidden bg-slate-100">
-                  <a href={`#news-${mostRecentStory.id}`} className="block h-full w-full">
-                    <img
-                      src={mostRecentStory.image}
-                      alt={mostRecentStory.headline}
-                      loading="eager"
-                      className="w-full h-full min-h-[220px] sm:min-h-[260px] md:min-h-[300px] lg:min-h-[330px] object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                    />
-                  </a>
-                </div>
-
-                {/* Right side: Headline and Summary */}
-                <div className="flex flex-col justify-center flex-1 py-1 md:py-2">
-                  <h2 className="font-serif-bangla text-2xl sm:text-3xl lg:text-[28px] xl:text-3xl font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors">
+              <>
+                {/* Mobile View: Headline on top, Image on mid, Summary at bottom */}
+                <article className="group flex flex-col gap-3 md:hidden">
+                  {/* Headline on top */}
+                  <h2 className="font-serif-bangla text-xl sm:text-2xl font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors">
                     <a href={`#news-${mostRecentStory.id}`}>
                       {mostRecentStory.headline}
                     </a>
                   </h2>
+
+                  {/* Image on mid */}
+                  <div className="w-full aspect-[16/10] overflow-hidden bg-slate-100">
+                    <a href={`#news-${mostRecentStory.id}`} className="block h-full w-full">
+                      <img
+                        src={mostRecentStory.image}
+                        alt={mostRecentStory.headline}
+                        loading="eager"
+                        className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                      />
+                    </a>
+                  </div>
+
+                  {/* Summary at bottom */}
                   {mostRecentStory.summary && (
-                    <p className="text-slate-600 text-sm sm:text-base leading-relaxed mt-3.5 line-clamp-4 font-normal">
+                    <p className="text-slate-600 text-sm leading-relaxed line-clamp-3 font-normal">
                       {mostRecentStory.summary}
                     </p>
                   )}
-                </div>
-              </article>
+                </article>
+
+                {/* Desktop View: Image on left, Headline & Summary on right */}
+                <article className="group hidden md:flex md:flex-row items-stretch gap-5 lg:gap-6 bg-transparent">
+                  {/* Left side: Card image takes full space */}
+                  <div className="w-full md:w-1/2 lg:w-7/12 shrink-0 overflow-hidden bg-slate-100">
+                    <a href={`#news-${mostRecentStory.id}`} className="block h-full w-full">
+                      <img
+                        src={mostRecentStory.image}
+                        alt={mostRecentStory.headline}
+                        loading="eager"
+                        className="w-full h-full min-h-[300px] lg:min-h-[330px] object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                      />
+                    </a>
+                  </div>
+
+                  {/* Right side: Headline and Summary */}
+                  <div className="flex flex-col justify-center flex-1 py-1 md:py-2">
+                    <h2 className="font-serif-bangla text-2xl sm:text-3xl lg:text-[28px] xl:text-3xl font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors">
+                      <a href={`#news-${mostRecentStory.id}`}>
+                        {mostRecentStory.headline}
+                      </a>
+                    </h2>
+                    {mostRecentStory.summary && (
+                      <p className="text-slate-600 text-sm sm:text-base leading-relaxed mt-3.5 line-clamp-4 font-normal">
+                        {mostRecentStory.summary}
+                      </p>
+                    )}
+                  </div>
+                </article>
+              </>
             )}
 
             {/* Subtle separator between top story and bottom news */}
             <div className="border-b border-slate-200" />
 
-            {/* 2. UNDER LATEST NEWS CARD LAYOUT: 1st Column (Ratio 1) & 2nd Column (Ratio 2) */}
+            {/* 2. MOBILE VIEW: 2nd to 7th news in 2-column grid (3 rows x 2 cols), square-shaped cards */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-5 md:hidden">
+              {mobileGridStories.map((news) => (
+                <article
+                  key={news.id}
+                  className="group flex flex-col"
+                >
+                  {/* Square-shaped image */}
+                  <div className="w-full aspect-square overflow-hidden bg-slate-100">
+                    <a href={`#news-${news.id}`} className="block h-full w-full">
+                      <img
+                        src={news.image}
+                        alt={news.headline}
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </a>
+                  </div>
+
+                  {/* Headline */}
+                  <h3 className="font-serif-bangla text-xs sm:text-sm font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors line-clamp-2 mt-2">
+                    <a href={`#news-${news.id}`}>
+                      {news.headline}
+                    </a>
+                  </h3>
+                </article>
+              ))}
+            </div>
+
+            {/* Subtle separator between 2-col grid and bottom vertical news on mobile */}
+            {mobileBottomStories.length > 0 && (
+              <div className="border-b border-slate-200 md:hidden" />
+            )}
+
+            {/* 3. MOBILE VIEW: 8th and 9th news as horizontal cards (image left, headline & summary right) */}
+            {mobileBottomStories.length > 0 && (
+              <div className="flex flex-col gap-4 sm:gap-5 md:hidden">
+                {mobileBottomStories.map((news) => (
+                  <article
+                    key={news.id}
+                    className="group flex flex-row gap-3.5 sm:gap-4 items-start"
+                  >
+                    {/* Left side: Image */}
+                    <div className="w-28 sm:w-32 aspect-[4/3] shrink-0 overflow-hidden bg-slate-100">
+                      <a href={`#news-${news.id}`} className="block h-full w-full">
+                        <img
+                          src={news.image}
+                          alt={news.headline}
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      </a>
+                    </div>
+
+                    {/* Right side: Headline and Summary */}
+                    <div className="flex flex-col justify-start flex-1 min-w-0">
+                      <h3 className="font-serif-bangla text-sm sm:text-base font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors line-clamp-2">
+                        <a href={`#news-${news.id}`}>
+                          {news.headline}
+                        </a>
+                      </h3>
+
+                      {news.summary && (
+                        <p className="text-slate-600 text-xs sm:text-[13px] line-clamp-2 leading-relaxed mt-1.5 font-normal">
+                          {news.summary}
+                        </p>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+
+            {/* 4. DESKTOP VIEW: 1st Column (Ratio 1) & 2nd Column (Ratio 2) */}
             {/* Equal height container: items-stretch ensures both columns have the exact same height */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
+            <div className="hidden md:grid md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
               
               {/* 1ST COLUMN: Ratio 1 (takes 1 of 3 parts in news area) */}
               {/* Card design swapped from 2nd col: first row image left headline right, second row summary */}
