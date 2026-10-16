@@ -16,7 +16,7 @@ export default function CategoryLoading() {
         {/* Subcategories Pills Skeleton (Desktop) */}
         <div className="hidden sm:flex gap-2 flex-wrap">
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} className="h-7 w-20 bg-slate-200 rounded-full" />
+            <div key={i} className="h-7 w-20 bg-slate-200 rounded-none" />
           ))}
         </div>
 
