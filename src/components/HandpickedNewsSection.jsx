@@ -194,7 +194,7 @@ export default function HandpickedNewsSection({ newsList = handpickedNewsList })
               SECOND COLUMN (Ratio 1) - Latest Single News From Each Category
               Takes the exact same height as the first column with its own scroll bar
              ========================================================================= */}
-          <div className="lg:col-span-1 relative min-h-[360px] lg:min-h-0 lg:h-full">
+          <div className="lg:col-span-1 relative lg:h-full">
             <div className="flex flex-col h-full lg:absolute lg:inset-0">
               
               {/* Sidebar Header */}
@@ -205,8 +205,8 @@ export default function HandpickedNewsSection({ newsList = handpickedNewsList })
                 </h3>
               </div>
 
-              {/* Scrollable News List */}
-              <div className="flex-1 min-h-0 overflow-y-auto pr-2 divide-y divide-slate-100 custom-scrollbar overscroll-contain">
+              {/* Scrollable News List: 4 news items upfront on mobile with scroll for remaining */}
+              <div className="h-[360px] sm:h-[385px] lg:h-auto lg:flex-1 min-h-0 overflow-y-auto pr-2 divide-y divide-slate-100 custom-scrollbar overscroll-contain">
                 {staticLatestCategoryNews.map((item) => (
                   <article
                     key={`${item.categorySlug}-${item.id}`}
