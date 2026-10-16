@@ -111,10 +111,10 @@ export default async function CategoryPage({ params, searchParams }) {
                 {/* All / সব option */}
                 <Link
                   href={`/category/${slug}`}
-                  className={`px-4.5 sm:px-5 py-2 sm:py-2.5 rounded-none font-serif-bangla text-base sm:text-lg font-bold transition-all cursor-pointer whitespace-nowrap select-none ${
+                  className={`px-4.5 sm:px-5 py-2 sm:py-2.5 rounded-none font-serif-bangla text-base sm:text-lg font-bold transition-all cursor-pointer whitespace-nowrap select-none bg-slate-100 hover:bg-slate-200 ${
                     !selectedSub
-                      ? "bg-[#9c3a3a] text-white shadow-xs"
-                      : "bg-slate-100 hover:bg-slate-200 text-slate-800 hover:text-slate-950"
+                      ? "text-red-600"
+                      : "text-slate-800 hover:text-red-600"
                   }`}
                 >
                   সকল
@@ -127,10 +127,10 @@ export default async function CategoryPage({ params, searchParams }) {
                     <Link
                       key={index}
                       href={`/category/${slug}?sub=${encodeURIComponent(sub)}`}
-                      className={`px-4.5 sm:px-5 py-2 sm:py-2.5 rounded-none font-serif-bangla text-base sm:text-lg font-bold transition-all cursor-pointer whitespace-nowrap select-none ${
+                      className={`px-4.5 sm:px-5 py-2 sm:py-2.5 rounded-none font-serif-bangla text-base sm:text-lg font-bold transition-all cursor-pointer whitespace-nowrap select-none bg-slate-100 hover:bg-slate-200 ${
                         isSelected
-                          ? "bg-[#9c3a3a] text-white shadow-xs"
-                          : "bg-slate-100 hover:bg-slate-200 text-slate-800 hover:text-slate-950"
+                          ? "text-red-600"
+                          : "text-slate-800 hover:text-red-600"
                       }`}
                     >
                       {sub}

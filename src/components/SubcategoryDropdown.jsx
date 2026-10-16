@@ -84,10 +84,10 @@ export default function SubcategoryDropdown({
             <Link
               href={`/category/${slug}`}
               onClick={() => setIsOpen(false)}
-              className={`flex items-center justify-between px-3.5 py-2 text-sm font-serif-bangla font-semibold transition-colors ${
+              className={`flex items-center justify-between px-3.5 py-2 text-sm font-serif-bangla font-semibold transition-colors hover:bg-slate-50 ${
                 !selectedSub
-                  ? "bg-red-50 text-red-600 font-bold"
-                  : "text-slate-800 hover:bg-slate-50 hover:text-red-600"
+                  ? "text-red-600 font-bold"
+                  : "text-slate-800 hover:text-red-600"
               }`}
             >
               <span>সকল</span>
@@ -102,10 +102,10 @@ export default function SubcategoryDropdown({
                   key={index}
                   href={`/category/${slug}?sub=${encodeURIComponent(sub)}`}
                   onClick={() => setIsOpen(false)}
-                  className={`flex items-center justify-between px-3.5 py-2 text-sm font-serif-bangla font-semibold transition-colors ${
+                  className={`flex items-center justify-between px-3.5 py-2 text-sm font-serif-bangla font-semibold transition-colors hover:bg-slate-50 ${
                     isSelected
-                      ? "bg-red-50 text-red-600 font-bold"
-                      : "text-slate-800 hover:bg-slate-50 hover:text-red-600"
+                      ? "text-red-600 font-bold"
+                      : "text-slate-800 hover:text-red-600"
                   }`}
                 >
                   <span>{sub}</span>
