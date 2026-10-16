@@ -94,14 +94,14 @@ export default function Footer() {
             </h4>
             <div className="text-xs sm:text-sm text-slate-600 space-y-2">
               <p>
-                <strong className="text-slate-800">সম্পাদক ও প্রকাশক:</strong> মোস্তাফিজুর রহমান
+                <strong className="text-slate-800">সম্পাদক ও প্রকাশক:</strong> তানভীর হাসান অনিক
               </p>
               <p>
-                <strong className="text-slate-800">নির্বাহী সম্পাদক:</strong> ড. তানভীর আহমেদ
+                <strong className="text-slate-800">নির্বাহী সম্পাদক:</strong> তানভীর হাসান অনিক
               </p>
               <p className="flex items-start gap-2 pt-1">
                 <MapPin className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                <span>প্রগতি টাওয়ার, ২০-২১ কারওয়ান বাজার বাণিজ্যিক এলাকা, ঢাকা-১২১৫, বাংলাদেশ।</span>
+                <span>কচুখেত ঢাকা, বাংলাদেশ।</span>
               </p>
               <p className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-red-600 shrink-0" />
