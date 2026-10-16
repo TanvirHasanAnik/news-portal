@@ -332,7 +332,7 @@ export default async function CategoryPage({ params, searchParams }) {
           {/* Right 1/3 (4 cols on lg): Ad Space (Desktop Sidebar) */}
           <aside
             aria-label="বিজ্ঞাপন এলাকা"
-            className="hidden lg:block lg:col-span-4 space-y-6 lg:sticky lg:top-20"
+            className="hidden lg:block lg:col-span-4 space-y-6"
           >
             {/* Medium Rectangle Ad (300 × 250) */}
             <div className="bg-slate-100 border-2 border-dashed border-slate-300 w-full max-w-[320px] aspect-[300/250] mx-auto flex flex-col items-center justify-center text-center p-4 relative group">
