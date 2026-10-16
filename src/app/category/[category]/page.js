@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Home, ChevronRight, Layers, Newspaper, Flame, Clock } from "lucide-react";
+import { Home, ChevronRight, Layers, Newspaper } from "lucide-react";
 import NewsArticleCard from "../../../components/NewsArticleCard";
 import SubcategoryDropdown from "../../../components/SubcategoryDropdown";
 import { getCategoryNews, getAllCategorySlugs } from "../../../utils/categoryNews";
@@ -49,8 +49,36 @@ export default async function CategoryPage({ params, searchParams }) {
     : articles;
 
   const totalCount = displayedArticles.length;
-  const leadStory = displayedArticles.length > 0 ? displayedArticles[0] : null;
-  const remainingArticles = displayedArticles.length > 1 ? displayedArticles.slice(1) : [];
+
+  // Single page limit news to 5 articles per page
+  const PAGE_SIZE = 5;
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const parsedPage = parseInt(resolvedSearchParams.page, 10);
+  const currentPage = Math.min(
+    totalPages,
+    Math.max(1, isNaN(parsedPage) ? 1 : parsedPage)
+  );
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const paginatedArticles = displayedArticles.slice(startIndex, startIndex + PAGE_SIZE);
+
+  const leadStory = paginatedArticles.length > 0 ? paginatedArticles[0] : null;
+  const remainingArticles = paginatedArticles.length > 1 ? paginatedArticles.slice(1) : [];
+
+  // Helper for pagination URLs preserving subcategory filter
+  const getPageLink = (pageNumber) => {
+    const queryParts = [];
+    if (selectedSub) queryParts.push(`sub=${encodeURIComponent(selectedSub)}`);
+    if (pageNumber > 1) queryParts.push(`page=${pageNumber}`);
+    return queryParts.length > 0
+      ? `/category/${slug}?${queryParts.join("&")}`
+      : `/category/${slug}`;
+  };
+
+  // Bangla number converter helper
+  const toBanglaNumber = (num) => {
+    const banglaDigits = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
+    return String(num).replace(/\d/g, (d) => banglaDigits[parseInt(d, 10)]);
+  };
 
   // Accent color themes for different categories
   const categoryAccentMap = {
@@ -142,165 +170,183 @@ export default async function CategoryPage({ params, searchParams }) {
           )}
         </header>
 
-        {/* 3. News Articles Showcase */}
-        {displayedArticles.length === 0 ? (
-          /* Empty State */
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-4 max-w-2xl mx-auto shadow-2xs my-12">
-            <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-              <Newspaper className="w-8 h-8" />
-            </div>
-            <h2 className="font-serif-bangla text-2xl font-bold text-slate-800">
-              এই বিভাগে বর্তমানে কোনো সংবাদ পাওয়া যায়নি
-            </h2>
-            <p className="text-sm text-slate-500 max-w-md mx-auto">
-              আমাদের সংবাদকর্মীরা নিয়মিত নতুন সংবাদ যুক্ত করছেন। আপনি অন্যান্য বিভাগের তাজা সংবাদসমূহ দেখতে পারেন।
-            </p>
-            <div className="pt-4 flex items-center justify-center gap-3 flex-wrap">
-              <Link
-                href="/"
-                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors shadow-xs"
-              >
-                প্রচ্ছদে ফিরে যান
-              </Link>
-              <Link
-                href="/category/latest"
-                className="px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-colors"
-              >
-                সর্বশেষ সংবাদ দেখুন
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-8">
-            {/* 3.1 Featured / Lead Story */}
-            {leadStory && (
-              <section aria-label="শীর্ষ সংবাদ">
-                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs hover:shadow-md transition-shadow">
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 items-stretch">
-                    {/* Image Area (7 cols on desktop) */}
-                    <div className="lg:col-span-7 relative aspect-[16/10] lg:aspect-auto min-h-[260px] sm:min-h-[360px] bg-slate-900 overflow-hidden group">
-                      <img
-                        src={leadStory.image}
-                        alt={leadStory.headline}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      <div className="absolute top-4 left-4 flex items-center gap-2 flex-wrap">
-                        <span className="px-3 py-1 rounded-full text-xs font-bold bg-red-600 text-white shadow-md flex items-center gap-1.5">
-                          <Flame className="w-3.5 h-3.5" />
-                          প্রধান খবর
-                        </span>
-                        {leadStory.subcategory && (
-                          <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-900/80 backdrop-blur-xs text-white shadow-md">
-                            {leadStory.subcategory}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Content Area (5 cols on desktop) */}
-                    <div className="lg:col-span-5 p-6 sm:p-8 flex flex-col justify-between">
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          {leadStory.location && (
-                            <span className="font-semibold text-slate-700">
-                              {leadStory.location}
-                            </span>
-                          )}
-                          {leadStory.location && <span>•</span>}
-                          {leadStory.publishedAt && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3.5 h-3.5" />
-                              {leadStory.publishedAt}
-                            </span>
-                          )}
+        {/* 3. Main Content Area: 2/3 News Showcase + 1/3 Ad Sidebar */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Left 2/3 (8 cols on lg): News List (Limit 5 articles per page with Pagination) */}
+          <div className="lg:col-span-8 space-y-8">
+            {displayedArticles.length === 0 ? (
+              /* Empty State */
+              <div className="bg-white rounded-none border border-slate-200 p-12 text-center space-y-4 max-w-2xl mx-auto shadow-2xs my-12">
+                <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                  <Newspaper className="w-8 h-8" />
+                </div>
+                <h2 className="font-serif-bangla text-2xl font-bold text-slate-800">
+                  এই বিভাগে বর্তমানে কোনো সংবাদ পাওয়া যায়নি
+                </h2>
+                <p className="text-sm text-slate-500 max-w-md mx-auto">
+                  আমাদের সংবাদকর্মীরা নিয়মিত নতুন সংবাদ যুক্ত করছেন। আপনি অন্যান্য বিভাগের তাজা সংবাদসমূহ দেখতে পারেন।
+                </p>
+                <div className="pt-4 flex items-center justify-center gap-3 flex-wrap">
+                  <Link
+                    href="/"
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors shadow-xs rounded-none"
+                  >
+                    প্রচ্ছদে ফিরে যান
+                  </Link>
+                  <Link
+                    href="/category/latest"
+                    className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold transition-colors rounded-none"
+                  >
+                    সর্বশেষ সংবাদ দেখুন
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {/* 3.1 Featured / Lead Story (First of the 5 articles - Only Image, Heading, Summary) */}
+                {leadStory && (
+                  <section aria-label="শীর্ষ সংবাদ">
+                    <article className="group bg-transparent pb-6 border-b border-slate-200">
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                        {/* Featured Image (7 cols) - No borders, no border radius, no overlays */}
+                        <div className="md:col-span-7 relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
+                          <a href={`#news-${leadStory.id}`} className="block h-full w-full">
+                            <img
+                              src={leadStory.image}
+                              alt={leadStory.headline}
+                              className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                            />
+                          </a>
                         </div>
 
-                        <h2 className="font-serif-bangla text-2xl sm:text-3xl font-extrabold text-slate-950 leading-snug hover:text-red-600 transition-colors">
-                          <a href={`#news-${leadStory.id}`}>
-                            {leadStory.headline}
-                          </a>
-                        </h2>
+                        {/* Content Area (5 cols) - Heading & Summary only */}
+                        <div className="md:col-span-5 flex flex-col justify-start">
+                          <h2 className="font-serif-bangla text-2xl sm:text-3xl font-extrabold text-slate-950 leading-snug group-hover:text-red-700 transition-colors mb-3">
+                            <a href={`#news-${leadStory.id}`}>
+                              {leadStory.headline}
+                            </a>
+                          </h2>
 
-                        {leadStory.summary && (
-                          <p className="text-slate-600 text-sm sm:text-base leading-relaxed line-clamp-4">
-                            {leadStory.summary}
-                          </p>
-                        )}
+                          {leadStory.summary && (
+                            <p className="text-slate-600 text-sm sm:text-base leading-relaxed line-clamp-4 font-normal">
+                              {leadStory.summary}
+                            </p>
+                          )}
+                        </div>
                       </div>
+                    </article>
+                  </section>
+                )}
 
-                      <div className="pt-6 mt-6 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                        <span className="font-medium text-slate-700">
-                          প্রতিবেদক: {leadStory.author || "নিজস্ব প্রতিবেদক"}
-                        </span>
-                        <a
-                          href={`#news-${leadStory.id}`}
-                          className="font-bold text-red-600 hover:text-red-700 flex items-center gap-1 group"
-                        >
-                          সম্পূর্ণ পড়ুন
-                          <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </a>
-                      </div>
-                    </div>
+                {/* 3.2 Remaining News (Remaining 4 articles on this page - Only Image, Heading, Summary) */}
+                {remainingArticles.length > 0 && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
+                    {remainingArticles.map((story) => (
+                      <NewsArticleCard
+                        key={story.id}
+                        news={story}
+                        variant="standard"
+                        showCategory={false}
+                        showSubcategory={false}
+                        showTime={false}
+                        className="h-full bg-transparent border-0 rounded-none shadow-none"
+                        imageClassName="rounded-none border-0"
+                      />
+                    ))}
                   </div>
-                </div>
-              </section>
+                )}
+
+                {/* 3.3 Pagination Controls */}
+                {totalPages > 1 && (
+                  <nav
+                    aria-label="পৃষ্ঠা নেভিগেশন"
+                    className="pt-6 border-t border-slate-200 flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap"
+                  >
+                    {/* Previous Button */}
+                    {currentPage > 1 ? (
+                      <Link
+                        href={getPageLink(currentPage - 1)}
+                        className="px-3.5 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-serif-bangla font-semibold transition-colors cursor-pointer select-none rounded-none"
+                      >
+                        &larr; পূর্ববর্তী
+                      </Link>
+                    ) : (
+                      <span className="px-3.5 sm:px-4 py-2 bg-slate-50 text-slate-300 text-sm font-serif-bangla font-semibold select-none rounded-none cursor-not-allowed">
+                        &larr; পূর্ববর্তী
+                      </span>
+                    )}
+
+                    {/* Page Numbers */}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                      const isActive = p === currentPage;
+                      return (
+                        <Link
+                          key={p}
+                          href={getPageLink(p)}
+                          className={`min-w-[38px] sm:min-w-[42px] h-9 sm:h-10 px-2 flex items-center justify-center text-sm sm:text-base font-serif-bangla font-bold transition-colors cursor-pointer select-none rounded-none ${
+                            isActive
+                              ? "bg-slate-900 text-white"
+                              : "bg-slate-100 hover:bg-slate-200 text-slate-800 hover:text-red-600"
+                          }`}
+                        >
+                          {toBanglaNumber(p)}
+                        </Link>
+                      );
+                    })}
+
+                    {/* Next Button */}
+                    {currentPage < totalPages ? (
+                      <Link
+                        href={getPageLink(currentPage + 1)}
+                        className="px-3.5 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-serif-bangla font-semibold transition-colors cursor-pointer select-none rounded-none"
+                      >
+                        পরবর্তী &rarr;
+                      </Link>
+                    ) : (
+                      <span className="px-3.5 sm:px-4 py-2 bg-slate-50 text-slate-300 text-sm font-serif-bangla font-semibold select-none rounded-none cursor-not-allowed">
+                        পরবর্তী &rarr;
+                      </span>
+                    )}
+                  </nav>
+                )}
+              </div>
             )}
-
-            {/* 3.2 Remaining Category Articles Grid */}
-            {remainingArticles.length > 0 && (
-              <section aria-label="বিভাগের অন্যান্য সংবাদ" className="space-y-4">
-                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                  <h3 className="font-serif-bangla text-xl sm:text-2xl font-bold text-slate-900">
-                    আরও সংবাদ
-                  </h3>
-                  <span className="text-xs text-slate-500">
-                    {remainingArticles.length} টি সংবাদ
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
-                  {remainingArticles.map((story) => (
-                    <NewsArticleCard
-                      key={story.id}
-                      news={story}
-                      variant="standard"
-                      showCategory={false}
-                      showTime={true}
-                      className="h-full bg-white rounded-xl border border-slate-200 shadow-2xs hover:shadow-md transition-shadow"
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
           </div>
-        )}
 
-        {/* 4. Other Categories Navigation Strip */}
-        <section aria-label="অন্যান্য বিভাগ" className="pt-8 border-t border-slate-200">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-serif-bangla text-lg sm:text-xl font-bold text-slate-900">
-              অন্যান্য বিভাগসমূহ ঘুরে দেখুন
-            </h3>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            {categories
-              .filter((c) => c.slug !== slug)
-              .map((cat) => (
-                <Link
-                  key={cat.id}
-                  href={`/category/${cat.slug}`}
-                  className="p-3 bg-white hover:bg-red-50 hover:border-red-300 border border-slate-200 rounded-xl text-center transition-all group shadow-2xs"
-                >
-                  <span className="font-serif-bangla text-base font-bold text-slate-800 group-hover:text-red-600 transition-colors block">
-                    {cat.name}
-                  </span>
-                  <span className="text-[11px] text-slate-400 group-hover:text-red-500 transition-colors">
-                    সংবাদ দেখুন &rarr;
-                  </span>
-                </Link>
-              ))}
-          </div>
-        </section>
+          {/* Right 1/3 (4 cols on lg): Ad Space */}
+          <aside
+            aria-label="বিজ্ঞাপন এলাকা"
+            className="lg:col-span-4 space-y-6 lg:sticky lg:top-20"
+          >
+            {/* Medium Rectangle Ad (300 × 250) */}
+            <div className="bg-slate-100 border-2 border-dashed border-slate-300 w-full max-w-[320px] aspect-[300/250] mx-auto flex flex-col items-center justify-center text-center p-4 relative group">
+              <span className="absolute top-2 left-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider select-none">
+                বিজ্ঞাপন
+              </span>
+              <p className="text-slate-400 text-xs sm:text-sm font-medium">
+                বিজ্ঞাপনের জন্য স্থান
+              </p>
+              <p className="text-slate-400 text-[11px] mt-1 font-mono">
+                ৩০০ × ২৫০ পিক্সেল
+              </p>
+            </div>
+
+            {/* Half-Page Skyscraper Ad (300 × 600) */}
+            <div className="bg-slate-100 border-2 border-dashed border-slate-300 w-full max-w-[320px] aspect-[300/600] mx-auto hidden sm:flex flex-col items-center justify-center text-center p-4 relative group">
+              <span className="absolute top-2 left-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider select-none">
+                বিজ্ঞাপন
+              </span>
+              <p className="text-slate-400 text-xs sm:text-sm font-medium">
+                বিজ্ঞাপনের জন্য স্থান
+              </p>
+              <p className="text-slate-400 text-[11px] mt-1 font-mono">
+                ৩০০ × ৬০০ পিক্সেল
+              </p>
+            </div>
+          </aside>
+
+        </div>
 
       </div>
     </div>

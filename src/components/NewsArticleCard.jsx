@@ -21,6 +21,7 @@ export default function NewsArticleCard({
   news,
   variant = "standard",
   showCategory = true,
+  showSubcategory = true,
   showTime = false,
   className = "",
   imageClassName = "",
@@ -262,7 +263,7 @@ export default function NewsArticleCard({
             className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           />
         </a>
-        {subcategory && (
+        {showSubcategory && subcategory && (
           <span className="absolute bottom-2 left-2 rounded bg-slate-900/80 backdrop-blur-xs px-2 py-0.5 text-[11px] font-medium text-white shadow-sm pointer-events-none">
             {subcategory}
           </span>
