@@ -10,7 +10,7 @@ import { breakingNews } from "../data/newsData";
  */
 export default function BreakingNewsTicker({
   items = breakingNews,
-  speed = 90, // leisurely, slow reading pace in seconds
+  speed = 160, // very slow, relaxed reading pace in seconds
 }) {
   const [isPlaying, setIsPlaying] = useState(true);
   const [isHovered, setIsHovered] = useState(false);

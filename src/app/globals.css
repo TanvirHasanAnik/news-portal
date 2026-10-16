@@ -67,7 +67,7 @@ body {
 .animate-ticker-smooth {
   display: flex;
   width: max-content;
-  animation: ticker-slide 95s linear infinite;
+  animation: ticker-slide 180s linear infinite;
   will-change: transform;
   backface-visibility: hidden;
   perspective: 1000px;

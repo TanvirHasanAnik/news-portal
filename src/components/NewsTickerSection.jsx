@@ -154,7 +154,7 @@ export default function NewsTickerSection() {
               <div
                 className="animate-ticker-smooth flex w-max will-change-transform py-1 select-none"
                 style={{
-                  animationDuration: "100s",
+                  animationDuration: "180s",
                   animationPlayState:
                     isHeadlinePlaying && !isHeadlineHovered ? "running" : "paused",
                 }}
