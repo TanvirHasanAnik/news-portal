@@ -8,7 +8,7 @@ import Footer from "../components/Footer";
 export default function Home() {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 font-sans text-slate-900">
-      {/* 1. Header with Brand Logo, Category & Subcategory Navbar */}
+      {/* 1. Top Horizontal Banner Ad & Header with Brand Logo, Category Navbar */}
       <Header />
 
       {/* 2. Breaking News & Headline Sliding Tickers */}

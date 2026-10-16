@@ -161,6 +161,20 @@ export default function Header() {
 
   return (
     <>
+      {/* 0. Top Horizontal Banner Ad Space (Exact height only: 50px mobile, 90px desktop - no padding or margin) */}
+      <aside aria-label="বিজ্ঞাপন" className="w-full bg-slate-100 border-b border-slate-200 overflow-hidden">
+        <div className="flex items-center justify-center">
+          <div className="relative w-full max-w-[320px] sm:max-w-[728px] lg:max-w-[970px] h-[50px] sm:h-[90px] bg-slate-200/60 border-dashed border-2 border-slate-300 flex items-center justify-center text-slate-400 text-xs sm:text-sm font-medium">
+            <span className="absolute top-1 left-2 text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-wider select-none">
+              বিজ্ঞাপন
+            </span>
+            <span className="hidden lg:inline">শীর্ষ ব্যানার বিজ্ঞাপন (৯৭০ × ৯০)</span>
+            <span className="hidden sm:inline lg:hidden">শীর্ষ ব্যানার বিজ্ঞাপন (৭২৮ × ৯০)</span>
+            <span className="inline sm:hidden">শীর্ষ ব্যানার বিজ্ঞাপন (৩২০ × ৫০)</span>
+          </div>
+        </div>
+      </aside>
+
       <header className="w-full bg-white border-b border-slate-200">
       {/* 1. BRAND LOGO & MASTHEAD */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 lg:py-4">
