@@ -14,7 +14,7 @@ export const categories = [
     id: "latest",
     name: "সর্বশেষ",
     slug: "latest",
-    subcategories: ["এইমাত্র", "আজকের সংবাদ", "সর্বাধিক পঠিত", "শীর্ষ সংবাদ"],
+    subcategories: [],
   },
   {
     id: "national",

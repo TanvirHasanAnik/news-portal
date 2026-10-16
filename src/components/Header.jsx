@@ -354,7 +354,7 @@ export default function Header() {
                     href={`/category/${cat.slug}`}
                     className={`px-4.5 py-3.5 text-xl whitespace-nowrap tracking-wide shrink-0 transition-colors ${
                       isActive
-                        ? "text-red-600 font-bold bg-red-50/70 border-b-2 border-red-600"
+                        ? "text-red-600 font-bold bg-red-50/70"
                         : "text-slate-950 hover:text-red-600 hover:bg-slate-50"
                     }`}
                   >

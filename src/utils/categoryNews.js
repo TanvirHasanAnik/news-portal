@@ -21,7 +21,7 @@ function normalizeArticle(item, defaultCategory, defaultSlug) {
       "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=800&auto=format&fit=crop",
     category: item.category || defaultCategory,
     categorySlug: item.categorySlug || defaultSlug,
-    subcategory: item.subcategory || "",
+    subcategory: defaultSlug === "latest" ? "" : (item.subcategory || ""),
     publishedAt: item.publishedAt || (item.time ? String(item.time) : "আজকের সংবাদ"),
     time: item.time,
     author: item.author || "নিজস্ব প্রতিবেদক",
@@ -158,10 +158,13 @@ export function getCategoryNews(categorySlug) {
     new Set(articles.map((a) => a.subcategory).filter(Boolean))
   );
 
-  // Combine dynamic subcategories from actual news data with any defined category subcategories
-  const subcategories = Array.from(
-    new Set([...dynamicSubcategories, ...(matchedCategory?.subcategories || [])])
-  );
+  // Combine dynamic subcategories from actual news data with any defined category subcategories (omit for latest)
+  const subcategories =
+    decodedSlug === "latest"
+      ? []
+      : Array.from(
+          new Set([...dynamicSubcategories, ...(matchedCategory?.subcategories || [])])
+        );
 
   return {
     slug: decodedSlug,

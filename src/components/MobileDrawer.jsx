@@ -69,7 +69,7 @@ export default function MobileDrawer({ isOpen, onClose }) {
                 onClick={onClose}
                 className={`block px-4 py-3 font-medium transition-colors ${
                   isActive
-                    ? "bg-red-50 text-red-600 font-bold border-l-4 border-red-600 pl-3"
+                    ? "bg-red-50 text-red-600 font-bold"
                     : "text-slate-800 hover:bg-slate-50 hover:text-red-600"
                 }`}
               >

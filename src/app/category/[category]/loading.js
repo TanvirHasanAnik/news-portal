@@ -8,16 +8,13 @@ export default function CategoryLoading() {
         <div className="h-4 w-40 bg-slate-200 rounded-sm" />
 
         {/* Category Header Skeleton */}
-        <div className="border-b border-slate-200 pb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-          <div className="space-y-3">
-            <div className="h-10 w-48 bg-slate-300 rounded-md" />
-            <div className="h-4 w-72 bg-slate-200 rounded-sm" />
-          </div>
-          <div className="h-8 w-28 bg-slate-200 rounded-full" />
+        <div className="border-b border-slate-200 pb-6 flex items-center justify-between gap-4">
+          <div className="h-10 w-44 bg-slate-300 rounded-md" />
+          <div className="h-6 w-6 bg-slate-200 rounded-full sm:hidden" />
         </div>
 
-        {/* Subcategories Pills Skeleton */}
-        <div className="flex gap-2 flex-wrap">
+        {/* Subcategories Pills Skeleton (Desktop) */}
+        <div className="hidden sm:flex gap-2 flex-wrap">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="h-7 w-20 bg-slate-200 rounded-full" />
           ))}

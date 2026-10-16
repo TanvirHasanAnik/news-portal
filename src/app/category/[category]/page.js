@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { Home, ChevronRight, Layers, Newspaper, Flame, Clock } from "lucide-react";
 import NewsArticleCard from "../../../components/NewsArticleCard";
+import SubcategoryDropdown from "../../../components/SubcategoryDropdown";
 import { getCategoryNews, getAllCategorySlugs } from "../../../utils/categoryNews";
 import { categories } from "../../../data/newsData";
 
@@ -76,25 +77,36 @@ export default async function CategoryPage({ params, searchParams }) {
 
         {/* 2. Category Header Banner */}
         <header className="border-b-2 border-slate-200 pb-6">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <span className={`w-3.5 sm:w-4 h-8 sm:h-10 rounded-xs ${badgeBg}`} />
-                <h1 className="font-serif-bangla text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-950 tracking-tight">
-                  {name}
-                </h1>
-                {selectedSub && (
-                  <span className="font-serif-bangla text-xl sm:text-2xl font-bold text-red-600">
-                    / {selectedSub}
-                  </span>
-                )}
-              </div>
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+              <span className={`w-3.5 sm:w-4 h-8 sm:h-10 rounded-xs ${badgeBg}`} />
+              <h1 className="font-serif-bangla text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-950 tracking-tight shrink-0">
+                {name}
+              </h1>
+
+              {/* Subcategory indicator if selected */}
+              {selectedSub && (
+                <span className="font-serif-bangla text-xl sm:text-2xl font-bold text-red-600 shrink-0">
+                  / {selectedSub}
+                </span>
+              )}
             </div>
+
+            {/* Mobile View: Subcategory Dropdown option on the most right side */}
+            {subcategories.length > 0 && (
+              <div className="sm:hidden shrink-0 flex items-center">
+                <SubcategoryDropdown
+                  slug={slug}
+                  subcategories={subcategories}
+                  selectedSub={selectedSub}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Subcategories Selection (Dynamic from News, Bigger, Borderless Design) */}
+          {/* Desktop Subcategories Selection (Dynamic from News, Bigger, Borderless Design) */}
           {subcategories.length > 0 && (
-            <div className="mt-6 pt-2 flex items-center gap-3 sm:gap-4 flex-wrap">
+            <div className="hidden sm:flex mt-6 pt-2 items-center gap-3 sm:gap-4 flex-wrap">
               <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
                 {/* All / সব option */}
                 <Link
