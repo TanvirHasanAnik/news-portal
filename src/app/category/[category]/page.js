@@ -257,59 +257,57 @@ export default async function CategoryPage({ params, searchParams }) {
                   </div>
                 )}
 
-                {/* 3.3 Pagination Controls */}
-                {totalPages > 1 && (
-                  <nav
-                    aria-label="পৃষ্ঠা নেভিগেশন"
-                    className="pt-6 border-t border-slate-200 flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap"
-                  >
-                    {/* Previous Button */}
-                    {currentPage > 1 ? (
-                      <Link
-                        href={getPageLink(currentPage - 1)}
-                        className="px-3.5 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-serif-bangla font-semibold transition-colors cursor-pointer select-none rounded-none"
-                      >
-                        &larr; পূর্ববর্তী
-                      </Link>
-                    ) : (
-                      <span className="px-3.5 sm:px-4 py-2 bg-slate-50 text-slate-300 text-sm font-serif-bangla font-semibold select-none rounded-none cursor-not-allowed">
-                        &larr; পূর্ববর্তী
-                      </span>
-                    )}
+                {/* 3.3 Pagination Controls (Always visible) */}
+                <nav
+                  aria-label="পৃষ্ঠা নেভিগেশন"
+                  className="pt-6 border-t border-slate-200 flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap"
+                >
+                  {/* Previous Button */}
+                  {currentPage > 1 ? (
+                    <Link
+                      href={getPageLink(currentPage - 1)}
+                      className="px-3.5 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-serif-bangla font-semibold transition-colors cursor-pointer select-none rounded-none"
+                    >
+                      &larr; পূর্ববর্তী
+                    </Link>
+                  ) : (
+                    <span className="px-3.5 sm:px-4 py-2 bg-slate-50 text-slate-300 text-sm font-serif-bangla font-semibold select-none rounded-none cursor-not-allowed">
+                      &larr; পূর্ববর্তী
+                    </span>
+                  )}
 
-                    {/* Page Numbers */}
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-                      const isActive = p === currentPage;
-                      return (
-                        <Link
-                          key={p}
-                          href={getPageLink(p)}
-                          className={`min-w-[38px] sm:min-w-[42px] h-9 sm:h-10 px-2 flex items-center justify-center text-sm sm:text-base font-serif-bangla font-bold transition-colors cursor-pointer select-none rounded-none ${
-                            isActive
-                              ? "bg-slate-900 text-white"
-                              : "bg-slate-100 hover:bg-slate-200 text-slate-800 hover:text-red-600"
-                          }`}
-                        >
-                          {toBanglaNumber(p)}
-                        </Link>
-                      );
-                    })}
-
-                    {/* Next Button */}
-                    {currentPage < totalPages ? (
+                  {/* Page Numbers */}
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+                    const isActive = p === currentPage;
+                    return (
                       <Link
-                        href={getPageLink(currentPage + 1)}
-                        className="px-3.5 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-serif-bangla font-semibold transition-colors cursor-pointer select-none rounded-none"
+                        key={p}
+                        href={getPageLink(p)}
+                        className={`min-w-[38px] sm:min-w-[42px] h-9 sm:h-10 px-2 flex items-center justify-center text-sm sm:text-base font-serif-bangla font-bold transition-colors cursor-pointer select-none rounded-none ${
+                          isActive
+                            ? "bg-slate-900 text-white"
+                            : "bg-slate-100 hover:bg-slate-200 text-slate-800 hover:text-red-600"
+                        }`}
                       >
-                        পরবর্তী &rarr;
+                        {toBanglaNumber(p)}
                       </Link>
-                    ) : (
-                      <span className="px-3.5 sm:px-4 py-2 bg-slate-50 text-slate-300 text-sm font-serif-bangla font-semibold select-none rounded-none cursor-not-allowed">
-                        পরবর্তী &rarr;
-                      </span>
-                    )}
-                  </nav>
-                )}
+                    );
+                  })}
+
+                  {/* Next Button */}
+                  {currentPage < totalPages ? (
+                    <Link
+                      href={getPageLink(currentPage + 1)}
+                      className="px-3.5 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-serif-bangla font-semibold transition-colors cursor-pointer select-none rounded-none"
+                    >
+                      পরবর্তী &rarr;
+                    </Link>
+                  ) : (
+                    <span className="px-3.5 sm:px-4 py-2 bg-slate-50 text-slate-300 text-sm font-serif-bangla font-semibold select-none rounded-none cursor-not-allowed">
+                      পরবর্তী &rarr;
+                    </span>
+                  )}
+                </nav>
               </div>
             )}
           </div>
