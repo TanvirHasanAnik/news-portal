@@ -88,17 +88,6 @@ export default async function CategoryPage({ params }) {
                   {name}
                 </h1>
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                {name} বিভাগের সর্বশেষ এবং সর্বাধিক আলোচিত সব খবরাখবর
-              </p>
-            </div>
-
-            {/* Total news count badge */}
-            <div className="flex items-center gap-2 self-start sm:self-end bg-white border border-slate-200 px-3.5 py-1.5 rounded-full shadow-2xs">
-              <Layers className="w-4 h-4 text-slate-500" />
-              <span className="text-xs sm:text-sm font-semibold text-slate-700">
-                মোট {totalCount} টি সংবাদ
-              </span>
             </div>
           </div>
 
