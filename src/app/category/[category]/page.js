@@ -73,31 +73,6 @@ export default async function CategoryPage({ params, searchParams }) {
   return (
     <div className="min-h-screen bg-slate-50 py-4 sm:py-6 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
-        {/* 1. Breadcrumbs Navigation */}
-        <nav aria-label="ব্রেডক্রাম্ব" className="flex items-center gap-2 text-xs sm:text-sm text-slate-500">
-          <Link
-            href="/"
-            className="flex items-center gap-1 hover:text-red-600 transition-colors"
-          >
-            <Home className="w-4 h-4 text-slate-400" />
-            <span>প্রচ্ছদ</span>
-          </Link>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          <Link
-            href={`/category/${slug}`}
-            className="hover:text-red-600 transition-colors"
-          >
-            {name}
-          </Link>
-          {selectedSub && (
-            <>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="font-semibold text-red-600 font-serif-bangla text-sm sm:text-base">
-                {selectedSub}
-              </span>
-            </>
-          )}
-        </nav>
 
         {/* 2. Category Header Banner */}
         <header className="border-b-2 border-slate-200 pb-6">
@@ -114,26 +89,12 @@ export default async function CategoryPage({ params, searchParams }) {
                   </span>
                 )}
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium">
-                {name} বিভাগের সর্বশেষ এবং সর্বাধিক আলোচিত সব খবরাখবর
-              </p>
-            </div>
-
-            {/* Total news count badge */}
-            <div className="flex items-center gap-2 self-start sm:self-end bg-white border border-slate-200 px-3.5 py-1.5 rounded-full shadow-2xs">
-              <Layers className="w-4 h-4 text-slate-500" />
-              <span className="text-xs sm:text-sm font-semibold text-slate-700">
-                মোট {totalCount} টি সংবাদ
-              </span>
             </div>
           </div>
 
           {/* Subcategories Selection (Dynamic from News, Bigger, Borderless Design) */}
           {subcategories.length > 0 && (
             <div className="mt-6 pt-2 flex items-center gap-3 sm:gap-4 flex-wrap">
-              <span className="font-serif-bangla text-base sm:text-lg font-bold text-slate-700 shrink-0">
-                উপ-বিভাগ:
-              </span>
               <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
                 {/* All / সব option */}
                 <Link
