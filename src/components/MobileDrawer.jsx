@@ -82,7 +82,6 @@ export default function MobileDrawer({ isOpen, onClose }) {
         {/* Drawer Footer */}
         <div className="p-4 bg-slate-100 border-t border-slate-200 text-center text-xs text-slate-500">
           <p className="font-serif-bangla text-slate-700 font-medium">আলো আসবে অনলাইন সংস্করণ</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">কপিরাইট © ২০২৬ সর্ত্ব সংরক্ষিত</p>
         </div>
       </div>
     </div>
