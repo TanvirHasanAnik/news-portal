@@ -163,6 +163,13 @@ export default function LatestMixedSection() {
                 বিজ্ঞাপন
               </span>
             </div>
+
+            {/* Bottom Ad Unit */}
+            <div className="w-full bg-slate-100/90 rounded-xs flex flex-col items-center justify-center p-4 min-h-[280px] lg:min-h-[330px] text-center border-dashed border-2 border-slate-200">
+              <span className="text-[11px] font-semibold text-slate-400 mb-2 uppercase tracking-wider">
+                বিজ্ঞাপন
+              </span>
+            </div>
           </div>
 
         </div>
