@@ -28,7 +28,7 @@ export default function NewsCard({
   loading,
   headlineTag,
   headlineSize,
-  headlineClamp = "line-clamp-2",
+  headlineClamp,
   headlineColor = "text-slate-900",
   headlineHoverColor,
   headlineClassName = "",
@@ -106,6 +106,23 @@ export default function NewsCard({
     headlineTag ||
     (variant === "hero" ? "h2" : variant === "horizontal" ? "h4" : "h3");
 
+  // Resolve headline line clamp class:
+  // Allows callers to pass headlineClamp="" or false to completely disable line-clamp
+  const getHeadlineClampClass = (defaultClamp = "line-clamp-2") => {
+    if (headlineClamp !== undefined) {
+      if (
+        headlineClamp === "" ||
+        headlineClamp === "none" ||
+        headlineClamp === false ||
+        headlineClamp === null
+      ) {
+        return "";
+      }
+      return headlineClamp;
+    }
+    return defaultClamp;
+  };
+
   // =========================================================================
   // 1. EMPHASIZED VARIANT (Hero visual card with badges & interactive actions)
   // =========================================================================
@@ -181,7 +198,7 @@ export default function NewsCard({
           <div>
             <HeadingTag
               className={`font-serif-bangla font-bold text-slate-900 leading-snug group-hover:text-red-700 transition-colors mb-2.5 ${
-                headlineClamp || "line-clamp-2"
+                getHeadlineClampClass("line-clamp-2")
               } ${headlineSize || "text-lg sm:text-xl md:text-2xl"} ${headlineClassName}`}
             >
               <Link href={linkHref} className="focus:outline-none focus:underline">
@@ -231,16 +248,30 @@ export default function NewsCard({
   // =========================================================================
   if (variant === "hero") {
     const isGridLayout = className.includes("grid");
+    const hasCustomGap = className.includes("gap-");
+    const hasCustomImageWidth =
+      imageWrapperClassName.includes("w-") ||
+      imageWrapperClassName.includes("md:w-") ||
+      imageWrapperClassName.includes("lg:w-");
+
     return (
       <article
         className={`group bg-transparent ${
-          isGridLayout ? "" : "flex flex-col md:flex-row items-stretch gap-5 lg:gap-6"
+          isGridLayout
+            ? ""
+            : `flex flex-col md:flex-row items-stretch ${
+                hasCustomGap ? "" : "gap-4 lg:gap-5"
+              }`
         } ${className}`}
       >
         {/* Featured Image */}
         <div
           className={`${
-            isGridLayout ? "md:col-span-7" : "w-full md:w-1/2 lg:w-7/12 shrink-0"
+            isGridLayout
+              ? "md:col-span-6"
+              : hasCustomImageWidth
+              ? ""
+              : "w-full md:w-1/2 lg:w-1/2 shrink-0"
           } relative overflow-hidden bg-slate-100 ${
             imageAspect || ""
           } ${imageWrapperClassName}`}
@@ -260,15 +291,17 @@ export default function NewsCard({
         {/* Content Area */}
         <div
           className={`${
-            isGridLayout ? "md:col-span-5 flex flex-col justify-start" : "flex flex-col justify-center flex-1 py-1 md:py-2"
+            isGridLayout
+              ? "md:col-span-6 flex flex-col justify-center"
+              : "flex flex-col justify-center flex-1 min-w-0 py-1 md:py-2"
           } ${contentWrapperClassName}`}
         >
           <HeadingTag
             className={`font-serif-bangla font-bold text-slate-900 leading-snug ${
               headlineHoverColor || "group-hover:text-red-600"
-            } transition-colors ${
-              headlineClamp || ""
-            } ${headlineSize || "text-2xl sm:text-3xl lg:text-[28px] xl:text-3xl"} ${headlineClassName}`}
+            } transition-colors ${getHeadlineClampClass("")} ${
+              headlineSize || "text-2xl sm:text-3xl lg:text-[28px] xl:text-3xl"
+            } ${headlineClassName}`}
           >
             <Link href={linkHref}>{headline}</Link>
           </HeadingTag>
@@ -328,7 +361,7 @@ export default function NewsCard({
             className={`font-serif-bangla font-bold ${headlineColor} leading-snug ${
               headlineHoverColor || "group-hover:text-red-600"
             } transition-colors ${
-              headlineClamp || "line-clamp-2"
+              getHeadlineClampClass("line-clamp-2")
             } ${headlineSize || "text-sm sm:text-[15px]"} ${headlineClassName}`}
           >
             <Link href={linkHref}>{headline}</Link>
@@ -407,7 +440,7 @@ export default function NewsCard({
               className={`font-serif-bangla font-bold ${headlineColor} leading-snug ${
                 headlineHoverColor || "group-hover:text-red-600"
               } transition-colors flex-1 min-w-0 ${
-                headlineClamp || "line-clamp-2"
+                getHeadlineClampClass("line-clamp-2")
               } ${headlineSize || "text-sm lg:text-[15px]"} ${headlineClassName}`}
             >
               <Link href={linkHref}>{headline}</Link>
@@ -460,7 +493,7 @@ export default function NewsCard({
           className={`font-serif-bangla font-bold ${headlineColor} leading-snug ${
             headlineHoverColor || "group-hover:text-red-600"
           } transition-colors ${
-            headlineClamp || "line-clamp-2"
+            getHeadlineClampClass("line-clamp-2")
           } ${headlineSize || "text-xs sm:text-sm mt-2"} ${headlineClassName}`}
         >
           <Link href={linkHref}>{headline}</Link>
@@ -503,7 +536,7 @@ export default function NewsCard({
       className={`font-serif-bangla font-bold ${headlineColor} leading-snug ${
         headlineHoverColor || "group-hover:text-red-600"
       } transition-colors ${
-        headlineClamp || "line-clamp-2"
+        getHeadlineClampClass(reverseOrder ? "" : "line-clamp-2")
       } ${headlineSize || "text-base sm:text-lg lg:text-xl mt-2.5"} ${headlineClassName}`}
     >
       <Link href={linkHref}>{headline}</Link>

@@ -50,6 +50,7 @@ export default function LatestMixedSection() {
                   imageAspect="aspect-[16/10]"
                   headlineTag="h2"
                   headlineSize="text-xl sm:text-2xl"
+                  headlineClamp=""
                   summaryClamp="line-clamp-3"
                   summarySize="text-sm"
                   imagePriority={true}
@@ -62,11 +63,12 @@ export default function LatestMixedSection() {
                   variant="hero"
                   headlineTag="h2"
                   headlineSize="text-2xl sm:text-3xl lg:text-[28px] xl:text-3xl"
+                  headlineClamp=""
                   summaryClamp="line-clamp-4"
                   summarySize="text-sm sm:text-base mt-3.5"
                   imageWrapperClassName="min-h-[300px] lg:min-h-[330px]"
                   imagePriority={true}
-                  className="hidden md:flex"
+                  className="hidden md:flex gap-4 lg:gap-5"
                 />
               </>
             )}
