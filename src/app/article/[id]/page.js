@@ -78,12 +78,12 @@ export default async function ArticlePage({ params }) {
         {/* Strictly no other info such as date, time, author etc. */}
         <header className="border-b-2 border-slate-200 pb-5 sm:pb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            {/* Category and Subcategory: Reused design from category page */}
-            <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-              <span className={`w-3.5 sm:w-4 h-8 sm:h-10 rounded-xs ${badgeBg}`} />
+            {/* Category and Subcategory: Reused design from category page (refined compact size) */}
+            <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+              <span className={`w-2 sm:w-2.5 h-5 sm:h-6 rounded-2xs ${badgeBg}`} />
               <Link
                 href={`/category/${article.categorySlug}`}
-                className="font-serif-bangla text-3xl sm:text-4xl lg:text-5xl font-extrabold text-slate-950 tracking-tight shrink-0 hover:text-red-700 transition-colors"
+                className="font-serif-bangla text-lg sm:text-xl lg:text-2xl font-bold text-slate-950 tracking-tight shrink-0 hover:text-red-700 transition-colors"
               >
                 {article.category}
               </Link>
@@ -92,7 +92,7 @@ export default async function ArticlePage({ params }) {
               {article.subcategory && (
                 <Link
                   href={`/category/${article.categorySlug}?sub=${encodeURIComponent(article.subcategory)}`}
-                  className="font-serif-bangla text-xl sm:text-2xl font-bold text-red-600 shrink-0 hover:underline"
+                  className="font-serif-bangla text-sm sm:text-base lg:text-lg font-semibold text-red-600 shrink-0 hover:underline"
                 >
                   / {article.subcategory}
                 </Link>
