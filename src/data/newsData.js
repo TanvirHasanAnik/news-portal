@@ -474,6 +474,20 @@ export const categoryNewsData = {
       location: "মিরপুর",
       isMostRecent: false,
     },
+    {
+      id: "spo-5",
+      category: "খেলাধুলা",
+      categorySlug: "sports",
+      subcategory: "ক্রিকেট",
+      headline: "টাইগার্সদের স্মরণীয় জয়ের বিশেষ ভিডিও মুহূর্ত ও ধারাভাষ্যকারের বিশ্লেষণ",
+      summary: "শেষ বলের বাউন্ডারিতে শ্বাসরুদ্ধকর জয়ের রোমাঞ্চকর ভিডিও ফুটেজ ও আন্তর্জাতিক ধারাভাষ্যকারদের ম্যাচ পরবর্তী বিশ্লেষণ।",
+      // No image uploaded: automatically chooses YouTube thumbnail across the site
+      youtubeUrl: "https://www.youtube.com/watch?v=ScMzIvxBSi4",
+      publishedAt: "১২ অক্টোবর ২০২৬, সকাল ০৯:৩০",
+      author: "ক্রীড়া প্রতিবেদক",
+      location: "মিরপুর",
+      isMostRecent: false,
+    },
   ],
 
   entertainment: [
@@ -516,6 +530,20 @@ export const categoryNewsData = {
       location: "ধানমন্ডি",
       isMostRecent: false,
     },
+    {
+      id: "ent-4",
+      category: "বিনোদন",
+      categorySlug: "entertainment",
+      subcategory: "চলচ্চিত্র",
+      headline: "আন্তর্জাতিক পুরস্কারজয়ী বাংলা সিনেমার বিশেষ ট্রেইলার ও ভিডিও ঝলক",
+      summary: "আন্তর্জাতিক চলচ্চিত্র উৎসবে প্রদর্শিত বাংলাদেশি নির্মাতার বহুল প্রতীক্ষিত সিনেমার এক্সক্লুসিভ অফিশিয়াল ভিডিও ট্রেইলার।",
+      // No image uploaded: automatically uses YouTube thumbnail
+      youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      publishedAt: "১২ অক্টোবর ২০২৬, সকাল ০৮:৪০",
+      author: "বিনোদন ডেস্ক",
+      location: "ঢাকা",
+      isMostRecent: false,
+    },
   ],
 
   technology: [
@@ -554,6 +582,20 @@ export const categoryNewsData = {
       summary: "আর্থিক প্রতিষ্ঠান ও সরকারি ডাটা সেন্টারের সুরক্ষায় ২৪ ঘণ্টা পর্যবেক্ষণে নিয়োজিত থাকবে বিশেষায়িত দক্ষ প্রকৌশলীদের নতুন এই টিম।",
       image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=600&auto=format&fit=crop",
       author: "নিরাপত্তা বিশ্লেষক",
+      location: "ঢাকা",
+      isMostRecent: false,
+    },
+    {
+      id: "tech-4",
+      category: "তথ্যপ্রযুক্তি",
+      categorySlug: "technology",
+      subcategory: "গ্যাজেটস",
+      headline: "আগামীর কোয়ান্টাম প্রসেসিং: ল্যাব টেস্ট ও লাইভ সুপারকম্পিউটিং ভিডিও ডেমো",
+      summary: "সুপারকন্ডাক্টিং কিউবিট প্রযুক্তির সাহায্যে জটিল সমীকরণ সমাধানের অবিশ্বাস্য গতির পরীক্ষামূলক ভিডিও প্রদর্শনী ও পর্যালোচনা।",
+      // No image uploaded: only YouTube embed
+      youtubeUrl: "https://www.youtube.com/watch?v=JhHMJCUmq28",
+      publishedAt: "১২ অক্টোবর ২০২৬, সকাল ১০:১৫",
+      author: "বিজ্ঞান ও প্রযুক্তি ডেস্ক",
       location: "ঢাকা",
       isMostRecent: false,
     },

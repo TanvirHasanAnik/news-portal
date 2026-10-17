@@ -138,14 +138,16 @@ export default async function ArticlePage({ params }) {
               />
             )}
 
-            {/* 2.4 Detailed text of the article and nothing else */}
-            <div className="font-serif-bangla text-lg sm:text-xl text-slate-800 leading-relaxed sm:leading-loose space-y-5 sm:space-y-6">
-              {paragraphs.map((paragraph, index) => (
-                <p key={index} className="text-justify sm:text-left">
-                  {paragraph}
-                </p>
-              ))}
-            </div>
+            {/* 2.4 Detailed text of the article and nothing else (omitted if no detailed text) */}
+            {paragraphs.length > 0 && (
+              <div className="font-serif-bangla text-lg sm:text-xl text-slate-800 leading-relaxed sm:leading-loose space-y-5 sm:space-y-6">
+                {paragraphs.map((paragraph, index) => (
+                  <p key={index} className="text-justify sm:text-left">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            )}
           </main>
 
           {/* Second Column [Ratio 1]: 2 Ad Holders + সর্বাধিক পঠিত Section */}

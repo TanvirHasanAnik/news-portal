@@ -7,6 +7,82 @@
  */
 
 export const temporaryNewsList = [
+  // =========================================================================
+  // EXAMPLE 1: YouTube embed AND also image (Latest News)
+  // Shows custom image in cards, and on article page shows image + embedded video under it + detailed text
+  // =========================================================================
+  {
+    id: "latest-yt-image",
+    category: "অর্থনীতি",
+    categorySlug: "economy",
+    subcategory: "বাণিজ্য ও বিনিয়োগ",
+    time: "2026-10-17T15:45:00Z",
+    headline: "অর্থনৈতিক করিডোর ও বিশ্ববাণিজ্য পরিস্থিতি: যমুনা টিভি বিশেষ ভিডিও বিশ্লেষণ",
+    summary: "আন্তর্জাতিক মুদ্রা তহবিল ও অর্থনৈতিক অংশীদারদের নতুন চুক্তি এবং বিশ্ব বাণিজ্যের সাম্প্রতিক গতিধারা নিয়ে যমুনা টিভির বিশদ প্রতিবেদন ও আলোকপাত।",
+    // Has custom image:
+    image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=800&auto=format&fit=crop",
+    // Real Bangladeshi News Channel (Jamuna TV):
+    youtubeUrl: "https://www.youtube.com/watch?v=HMwKzs-fhEE",
+    author: "অর্থনৈতিক ব্যুরো",
+    location: "ঢাকা",
+    isMostRecent: true,
+    content: [
+      "আন্তর্জাতিক বাণিজ্য ও অর্থনৈতিক করিডোর সম্প্রসারণের লক্ষ্যে সম্প্রতি গৃহীত বিভিন্ন চুক্তি ও অংশীদারিত্বের সামগ্রিক প্রভাব নিয়ে বিশদ প্রতিবেদন প্রকাশ করেছে যমুনা টিভি। এ চুক্তির ফলে দেশের বৈদেশিক বাণিজ্য ও বিনিয়োগের ক্ষেত্রে নতুন দিগন্ত উন্মোচিত হতে যাচ্ছে বলে মত অর্থনীতিবিদদের।",
+      "সংশ্লিষ্ট মন্ত্রণালয়ের ঊর্ধ্বতন কর্মকর্তারা জানিয়েছেন, যোগাযোগ নেটওয়ার্ক শক্তিশালীকরণ এবং আঞ্চলিক বন্দরগুলোর সক্ষমতা বৃদ্ধির পাশাপাশি সমন্বিত অর্থনৈতিক অঞ্চল গড়ে তোলার কাজ পুরোদমে এগিয়ে চলছে। এর মাধ্যমে স্থানীয় কর্মসংস্থান বৃদ্ধির ব্যাপক সম্ভাবনা তৈরি হয়েছে।",
+      "বিশেষজ্ঞরা বলছেন, বিশ্ববাজারে জ্বালানি তেলের দামের অস্থিরতা এবং মুদ্রাস্ফীতির চাপের মাঝে এ ধরনের আন্তর্জাতিক চুক্তি সামষ্টিক অর্থনীতির স্থিতিশীলতা বজায় রাখতে তাৎপর্যপূর্ণ অবদান রাখবে।",
+    ],
+  },
+
+  // =========================================================================
+  // EXAMPLE 2: ONLY YouTube video AND detailed text (NO image uploaded)
+  // Cards automatically choose YouTube thumbnail, article page shows video + detailed text
+  // =========================================================================
+  {
+    id: "latest-yt-text",
+    category: "আন্তর্জাতিক",
+    categorySlug: "international",
+    subcategory: "বিশ্ব সংবাদ",
+    time: "2026-10-17T15:30:00Z",
+    headline: "একনজরে বিশ্বের আলোচিত সব তাজা খবর: যমুনা টিভি আন্তর্জাতিক বুলেটিন",
+    summary: "মধ্যপ্রাচ্য পরিস্থিতি ও বৈশ্বিক কূটনীতির গুরুত্বপূর্ণ সব ঘটনা নিয়ে যমুনা টিভির বিশেষ আন্তর্জাতিক নিউজ বুলেটিন ও মাঠপর্যায়ের তথ্য।",
+    // NO image uploaded: Card automatically chooses YouTube thumbnail!
+    image: null,
+    // Real Bangladeshi News Channel (Jamuna TV Bulletin):
+    youtubeUrl: "https://www.youtube.com/watch?v=1ad4I3Wtob4",
+    author: "আন্তর্জাতিক ডেস্ক",
+    location: "নিউইয়র্ক",
+    isMostRecent: false,
+    content: [
+      "বিশ্ব রাজনীতির উত্তাল প্রেক্ষাপট ও মধ্যপ্রাচ্য শান্তি আলোচনার সর্বশেষ অগ্রগতি তুলে ধরে প্রচারিত হয়েছে যমুনা টিভির বিশেষ আন্তর্জাতিক বুলেটিন। জাতিসংঘ ও আন্তর্জাতিক মধ্যস্থতাকারীদের প্রচেষ্টায় যুদ্ধবিরতির আশার আলো দেখা গেলেও মানবিক সহায়তার সরবরাহ নিয়ে উদ্বেগ কাটেনি।",
+      "আই-ডেস্কের প্রতিবেদনে তুলে ধরা হয় কীভাবে ইউরোপীয় ইউনিয়নের নতুন জ্বালানি নীতি ও বৈশ্বিক বাণিজ্য নিষেধাজ্ঞা আন্তর্জাতিক বাজারে প্রভাব ফেলছে। এশিয়ার উদীয়মান বাজারগুলোতেও এর প্রত্যক্ষ অভিঘাত লক্ষ্য করা যাচ্ছে।",
+      "আন্তর্জাতিক বিশ্লেষকরা মনে করছেন, পরাশক্তিগুলোর মধ্যকার কূটনৈতিক আলোচনা ফলপ্রসূ হলে সামগ্রিক বিশ্ব অর্থনীতিতে ইতিবাচক পরিবর্তনের সূচনা হতে পারে।",
+    ],
+  },
+
+  // =========================================================================
+  // EXAMPLE 3: ONLY YouTube video NO detailed text (NO image, NO detailed text)
+  // Cards use YouTube thumbnail; article page shows ONLY title + video and NOTHING else!
+  // =========================================================================
+  {
+    id: "latest-yt-only",
+    category: "জাতীয়",
+    categorySlug: "national",
+    subcategory: "ভিডিও বুলেটিন",
+    time: "2026-10-17T15:15:00Z",
+    headline: "যমুনা নিউজ স্পেশাল বুলেটিন: দিনের শীর্ষ সংবাদের সরাসরি ভিডিও সম্প্রচার",
+    summary: "সরাসরি মাঠপর্যায়ের ভিডিও চিত্র ও দিনের গুরুত্বপূর্ণ সব সংবাদের তাজা ভিডিও ফুটেজ।",
+    // NO image uploaded: Card automatically uses YouTube thumbnail!
+    image: null,
+    // Real Bangladeshi News Channel (Jamuna TV):
+    youtubeUrl: "https://www.youtube.com/watch?v=HMwKzs-fhEE",
+    // NO detailed text:
+    content: [],
+    hasDetailedText: false,
+    author: "যমুনা নিউজ রুম",
+    location: "ঢাকা",
+    isMostRecent: false,
+  },
+
   {
     id: "temp-1",
     category: "আন্তর্জাতিক",
@@ -137,6 +213,62 @@ export const temporaryNewsList = [
     image: "https://images.unsplash.com/photo-1448375240586-882707db888b?q=80&w=600&auto=format&fit=crop",
     author: "পরিবেশ প্রতিবেদক",
     location: "খুলনা",
+    isMostRecent: false,
+  },
+  {
+    id: "temp-11",
+    category: "খেলাধুলা",
+    categorySlug: "sports",
+    subcategory: "ক্রিকেট",
+    time: "2026-10-15T11:00:00Z",
+    headline: "রোমাঞ্চকর শেষ ওভারের জয়: ম্যাচ বিশ্লেষণ ও বিশেষ ভিডিও হাইলাইটস",
+    summary: "শেষ দুই বলে দরকার ছিল ৮ রান। চার ও ছক্কার দুর্দান্ত সমাপনীতে শ্বাসরুদ্ধকর জয় তুলে নেওয়ার রোমাঞ্চকর ভিডিও মুহূর্ত।",
+    // No image uploaded: automatically uses YouTube thumbnail in cards
+    youtubeUrl: "https://www.youtube.com/watch?v=ScMzIvxBSi4",
+    author: "ক্রীড়া প্রতিবেদক",
+    location: "মিরপুর",
+    isMostRecent: false,
+  },
+  {
+    id: "temp-12",
+    category: "বিনোদন",
+    categorySlug: "entertainment",
+    subcategory: "চলচ্চিত্র",
+    time: "2026-10-15T10:15:00Z",
+    headline: "আসছে বছরের সবচেয়ে আলোচিত বাংলা সিনেমার অফিসিয়াল ভিডিও ট্রেইলার",
+    summary: "স্টার কাস্ট ও চোখধাঁধানো ভিএফএক্সে সাজানো নতুন অ্যাকশন থ্রিলার চলচ্চিত্রের এক্সক্লুসিভ ভিডিও ঝলক ইউটিউবে দর্শকদের মাঝে আলোড়ন তৈরি করেছে।",
+    // No image uploaded: only YouTube embed
+    youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    author: "বিনোদন ডেস্ক",
+    location: "ঢাকা",
+    isMostRecent: false,
+  },
+  {
+    id: "temp-13",
+    category: "তথ্যপ্রযুক্তি",
+    categorySlug: "technology",
+    subcategory: "স্মার্টফোন",
+    time: "2026-10-15T09:30:00Z",
+    headline: "নতুন ফ্ল্যাগশিপ স্মার্টফোনের ক্যামেরা পরীক্ষা ও পারফরম্যান্স ভিডিও রিভিউ",
+    summary: "২০০ মেগাপিক্সেল ক্যামেরা সেন্সর এবং ডেডিকেটেড নিউরাল প্রসেসিং ইউনিটের লো-লাইট ফটোগ্রাফির বাস্তবধর্মী পরীক্ষা ও বিস্তারিত ভিডিও রিভিউ।",
+    image: "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?q=80&w=600&auto=format&fit=crop",
+    youtubeUrl: "https://www.youtube.com/watch?v=1La4QzGeaaQ",
+    author: "প্রযুক্তি প্রতিবেদক",
+    location: "ঢাকা",
+    isMostRecent: false,
+  },
+  {
+    id: "temp-14",
+    category: "জাতীয়",
+    categorySlug: "national",
+    subcategory: "যোগাযোগ",
+    time: "2026-10-15T08:45:00Z",
+    headline: "বঙ্গবন্ধু টানেল ঘিরে অর্থনৈতিক করিডোর: ড্রোন ফুটেজ ও ড্রাইভ-থ্রু ভিডিও প্রতিবেদন",
+    summary: "কর্ণফুলী নদীর তলদেশের টানেল সংযোগ সড়ক সম্প্রসারণ ও এর আশপাশের শিল্পাঞ্চলের সাম্প্রতিক উন্নয়ন চিত্রের অনন্য ড্রোন ভিডিও দৃশ্য।",
+    // No image uploaded: only YouTube embed
+    youtubeUrl: "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+    author: "চট্টগ্রাম প্রতিনিধি",
+    location: "চট্টগ্রাম",
     isMostRecent: false,
   },
 ];

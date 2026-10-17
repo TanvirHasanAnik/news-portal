@@ -57,7 +57,13 @@ export function normalizeArticle(item, defaultCategory = "জাতীয়", d
     author: item.author || "নিজস্ব প্রতিবেদক",
     location: item.location || "ঢাকা",
     isMostRecent: Boolean(item.isMostRecent),
-    content: item.content || null,
+    content: item.content !== undefined ? item.content : null,
+    hasDetailedText:
+      item.hasDetailedText !== undefined
+        ? item.hasDetailedText
+        : Array.isArray(item.content) && item.content.length === 0
+        ? false
+        : true,
   };
 }
 
@@ -316,12 +322,15 @@ export function getRelatedArticles(categorySlug, currentArticleId, limit = 4) {
 export function getArticleContent(article) {
   if (!article) return [];
 
-  // If custom content array is already provided
-  if (Array.isArray(article.content) && article.content.length > 0) {
+  // If explicitly designated to have no detailed text or empty content array
+  if (article.hasDetailedText === false || article.noDetailedText === true) {
+    return [];
+  }
+  if (Array.isArray(article.content)) {
     return article.content;
   }
-  if (typeof article.content === "string" && article.content.trim()) {
-    return article.content.split("\n\n").filter(Boolean);
+  if (typeof article.content === "string") {
+    return article.content.trim() ? article.content.split("\n\n").filter(Boolean) : [];
   }
 
   const { headline, summary, category, subcategory, location } = article;

@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Clock, MapPin } from "lucide-react";
+import { Clock, MapPin, Play } from "lucide-react";
 import NewsImage from "./NewsImage";
 import ArticleActions from "./ArticleActions";
 import { DEFAULT_NEWS_IMAGE, getNewsImageUrl, getOptimizedNewsImage, getYouTubeThumbnail } from "../utils/imageUtils";
@@ -72,6 +72,35 @@ export default function NewsCard({
     : DEFAULT_NEWS_IMAGE;
   const imageLoading = loading || (imagePriority ? "eager" : "lazy");
 
+  // Cosmetic play button for video thumbnails
+  const hasVideoThumbnail = Boolean(
+    news.youtubeUrl ||
+    (finalImageSrc && (finalImageSrc.includes("img.youtube.com") || finalImageSrc.includes("i.ytimg.com") || finalImageSrc.includes("youtube.com")))
+  );
+
+  const renderPlayButton = (size = "default") => {
+    if (!hasVideoThumbnail) return null;
+    const isSmall = size === "small";
+    return (
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+        <div
+          className={`${
+            isSmall
+              ? "w-7 h-7 sm:w-8 sm:h-8"
+              : "w-10 h-10 sm:w-12 sm:h-12"
+          } rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-md backdrop-blur-xs transition-transform duration-300 group-hover:scale-110`}
+          aria-hidden="true"
+        >
+          <Play
+            className={`${
+              isSmall ? "w-3.5 h-3.5 sm:w-4 sm:h-4" : "w-5 h-5 sm:w-6 sm:h-6"
+            } fill-white text-white translate-x-0.5`}
+          />
+        </div>
+      </div>
+    );
+  };
+
   // Determine semantic heading tag
   const HeadingTag =
     headlineTag ||
@@ -100,6 +129,7 @@ export default function NewsCard({
               className={`h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 ${imageClassName}`}
             />
           </Link>
+          {renderPlayButton()}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity pointer-events-none" />
 
           {/* Badges Overlay */}
@@ -210,8 +240,8 @@ export default function NewsCard({
         {/* Featured Image */}
         <div
           className={`${
-            isGridLayout ? "md:col-span-7 relative" : "w-full md:w-1/2 lg:w-7/12 shrink-0"
-          } overflow-hidden bg-slate-100 ${
+            isGridLayout ? "md:col-span-7" : "w-full md:w-1/2 lg:w-7/12 shrink-0"
+          } relative overflow-hidden bg-slate-100 ${
             imageAspect || ""
           } ${imageWrapperClassName}`}
         >
@@ -224,6 +254,7 @@ export default function NewsCard({
               className={`w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 ${imageClassName}`}
             />
           </Link>
+          {renderPlayButton()}
         </div>
 
         {/* Content Area */}
@@ -271,7 +302,7 @@ export default function NewsCard({
       >
         {/* Left Side Thumbnail */}
         <div
-          className={`shrink-0 overflow-hidden bg-slate-100 ${
+          className={`relative shrink-0 overflow-hidden bg-slate-100 ${
             imageAspect || ""
           } ${imageWrapperClassName || "w-24 h-16 sm:w-28 sm:h-18"}`}
         >
@@ -284,6 +315,7 @@ export default function NewsCard({
               className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${imageClassName}`}
             />
           </Link>
+          {renderPlayButton("small")}
         </div>
 
         {/* Right Side Content */}
@@ -355,7 +387,7 @@ export default function NewsCard({
           {/* First row: image on left, headline on right */}
           <div className="flex flex-row gap-3 items-start">
             <div
-              className={`shrink-0 overflow-hidden bg-slate-100 ${
+              className={`relative shrink-0 overflow-hidden bg-slate-100 ${
                 imageAspect || ""
               } ${imageWrapperClassName || "w-24 h-16 sm:w-26 sm:h-18 md:w-20 md:h-16 lg:w-24 lg:h-18"}`}
             >
@@ -368,6 +400,7 @@ export default function NewsCard({
                   className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${imageClassName}`}
                 />
               </Link>
+              {renderPlayButton("small")}
             </div>
 
             <HeadingTag
@@ -406,7 +439,7 @@ export default function NewsCard({
       <article className={`group flex flex-col ${className}`}>
         {/* Image */}
         <div
-          className={`w-full overflow-hidden bg-slate-100 ${
+          className={`relative w-full overflow-hidden bg-slate-100 ${
             imageAspect || "aspect-square"
           } ${imageWrapperClassName}`}
         >
@@ -419,6 +452,7 @@ export default function NewsCard({
               className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${imageClassName}`}
             />
           </Link>
+          {renderPlayButton("small")}
         </div>
 
         {/* Headline */}
@@ -455,6 +489,7 @@ export default function NewsCard({
           className={`w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 ${imageClassName}`}
         />
       </Link>
+      {renderPlayButton()}
       {showSubcategory && subcategory && (
         <span className="absolute bottom-2 left-2 rounded bg-slate-900/80 backdrop-blur-xs px-2 py-0.5 text-[11px] font-medium text-white shadow-sm pointer-events-none">
           {subcategory}
