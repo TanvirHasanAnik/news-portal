@@ -159,20 +159,32 @@ export default function LatestMixedSection() {
           </div>
 
           {/* 3RD COLUMN: Ratio 1 (takes remaining 1 of 4 columns) */}
-          {/* Beside the latest news card the remaining column will fill ad space */}
-          <div className="lg:col-span-1 flex flex-col gap-6">
-            {/* Top Ad Unit (Positioned right beside the latest news card) */}
-            <div className="w-full bg-slate-100/90 rounded-xs flex flex-col items-center justify-center p-4 min-h-[280px] lg:min-h-[330px] text-center border-dashed border-2 border-slate-200">
-              <span className="text-[11px] font-semibold text-slate-400 mb-2 uppercase tracking-wider">
+          {/* Standard ad unit placement in the side column */}
+          <div className="lg:col-span-1 flex flex-col gap-6 items-center">
+            {/* Top Ad Unit: Medium Rectangle (300 × 250) */}
+            <div className="w-full max-w-[300px] aspect-[300/250] bg-slate-100/90 rounded-xs flex flex-col items-center justify-center p-4 text-center border-dashed border-2 border-slate-200 relative">
+              <span className="absolute top-2 left-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider select-none">
                 বিজ্ঞাপন
               </span>
+              <p className="text-slate-400 text-xs font-medium">
+                বিজ্ঞাপনের স্থান
+              </p>
+              <p className="text-slate-400 text-[11px] mt-1 font-mono">
+                ৩০০ × ২৫০ পিক্সেল
+              </p>
             </div>
 
-            {/* Bottom Ad Unit */}
-            <div className="w-full bg-slate-100/90 rounded-xs flex flex-col items-center justify-center p-4 min-h-[280px] lg:min-h-[330px] text-center border-dashed border-2 border-slate-200">
-              <span className="text-[11px] font-semibold text-slate-400 mb-2 uppercase tracking-wider">
+            {/* Bottom Ad Unit: Medium Rectangle (300 × 250) or Large Skyscraper (300 × 600) */}
+            <div className="w-full max-w-[300px] aspect-[300/250] bg-slate-100/90 rounded-xs flex flex-col items-center justify-center p-4 text-center border-dashed border-2 border-slate-200 relative">
+              <span className="absolute top-2 left-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider select-none">
                 বিজ্ঞাপন
               </span>
+              <p className="text-slate-400 text-xs font-medium">
+                বিজ্ঞাপনের স্থান
+              </p>
+              <p className="text-slate-400 text-[11px] mt-1 font-mono">
+                ৩০০ × ২৫০ পিক্সেল
+              </p>
             </div>
           </div>
 
