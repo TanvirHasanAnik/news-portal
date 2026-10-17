@@ -1,8 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { handpickedNewsList } from "../data/handpickedNewsData";
-import { categories, categoryNewsData } from "../data/newsData";
-import { temporaryNewsList } from "../data/temporaryNewsData";
+import { trendingNews } from "../data/newsData";
 
 /**
  * Helper to optimize Unsplash URLs with proper dimensions, format, and compression.
@@ -24,54 +23,25 @@ function optimizeUnsplash(url, width = 400, quality = 75) {
 }
 
 /**
- * Pre-compute latest single news from each category at module scope
+ * Pre-optimized most read news list at module scope
  * (Executed once on server, 0 client hydration cost)
  */
-function buildLatestCategoryNews() {
-  const result = [];
-  const seenCategories = new Set();
-
-  categories.forEach((cat) => {
-    if (cat.slug === "latest") return;
-    const list = categoryNewsData[cat.slug];
-    if (list && list.length > 0) {
-      result.push({
-        id: list[0].id,
-        headline: list[0].headline,
-        image: optimizeUnsplash(list[0].image, 240, 70),
-        category: list[0].category || cat.name,
-        categorySlug: cat.slug,
-      });
-      seenCategories.add(cat.slug);
-    }
-  });
-
-  temporaryNewsList.forEach((news) => {
-    if (news.categorySlug && !seenCategories.has(news.categorySlug)) {
-      result.push({
-        id: news.id,
-        headline: news.headline,
-        image: optimizeUnsplash(news.image, 240, 70),
-        category: news.category,
-        categorySlug: news.categorySlug,
-      });
-      seenCategories.add(news.categorySlug);
-    }
-  });
-
-  return result;
-}
-
-const staticLatestCategoryNews = buildLatestCategoryNews();
+const staticMostReadNews = trendingNews.map((item) => ({
+  ...item,
+  image: optimizeUnsplash(item.image, 240, 70),
+}));
 
 /**
- * HandpickedNewsSection (বাছাইকৃত সংবাদ) - Server Component
+ * HandpickedNewsSection (বাছাইকৃত সংবাদ ও সর্বাধিক পঠিত) - Server Component
  * 
  * Column ratio: 2 : 1
- * - First column (Width 2): Handpicked news
- * - Second column (Width 1): Latest single news from each category with own scrollbar
+ * - First column (Width 2): Handpicked news (বাছাইকৃত সংবাদ)
+ * - Second column (Width 1): Most read news (সর্বাধিক পঠিত) with own scrollbar
  */
-export default function HandpickedNewsSection({ newsList = handpickedNewsList }) {
+export default function HandpickedNewsSection({
+  newsList = handpickedNewsList,
+  mostReadList = staticMostReadNews,
+}) {
   const displayNews = newsList.slice(0, 4);
   const count = displayNews.length;
 
@@ -192,7 +162,7 @@ export default function HandpickedNewsSection({ newsList = handpickedNewsList })
           </div>
 
           {/* =========================================================================
-              SECOND COLUMN (Ratio 1) - Latest Single News From Each Category
+              SECOND COLUMN (Ratio 1) - Most Read News (সর্বাধিক পঠিত)
               Takes the exact same height as the first column with its own scroll bar
              ========================================================================= */}
           <div className="lg:col-span-1 relative lg:h-full">
@@ -202,15 +172,15 @@ export default function HandpickedNewsSection({ newsList = handpickedNewsList })
               <div className="flex items-center gap-2.5 border-b-2 border-slate-900 pb-3 mb-3 shrink-0">
                 <span className="w-2.5 h-6 bg-red-600 inline-block"></span>
                 <h3 className="font-serif-bangla text-2xl font-bold text-slate-900 tracking-tight">
-                  বিভাগ অনুযায়ী সর্বশেষ
+                  সর্বাধিক পঠিত
                 </h3>
               </div>
 
               {/* Scrollable News List: 4 news items upfront on mobile with scroll for remaining */}
               <div className="h-[360px] sm:h-[385px] lg:h-auto lg:flex-1 min-h-0 overflow-y-auto pr-2 divide-y divide-slate-100 custom-scrollbar overscroll-contain">
-                {staticLatestCategoryNews.map((item) => (
+                {mostReadList.map((item) => (
                   <article
-                    key={`${item.categorySlug}-${item.id}`}
+                    key={`${item.categorySlug || item.category}-${item.id}`}
                     className="group flex flex-row items-center gap-3 py-3 first:pt-0 last:pb-0"
                   >
                     {/* Image on the left side */}
@@ -235,7 +205,7 @@ export default function HandpickedNewsSection({ newsList = handpickedNewsList })
                       </h4>
                       <div className="mt-1.5 flex items-center">
                         <Link
-                          href={`/category/${item.categorySlug}`}
+                          href={`/category/${item.categorySlug || "national"}`}
                           className="text-xs font-semibold text-red-600 hover:underline"
                         >
                           {item.category}
