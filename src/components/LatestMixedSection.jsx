@@ -1,5 +1,5 @@
 import React from "react";
-import NewsImage from "./NewsImage";
+import NewsCard from "./NewsCard";
 import { temporaryNewsList, getSortedNewsByTime } from "../data/temporaryNewsData";
 
 export default function LatestMixedSection() {
@@ -42,62 +42,31 @@ export default function LatestMixedSection() {
             {mostRecentStory && (
               <>
                 {/* Mobile View: Headline on top, Image on mid, Summary at bottom */}
-                <article className="group flex flex-col gap-3 md:hidden">
-                  {/* Headline on top */}
-                  <h2 className="font-serif-bangla text-xl sm:text-2xl font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors">
-                    <a href={`#news-${mostRecentStory.id}`}>
-                      {mostRecentStory.headline}
-                    </a>
-                  </h2>
-
-                  {/* Image on mid */}
-                  <div className="w-full aspect-[16/10] overflow-hidden bg-slate-100">
-                    <a href={`#news-${mostRecentStory.id}`} className="block h-full w-full">
-                      <NewsImage
-                        src={mostRecentStory.image}
-                        alt={mostRecentStory.headline}
-                        loading="eager"
-                        className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                      />
-                    </a>
-                  </div>
-
-                  {/* Summary at bottom */}
-                  {mostRecentStory.summary && (
-                    <p className="text-slate-600 text-sm leading-relaxed line-clamp-3 font-normal">
-                      {mostRecentStory.summary}
-                    </p>
-                  )}
-                </article>
+                <NewsCard
+                  news={mostRecentStory}
+                  variant="vertical"
+                  reverseOrder={true}
+                  imageAspect="aspect-[16/10]"
+                  headlineTag="h2"
+                  headlineSize="text-xl sm:text-2xl"
+                  summaryClamp="line-clamp-3"
+                  summarySize="text-sm"
+                  imagePriority={true}
+                  className="gap-3 md:hidden"
+                />
 
                 {/* Desktop View: Image on left, Headline & Summary on right */}
-                <article className="group hidden md:flex md:flex-row items-stretch gap-5 lg:gap-6 bg-transparent">
-                  {/* Left side: Card image takes full space */}
-                  <div className="w-full md:w-1/2 lg:w-7/12 shrink-0 overflow-hidden bg-slate-100">
-                    <a href={`#news-${mostRecentStory.id}`} className="block h-full w-full">
-                      <NewsImage
-                        src={mostRecentStory.image}
-                        alt={mostRecentStory.headline}
-                        loading="eager"
-                        className="w-full h-full min-h-[300px] lg:min-h-[330px] object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                      />
-                    </a>
-                  </div>
-
-                  {/* Right side: Headline and Summary */}
-                  <div className="flex flex-col justify-center flex-1 py-1 md:py-2">
-                    <h2 className="font-serif-bangla text-2xl sm:text-3xl lg:text-[28px] xl:text-3xl font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors">
-                      <a href={`#news-${mostRecentStory.id}`}>
-                        {mostRecentStory.headline}
-                      </a>
-                    </h2>
-                    {mostRecentStory.summary && (
-                      <p className="text-slate-600 text-sm sm:text-base leading-relaxed mt-3.5 line-clamp-4 font-normal">
-                        {mostRecentStory.summary}
-                      </p>
-                    )}
-                  </div>
-                </article>
+                <NewsCard
+                  news={mostRecentStory}
+                  variant="hero"
+                  headlineTag="h2"
+                  headlineSize="text-2xl sm:text-3xl lg:text-[28px] xl:text-3xl"
+                  summaryClamp="line-clamp-4"
+                  summarySize="text-sm sm:text-base mt-3.5"
+                  imageWrapperClassName="min-h-[300px] lg:min-h-[330px]"
+                  imagePriority={true}
+                  className="hidden md:flex"
+                />
               </>
             )}
 
@@ -107,29 +76,15 @@ export default function LatestMixedSection() {
             {/* 2. MOBILE VIEW: 2nd to 7th news in 2-column grid (3 rows x 2 cols), square-shaped cards */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-5 md:hidden">
               {mobileGridStories.map((news) => (
-                <article
+                <NewsCard
                   key={news.id}
-                  className="group flex flex-col"
-                >
-                  {/* Square-shaped image */}
-                  <div className="w-full aspect-square overflow-hidden bg-slate-100">
-                    <a href={`#news-${news.id}`} className="block h-full w-full">
-                      <NewsImage
-                        src={news.image}
-                        alt={news.headline}
-                        loading="lazy"
-                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                    </a>
-                  </div>
-
-                  {/* Headline */}
-                  <h3 className="font-serif-bangla text-xs sm:text-sm font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors line-clamp-2 mt-2">
-                    <a href={`#news-${news.id}`}>
-                      {news.headline}
-                    </a>
-                  </h3>
-                </article>
+                  news={news}
+                  variant="compact"
+                  imageAspect="aspect-square"
+                  headlineTag="h3"
+                  headlineSize="text-xs sm:text-sm mt-2"
+                  showSummary={false}
+                />
               ))}
             </div>
 
@@ -142,37 +97,17 @@ export default function LatestMixedSection() {
             {mobileBottomStories.length > 0 && (
               <div className="flex flex-col gap-4 sm:gap-5 md:hidden">
                 {mobileBottomStories.map((news) => (
-                  <article
+                  <NewsCard
                     key={news.id}
-                    className="group flex flex-row gap-3.5 sm:gap-4 items-start"
-                  >
-                    {/* Left side: Image */}
-                    <div className="w-28 sm:w-32 aspect-[4/3] shrink-0 overflow-hidden bg-slate-100">
-                      <a href={`#news-${news.id}`} className="block h-full w-full">
-                        <NewsImage
-                          src={news.image}
-                          alt={news.headline}
-                          loading="lazy"
-                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      </a>
-                    </div>
-
-                    {/* Right side: Headline and Summary */}
-                    <div className="flex flex-col justify-start flex-1 min-w-0">
-                      <h3 className="font-serif-bangla text-sm sm:text-base font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors line-clamp-2">
-                        <a href={`#news-${news.id}`}>
-                          {news.headline}
-                        </a>
-                      </h3>
-
-                      {news.summary && (
-                        <p className="text-slate-600 text-xs sm:text-[13px] line-clamp-2 leading-relaxed mt-1.5 font-normal">
-                          {news.summary}
-                        </p>
-                      )}
-                    </div>
-                  </article>
+                    news={news}
+                    variant="horizontal"
+                    imageWrapperClassName="w-28 sm:w-32 aspect-[4/3]"
+                    headlineTag="h3"
+                    headlineSize="text-sm sm:text-base"
+                    showSummary={true}
+                    summaryClamp="line-clamp-2"
+                    summarySize="text-xs sm:text-[13px] mt-1.5"
+                  />
                 ))}
               </div>
             )}
@@ -185,39 +120,18 @@ export default function LatestMixedSection() {
               {/* Card design swapped from 2nd col: first row image left headline right, second row summary */}
               <div className="md:col-span-1 flex flex-col justify-between h-full gap-4 lg:gap-5">
                 {firstColumnStories.map((news) => (
-                  <article
+                  <NewsCard
                     key={news.id}
-                    className="group flex flex-col justify-between flex-1 py-0.5"
-                  >
-                    {/* First row: image left, headline right */}
-                    <div className="flex flex-row gap-3 items-start">
-                      {/* Image left */}
-                      <div className="w-24 h-16 sm:w-26 sm:h-18 md:w-20 md:h-16 lg:w-24 lg:h-18 shrink-0 overflow-hidden bg-slate-100">
-                        <a href={`#news-${news.id}`} className="block h-full w-full">
-                          <NewsImage
-                            src={news.image}
-                            alt={news.headline}
-                            loading="lazy"
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          />
-                        </a>
-                      </div>
-
-                      {/* Headline right */}
-                      <h3 className="font-serif-bangla text-sm lg:text-[15px] font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors line-clamp-2 flex-1 min-w-0">
-                        <a href={`#news-${news.id}`}>
-                          {news.headline}
-                        </a>
-                      </h3>
-                    </div>
-
-                    {/* Second row: summary */}
-                    {news.summary && (
-                      <p className="text-xs sm:text-[13px] text-slate-600 line-clamp-2 leading-relaxed mt-2 font-normal">
-                        {news.summary}
-                      </p>
-                    )}
-                  </article>
+                    news={news}
+                    variant="row-summary"
+                    imageWrapperClassName="w-24 h-16 sm:w-26 sm:h-18 md:w-20 md:h-16 lg:w-24 lg:h-18"
+                    headlineTag="h3"
+                    headlineSize="text-sm lg:text-[15px]"
+                    showSummary={true}
+                    summaryClamp="line-clamp-2"
+                    summarySize="text-xs sm:text-[13px] mt-2"
+                    className="flex-1 py-0.5"
+                  />
                 ))}
               </div>
 
@@ -226,38 +140,18 @@ export default function LatestMixedSection() {
               {/* 2x2 grid kept at same height matching 1st column */}
               <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6 h-full content-between">
                 {secondColumnStories.map((news) => (
-                  <article
+                  <NewsCard
                     key={news.id}
-                    className="group flex flex-col justify-between h-full"
-                  >
-                    <div>
-                      {/* First row: only image */}
-                      <div className="w-full aspect-[16/10] overflow-hidden bg-slate-100">
-                        <a href={`#news-${news.id}`} className="block h-full w-full">
-                          <NewsImage
-                            src={news.image}
-                            alt={news.headline}
-                            loading="lazy"
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          />
-                        </a>
-                      </div>
-
-                      {/* Second row: headline */}
-                      <h3 className="font-serif-bangla text-base font-bold text-slate-900 leading-snug group-hover:text-red-600 transition-colors line-clamp-2 mt-2.5">
-                        <a href={`#news-${news.id}`}>
-                          {news.headline}
-                        </a>
-                      </h3>
-                    </div>
-
-                    {/* Third row: summary */}
-                    {news.summary && (
-                      <p className="text-xs sm:text-sm text-slate-600 line-clamp-2 leading-relaxed mt-1.5 font-normal">
-                        {news.summary}
-                      </p>
-                    )}
-                  </article>
+                    news={news}
+                    variant="vertical"
+                    imageAspect="aspect-[16/10]"
+                    headlineTag="h3"
+                    headlineSize="text-base mt-2.5"
+                    showSummary={true}
+                    summaryClamp="line-clamp-2"
+                    summarySize="text-xs sm:text-sm mt-1.5"
+                    className="h-full"
+                  />
                 ))}
               </div>
 

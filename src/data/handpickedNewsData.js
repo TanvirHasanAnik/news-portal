@@ -24,7 +24,7 @@ export const handpickedNewsList = [
     time: "2026-10-15T21:15:00Z",
     headline: "নবায়নযোগ্য জ্বালানিতে নতুন বিনিয়োগ: সৌরবিদ্যুৎ উৎপাদনে বড় মাইলফলক অর্জনের পথে দেশ",
     summary: "পরিবেশবান্ধব সবুজ জ্বালানি উৎপাদনে দেশি-বিদেশি যৌথ উদ্যোগে চালু হতে যাচ্ছে ৫০০ মেগাওয়াটের বিশালাকার সৌরবিদ্যুৎ পার্ক।",
-    image: "https://images.unsplash.com/photo-1509391365360-2e959784a276?q=80&w=800&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?q=80&w=800&auto=format&fit=crop",
     author: "অর্থনৈতিক ব্যুরো",
     location: "ঢাকা",
   },

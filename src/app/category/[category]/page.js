@@ -207,35 +207,17 @@ export default async function CategoryPage({ params, searchParams }) {
                 {/* 3.1 Featured / Lead Story (First of the 5 articles - Only Image, Heading, Summary) */}
                 {leadStory && (
                   <section aria-label="শীর্ষ সংবাদ">
-                    <article className="group bg-transparent pb-6 border-b border-slate-200">
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-                        {/* Featured Image (7 cols) - No borders, no border radius, no overlays */}
-                        <div className="md:col-span-7 relative aspect-[16/10] w-full overflow-hidden bg-slate-100">
-                          <a href={`#news-${leadStory.id}`} className="block h-full w-full">
-                            <img
-                              src={leadStory.image}
-                              alt={leadStory.headline}
-                              className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-                            />
-                          </a>
-                        </div>
-
-                        {/* Content Area (5 cols) - Heading & Summary only */}
-                        <div className="md:col-span-5 flex flex-col justify-start">
-                          <h2 className="font-serif-bangla text-2xl sm:text-3xl font-extrabold text-slate-950 leading-snug group-hover:text-red-700 transition-colors mb-3">
-                            <a href={`#news-${leadStory.id}`}>
-                              {leadStory.headline}
-                            </a>
-                          </h2>
-
-                          {leadStory.summary && (
-                            <p className="text-slate-600 text-sm sm:text-base leading-relaxed line-clamp-4 font-normal">
-                              {leadStory.summary}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </article>
+                    <NewsArticleCard
+                      news={leadStory}
+                      variant="hero"
+                      headlineTag="h2"
+                      headlineSize="text-2xl sm:text-3xl font-extrabold text-slate-950 mb-3"
+                      headlineHoverColor="group-hover:text-red-700"
+                      summaryClamp="line-clamp-4"
+                      summarySize="text-sm sm:text-base"
+                      imageAspect="aspect-[16/10]"
+                      className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start pb-6 border-b border-slate-200"
+                    />
                   </section>
                 )}
 

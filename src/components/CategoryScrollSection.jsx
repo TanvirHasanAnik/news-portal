@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { ArrowRight, ChevronRight } from "lucide-react";
-import NewsArticleCard from "./NewsArticleCard";
+import NewsCard from "./NewsCard";
 import { categories, categoryNewsData } from "../data/newsData";
 
 /**
@@ -82,12 +82,20 @@ export default function CategoryScrollSection() {
                 */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
                   {articles.slice(0, 4).map((story) => (
-                    <NewsArticleCard
+                    <NewsCard
                       key={story.id}
                       news={story}
-                      variant="standard"
+                      variant="horizontal"
+                      imageWrapperClassName="w-32 sm:w-40 md:w-36 lg:w-44 aspect-[16/10]"
+                      headlineTag="h4"
+                      headlineSize="text-base sm:text-lg"
+                      showSummary={true}
+                      summaryClamp="line-clamp-2"
+                      summarySize="text-xs sm:text-sm mt-1.5"
+                      showSubcategory={false}
                       showCategory={false}
                       showTime={false}
+                      contentWrapperClassName="justify-start"
                       className="h-full"
                     />
                   ))}
