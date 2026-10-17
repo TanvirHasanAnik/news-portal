@@ -113,7 +113,7 @@ export default async function ArticlePage({ params }) {
           {/* Main content [First Column - Ratio 2]: Title, Image, Detailed Text and nothing else */}
           <main className="lg:col-span-2 space-y-6">
             {/* 2.1 Title */}
-            <h1 className="font-serif-bangla text-2xl sm:text-3xl lg:text-4xl xl:text-[40px] font-extrabold text-slate-950 leading-tight">
+            <h1 className="font-serif-bangla text-2xl sm:text-3xl lg:text-2xl xl:text-3xl font-semi-bold text-slate-950 leading-tight">
               {article.headline}
             </h1>
 
