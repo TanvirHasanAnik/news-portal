@@ -1,6 +1,5 @@
-import React from "react";
 import Link from "next/link";
-import { Clock, MapPin, Play } from "lucide-react";
+import { Clock, MapPin } from "lucide-react";
 import NewsImage from "./NewsImage";
 import ArticleActions from "./ArticleActions";
 import { DEFAULT_NEWS_IMAGE, getNewsImageUrl, getOptimizedNewsImage, getYouTubeThumbnail } from "../utils/imageUtils";
@@ -83,20 +82,23 @@ export default function NewsCard({
     const isSmall = size === "small";
     return (
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-        <div
+        <svg
+          viewBox="0 0 68 48"
           className={`${
             isSmall
-              ? "w-7 h-7 sm:w-8 sm:h-8"
-              : "w-10 h-10 sm:w-12 sm:h-12"
-          } rounded-full bg-red-600/90 text-white flex items-center justify-center shadow-md backdrop-blur-xs transition-transform duration-300 group-hover:scale-110`}
+              ? "w-7 sm:w-8"
+              : "w-11 sm:w-13 md:w-14"
+          } h-auto drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition-transform duration-300 ease-out group-hover:scale-110`}
           aria-hidden="true"
         >
-          <Play
-            className={`${
-              isSmall ? "w-3.5 h-3.5 sm:w-4 sm:h-4" : "w-5 h-5 sm:w-6 sm:h-6"
-            } fill-white text-white translate-x-0.5`}
+          {/* Authentic YouTube brand shape */}
+          <path
+            d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55C3.97 2.33 2.27 4.81 1.48 7.74.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42-6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z"
+            fill="#FF0000"
           />
-        </div>
+          {/* Authentic play triangle */}
+          <path d="M45 24 27 14v20z" fill="#FFFFFF" />
+        </svg>
       </div>
     );
   };
