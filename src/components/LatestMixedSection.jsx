@@ -1,5 +1,6 @@
 import React from "react";
 import NewsCard from "./NewsCard";
+import AdHolder from "./AdHolder";
 import { temporaryNewsList, getSortedNewsByTime } from "../data/temporaryNewsData";
 
 export default function LatestMixedSection() {
@@ -162,30 +163,10 @@ export default function LatestMixedSection() {
           {/* Standard ad unit placement in the side column */}
           <div className="lg:col-span-1 flex flex-col gap-6 items-center">
             {/* Top Ad Unit: Medium Rectangle (300 × 250) */}
-            <div className="w-full max-w-[300px] aspect-[300/250] bg-slate-100/90 rounded-xs flex flex-col items-center justify-center p-4 text-center border-dashed border-2 border-slate-200 relative">
-              <span className="absolute top-2 left-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider select-none">
-                বিজ্ঞাপন
-              </span>
-              <p className="text-slate-400 text-xs font-medium">
-                বিজ্ঞাপনের স্থান
-              </p>
-              <p className="text-slate-400 text-[11px] mt-1 font-mono">
-                ৩০০ × ২৫০ পিক্সেল
-              </p>
-            </div>
+            <AdHolder size="300x250" />
 
-            {/* Bottom Ad Unit: Medium Rectangle (300 × 250) or Large Skyscraper (300 × 600) */}
-            <div className="w-full max-w-[300px] aspect-[300/250] bg-slate-100/90 rounded-xs flex flex-col items-center justify-center p-4 text-center border-dashed border-2 border-slate-200 relative">
-              <span className="absolute top-2 left-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider select-none">
-                বিজ্ঞাপন
-              </span>
-              <p className="text-slate-400 text-xs font-medium">
-                বিজ্ঞাপনের স্থান
-              </p>
-              <p className="text-slate-400 text-[11px] mt-1 font-mono">
-                ৩০০ × ২৫০ পিক্সেল
-              </p>
-            </div>
+            {/* Bottom Ad Unit: Medium Rectangle (300 × 250) */}
+            <AdHolder size="300x250" />
           </div>
 
         </div>

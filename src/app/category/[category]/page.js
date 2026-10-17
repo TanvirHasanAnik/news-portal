@@ -3,7 +3,8 @@ import Link from "next/link";
 import { Home, ChevronRight, Layers, Newspaper } from "lucide-react";
 import NewsArticleCard from "../../../components/NewsArticleCard";
 import SubcategoryDropdown from "../../../components/SubcategoryDropdown";
-import { getCategoryNews, getAllCategorySlugs } from "../../../utils/categoryNews";
+import AdHolder from "../../../components/AdHolder";
+import { getCategoryNews, getAllCategorySlugs, categoryAccentMap } from "../../../utils/categoryNews";
 import { categories } from "../../../data/newsData";
 
 /**
@@ -78,20 +79,6 @@ export default async function CategoryPage({ params, searchParams }) {
   const toBanglaNumber = (num) => {
     const banglaDigits = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
     return String(num).replace(/\d/g, (d) => banglaDigits[parseInt(d, 10)]);
-  };
-
-  // Accent color themes for different categories
-  const categoryAccentMap = {
-    national: "from-red-600 to-rose-700 bg-red-600 border-red-600 text-red-600",
-    politics: "from-blue-600 to-indigo-700 bg-blue-600 border-blue-600 text-blue-600",
-    economy: "from-emerald-600 to-teal-700 bg-emerald-600 border-emerald-600 text-emerald-600",
-    international: "from-purple-600 to-violet-700 bg-purple-600 border-purple-600 text-purple-600",
-    sports: "from-amber-600 to-orange-700 bg-amber-600 border-amber-600 text-amber-600",
-    entertainment: "from-pink-600 to-rose-700 bg-pink-600 border-pink-600 text-pink-600",
-    technology: "from-cyan-600 to-blue-700 bg-cyan-600 border-cyan-600 text-cyan-600",
-    lifestyle: "from-lime-600 to-emerald-700 bg-lime-600 border-lime-600 text-lime-600",
-    opinion: "from-slate-700 to-slate-900 bg-slate-800 border-slate-800 text-slate-800",
-    latest: "from-red-700 to-red-900 bg-red-700 border-red-700 text-red-700",
   };
 
   const accentClass =
@@ -224,17 +211,7 @@ export default async function CategoryPage({ params, searchParams }) {
                 {/* Mobile In-feed Ad (Rendered after the first news in mobile view < lg) */}
                 {leadStory && (
                   <div className="lg:hidden pb-6 border-b border-slate-200">
-                    <div className="bg-slate-100 border-2 border-dashed border-slate-300 w-full max-w-[320px] aspect-[300/250] mx-auto flex flex-col items-center justify-center text-center p-4 relative group">
-                      <span className="absolute top-2 left-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider select-none">
-                        বিজ্ঞাপন
-                      </span>
-                      <p className="text-slate-400 text-xs sm:text-sm font-medium">
-                        বিজ্ঞাপনের জন্য স্থান
-                      </p>
-                      <p className="text-slate-400 text-[11px] mt-1 font-mono">
-                        ৩০০ × ২৫০ পিক্সেল
-                      </p>
-                    </div>
+                    <AdHolder size="300x250" />
                   </div>
                 )}
 
@@ -317,30 +294,10 @@ export default async function CategoryPage({ params, searchParams }) {
             className="hidden lg:block lg:col-span-4 space-y-6"
           >
             {/* Medium Rectangle Ad (300 × 250) */}
-            <div className="bg-slate-100 border-2 border-dashed border-slate-300 w-full max-w-[320px] aspect-[300/250] mx-auto flex flex-col items-center justify-center text-center p-4 relative group">
-              <span className="absolute top-2 left-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider select-none">
-                বিজ্ঞাপন
-              </span>
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">
-                বিজ্ঞাপনের জন্য স্থান
-              </p>
-              <p className="text-slate-400 text-[11px] mt-1 font-mono">
-                ৩০০ × ২৫০ পিক্সেল
-              </p>
-            </div>
+            <AdHolder size="300x250" />
 
             {/* Half-Page Skyscraper Ad (300 × 600) */}
-            <div className="bg-slate-100 border-2 border-dashed border-slate-300 w-full max-w-[320px] aspect-[300/600] mx-auto hidden sm:flex flex-col items-center justify-center text-center p-4 relative group">
-              <span className="absolute top-2 left-2 text-[10px] font-semibold text-slate-400 uppercase tracking-wider select-none">
-                বিজ্ঞাপন
-              </span>
-              <p className="text-slate-400 text-xs sm:text-sm font-medium">
-                বিজ্ঞাপনের জন্য স্থান
-              </p>
-              <p className="text-slate-400 text-[11px] mt-1 font-mono">
-                ৩০০ × ৬০০ পিক্সেল
-              </p>
-            </div>
+            <AdHolder size="300x600" className="hidden sm:flex" />
           </aside>
 
         </div>

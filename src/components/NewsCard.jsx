@@ -64,7 +64,7 @@ export default function NewsCard({
     isMostRecent,
   } = news;
 
-  const linkHref = href || `#news-${id}`;
+  const linkHref = href || (id ? `/article/${id}` : "#");
   const targetImage = imageSrc || image;
   const finalImageSrc = targetImage
     ? (imageSrc ? getNewsImageUrl(imageSrc) : getOptimizedNewsImage(image))
@@ -90,7 +90,7 @@ export default function NewsCard({
             imageAspect || ""
           } ${imageWrapperClassName}`}
         >
-          <a href={linkHref} className="block w-full h-full">
+          <Link href={linkHref} className="block w-full h-full">
             <NewsImage
               src={finalImageSrc}
               alt={headline}
@@ -98,7 +98,7 @@ export default function NewsCard({
               decoding="async"
               className={`h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 ${imageClassName}`}
             />
-          </a>
+          </Link>
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity pointer-events-none" />
 
           {/* Badges Overlay */}
@@ -153,9 +153,9 @@ export default function NewsCard({
                 headlineClamp || "line-clamp-2"
               } ${headlineSize || "text-lg sm:text-xl md:text-2xl"} ${headlineClassName}`}
             >
-              <a href={linkHref} className="focus:outline-none focus:underline">
+              <Link href={linkHref} className="focus:outline-none focus:underline">
                 {headline}
-              </a>
+              </Link>
             </HeadingTag>
 
             {showSummary && summary && (
@@ -214,7 +214,7 @@ export default function NewsCard({
             imageAspect || ""
           } ${imageWrapperClassName}`}
         >
-          <a href={linkHref} className="block w-full h-full">
+          <Link href={linkHref} className="block w-full h-full">
             <NewsImage
               src={finalImageSrc}
               alt={headline}
@@ -222,7 +222,7 @@ export default function NewsCard({
               decoding="async"
               className={`w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 ${imageClassName}`}
             />
-          </a>
+          </Link>
         </div>
 
         {/* Content Area */}
@@ -238,7 +238,7 @@ export default function NewsCard({
               headlineClamp || ""
             } ${headlineSize || "text-2xl sm:text-3xl lg:text-[28px] xl:text-3xl"} ${headlineClassName}`}
           >
-            <a href={linkHref}>{headline}</a>
+            <Link href={linkHref}>{headline}</Link>
           </HeadingTag>
 
           {showSummary && summary && (
@@ -274,7 +274,7 @@ export default function NewsCard({
             imageAspect || ""
           } ${imageWrapperClassName || "w-24 h-16 sm:w-28 sm:h-18"}`}
         >
-          <a href={linkHref} className="block w-full h-full">
+          <Link href={linkHref} className="block w-full h-full">
             <NewsImage
               src={finalImageSrc}
               alt={headline}
@@ -282,7 +282,7 @@ export default function NewsCard({
               decoding="async"
               className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${imageClassName}`}
             />
-          </a>
+          </Link>
         </div>
 
         {/* Right Side Content */}
@@ -298,7 +298,7 @@ export default function NewsCard({
               headlineClamp || "line-clamp-2"
             } ${headlineSize || "text-sm sm:text-[15px]"} ${headlineClassName}`}
           >
-            <a href={linkHref}>{headline}</a>
+            <Link href={linkHref}>{headline}</Link>
           </HeadingTag>
 
           {showSummary && summary && (
@@ -358,7 +358,7 @@ export default function NewsCard({
                 imageAspect || ""
               } ${imageWrapperClassName || "w-24 h-16 sm:w-26 sm:h-18 md:w-20 md:h-16 lg:w-24 lg:h-18"}`}
             >
-              <a href={linkHref} className="block w-full h-full">
+              <Link href={linkHref} className="block w-full h-full">
                 <NewsImage
                   src={finalImageSrc}
                   alt={headline}
@@ -366,7 +366,7 @@ export default function NewsCard({
                   decoding="async"
                   className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${imageClassName}`}
                 />
-              </a>
+              </Link>
             </div>
 
             <HeadingTag
@@ -376,7 +376,7 @@ export default function NewsCard({
                 headlineClamp || "line-clamp-2"
               } ${headlineSize || "text-sm lg:text-[15px]"} ${headlineClassName}`}
             >
-              <a href={linkHref}>{headline}</a>
+              <Link href={linkHref}>{headline}</Link>
             </HeadingTag>
           </div>
 
@@ -409,7 +409,7 @@ export default function NewsCard({
             imageAspect || "aspect-square"
           } ${imageWrapperClassName}`}
         >
-          <a href={linkHref} className="block w-full h-full">
+          <Link href={linkHref} className="block w-full h-full">
             <NewsImage
               src={finalImageSrc}
               alt={headline}
@@ -417,7 +417,7 @@ export default function NewsCard({
               decoding="async"
               className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-105 ${imageClassName}`}
             />
-          </a>
+          </Link>
         </div>
 
         {/* Headline */}
@@ -428,7 +428,7 @@ export default function NewsCard({
             headlineClamp || "line-clamp-2"
           } ${headlineSize || "text-xs sm:text-sm mt-2"} ${headlineClassName}`}
         >
-          <a href={linkHref}>{headline}</a>
+          <Link href={linkHref}>{headline}</Link>
         </HeadingTag>
 
         {children}
@@ -445,7 +445,7 @@ export default function NewsCard({
         imageAspect || "aspect-[16/9]"
       } ${imageWrapperClassName}`}
     >
-      <a href={linkHref} className="block w-full h-full">
+      <Link href={linkHref} className="block w-full h-full">
         <NewsImage
           src={finalImageSrc}
           alt={headline}
@@ -453,7 +453,7 @@ export default function NewsCard({
           decoding="async"
           className={`w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105 ${imageClassName}`}
         />
-      </a>
+      </Link>
       {showSubcategory && subcategory && (
         <span className="absolute bottom-2 left-2 rounded bg-slate-900/80 backdrop-blur-xs px-2 py-0.5 text-[11px] font-medium text-white shadow-sm pointer-events-none">
           {subcategory}
@@ -470,7 +470,7 @@ export default function NewsCard({
         headlineClamp || "line-clamp-2"
       } ${headlineSize || "text-base sm:text-lg lg:text-xl mt-2.5"} ${headlineClassName}`}
     >
-      <a href={linkHref}>{headline}</a>
+      <Link href={linkHref}>{headline}</Link>
     </HeadingTag>
   );
 

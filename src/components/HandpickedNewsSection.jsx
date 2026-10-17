@@ -1,5 +1,6 @@
 import React from "react";
 import NewsCard from "./NewsCard";
+import MostReadSection from "./MostReadSection";
 import { handpickedNewsList } from "../data/handpickedNewsData";
 import { trendingNews } from "../data/newsData";
 import { getOptimizedNewsImage } from "../utils/imageUtils";
@@ -112,38 +113,16 @@ export default function HandpickedNewsSection({
 
           {/* =========================================================================
               SECOND COLUMN (Ratio 1) - Most Read News (সর্বাধিক পঠিত)
+          {/* =========================================================================
+              SECOND COLUMN (Ratio 1) - Most Read News (সর্বাধিক পঠিত)
               Takes the exact same height as the first column with its own scroll bar
              ========================================================================= */}
           <div className="lg:col-span-1 relative lg:h-full">
-            <div className="flex flex-col h-full lg:absolute lg:inset-0">
-              
-              {/* Sidebar Header */}
-              <div className="flex items-center gap-2.5 border-b-2 border-slate-900 pb-3 mb-3 shrink-0">
-                <span className="w-2.5 h-6 bg-red-600 inline-block"></span>
-                <h3 className="font-serif-bangla text-2xl font-bold text-slate-900 tracking-tight">
-                  সর্বাধিক পঠিত
-                </h3>
-              </div>
-
-              {/* Scrollable News List: 4 news items upfront on mobile with scroll for remaining */}
-              <div className="h-[360px] sm:h-[385px] lg:h-auto lg:flex-1 min-h-0 overflow-y-auto pr-2 divide-y divide-slate-100 custom-scrollbar overscroll-contain">
-                {mostReadList.map((item) => (
-                  <NewsCard
-                    key={`${item.categorySlug || item.category}-${item.id}`}
-                    news={item}
-                    variant="horizontal"
-                    imageWrapperClassName="w-24 h-16 sm:w-28 sm:h-18"
-                    headlineTag="h4"
-                    headlineSize="text-sm sm:text-[15px]"
-                    showCategory={true}
-                    categoryPlacement="bottom"
-                    showSummary={false}
-                    className="items-center py-3 first:pt-0 last:pb-0"
-                  />
-                ))}
-              </div>
-
-            </div>
+            <MostReadSection
+              newsList={mostReadList}
+              className="h-full lg:absolute lg:inset-0"
+              listClassName="h-[360px] sm:h-[385px] lg:h-auto lg:flex-1 min-h-0 overflow-y-auto pr-2 divide-y divide-slate-100 custom-scrollbar overscroll-contain"
+            />
           </div>
 
         </div>
