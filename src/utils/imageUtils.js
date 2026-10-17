@@ -48,3 +48,56 @@ export function getOptimizedNewsImage(url, width = 400, quality = 75) {
   }
 }
 
+/**
+ * Extracts YouTube video ID from various YouTube URL formats or ID strings.
+ *
+ * Supports:
+ * - https://www.youtube.com/watch?v=VIDEO_ID
+ * - https://youtu.be/VIDEO_ID
+ * - https://www.youtube.com/embed/VIDEO_ID
+ * - https://www.youtube.com/shorts/VIDEO_ID
+ * - Raw 11-character VIDEO_ID
+ *
+ * @param {string|null|undefined} url - The YouTube link or ID
+ * @returns {string|null} 11-char video ID or null
+ */
+export function extractYouTubeId(url) {
+  if (!url || typeof url !== "string") return null;
+  const trimmed = url.trim();
+  const match = trimmed.match(
+    /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/
+  );
+  if (match && match[1]) {
+    return match[1];
+  }
+  if (/^[\w-]{11}$/.test(trimmed)) {
+    return trimmed;
+  }
+  return null;
+}
+
+/**
+ * Generates a YouTube video thumbnail URL from a YouTube URL or video ID.
+ *
+ * @param {string|null|undefined} url - YouTube URL or video ID
+ * @param {string} [quality="hqdefault"] - Thumbnail quality ('hqdefault', 'mqdefault', 'maxresdefault')
+ * @returns {string|null} Valid thumbnail image URL or null
+ */
+export function getYouTubeThumbnail(url, quality = "hqdefault") {
+  const videoId = extractYouTubeId(url);
+  if (!videoId) return null;
+  return `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+}
+
+/**
+ * Generates a privacy-enhanced YouTube embed URL for iframe players.
+ *
+ * @param {string|null|undefined} url - YouTube URL or video ID
+ * @returns {string|null} Embed URL or null
+ */
+export function getYouTubeEmbedUrl(url) {
+  const videoId = extractYouTubeId(url);
+  if (!videoId) return null;
+  return `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`;
+}
+

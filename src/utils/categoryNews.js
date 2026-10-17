@@ -9,6 +9,7 @@ import {
 } from "../data/newsData";
 import { temporaryNewsList, getSortedNewsByTime } from "../data/temporaryNewsData";
 import { handpickedNewsList } from "../data/handpickedNewsData";
+import { getYouTubeThumbnail } from "./imageUtils";
 
 /**
  * Standard category accent color themes
@@ -27,17 +28,27 @@ export const categoryAccentMap = {
 };
 
 /**
- * Normalizes an article to a standard format for rendering
+ * Normalizes an article to a standard format for rendering.
+ * Automatically chooses YouTube video thumbnail when a YouTube video is present
+ * but no images were uploaded.
  */
 export function normalizeArticle(item, defaultCategory = "জাতীয়", defaultSlug = "national") {
+  const youtubeUrl = item.youtubeUrl || item.youtubeEmbed || item.videoUrl || item.youtube || null;
+  const youtubeThumb = youtubeUrl ? getYouTubeThumbnail(youtubeUrl) : null;
+  const hasCustomImage = Boolean(item.image && typeof item.image === "string" && item.image.trim());
+
+  // Rule: If YouTube video exists but no images were uploaded, choose YouTube thumbnail
+  const resolvedImage = hasCustomImage
+    ? item.image
+    : (youtubeThumb || item.avatar || "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=800&auto=format&fit=crop");
+
   return {
     id: String(item.id),
     headline: item.headline || item.title || "",
     summary: item.summary || item.excerpt || "",
-    image:
-      item.image ||
-      item.avatar ||
-      "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=800&auto=format&fit=crop",
+    image: resolvedImage,
+    hasCustomImage,
+    youtubeUrl,
     category: item.category || defaultCategory,
     categorySlug: item.categorySlug || defaultSlug,
     subcategory: defaultSlug === "latest" ? "" : (item.subcategory || ""),

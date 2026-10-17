@@ -42,6 +42,7 @@ export const temporaryNewsList = [
     headline: "দেশেই তৈরি হচ্ছে সাশ্রয়ী কৃত্রিম বুদ্ধিমত্তা চিপ, গবেষণাগারে অনন্য সাফল্য",
     summary: "বুয়েটের গবেষকদের যৌথ প্রচেষ্টায় অত্যন্ত স্বল্পমূল্যে এআই মডেল প্রসেসিং উপযোগী সেমিকন্ডাক্টর স্থাপত্যের প্রোটোটাইপ সফলভাবে প্রস্তুত হয়েছে।",
     image: "https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=600&auto=format&fit=crop",
+    youtubeUrl: "https://www.youtube.com/watch?v=ScMzIvxBSi4",
     author: "প্রযুক্তি প্রতিবেদক",
     location: "ঢাকা",
     isMostRecent: false,
@@ -67,7 +68,8 @@ export const temporaryNewsList = [
     time: "2026-10-15T17:10:00Z",
     headline: "মেট্রোরেলের নতুন সম্প্রসারিত রুটের ট্রায়াল রান সফল, উদ্বোধনের জোর প্রস্তুতি",
     summary: "রাজধানীর যোগাযোগ ব্যবস্থার যুগান্তকারী অগ্রগতি হিসেবে নতুন রুটে শুরু হয়েছে পরীক্ষামূলক চলাচল। দ্রুতই এটি সর্বসাধারণের জন্য উন্মুক্ত করা হবে।",
-    image: "https://images.unsplash.com/photo-1474487548417-781cb71495f3?q=80&w=800&auto=format&fit=crop",
+    // No image uploaded: card automatically uses YouTube thumbnail
+    youtubeUrl: "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
     author: "নিজস্ব প্রতিবেদক",
     location: "ঢাকা",
     isMostRecent: false,

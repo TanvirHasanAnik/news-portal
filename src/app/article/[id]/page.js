@@ -6,6 +6,7 @@ import NewsCard from "../../../components/NewsCard";
 import AdHolder from "../../../components/AdHolder";
 import MostReadSection from "../../../components/MostReadSection";
 import SocialShareBar from "../../../components/SocialShareBar";
+import YouTubeEmbed from "../../../components/YouTubeEmbed";
 import {
   getArticleById,
   getAllArticles,
@@ -116,18 +117,28 @@ export default async function ArticlePage({ params }) {
               {article.headline}
             </h1>
 
-            {/* 2.2 Image */}
-            <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-100">
-              <NewsImage
-                src={article.image}
-                alt={article.headline}
-                imagePriority={true}
-                loading="eager"
-                className="h-full w-full object-cover"
-              />
-            </div>
+            {/* 2.2 Image (rendered if image was uploaded, or if no video is present) */}
+            {(article.hasCustomImage || !article.youtubeUrl) && (
+              <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-100">
+                <NewsImage
+                  src={article.image}
+                  alt={article.headline}
+                  imagePriority={true}
+                  loading="eager"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            )}
 
-            {/* 2.3 Detailed text of the article and nothing else */}
+            {/* 2.3 Embedded YouTube Video (comes under image in the article page) */}
+            {article.youtubeUrl && (
+              <YouTubeEmbed
+                url={article.youtubeUrl}
+                title={article.headline}
+              />
+            )}
+
+            {/* 2.4 Detailed text of the article and nothing else */}
             <div className="font-serif-bangla text-lg sm:text-xl text-slate-800 leading-relaxed sm:leading-loose space-y-5 sm:space-y-6">
               {paragraphs.map((paragraph, index) => (
                 <p key={index} className="text-justify sm:text-left">

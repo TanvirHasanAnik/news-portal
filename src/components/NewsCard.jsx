@@ -3,7 +3,7 @@ import Link from "next/link";
 import { Clock, MapPin } from "lucide-react";
 import NewsImage from "./NewsImage";
 import ArticleActions from "./ArticleActions";
-import { DEFAULT_NEWS_IMAGE, getNewsImageUrl, getOptimizedNewsImage } from "../utils/imageUtils";
+import { DEFAULT_NEWS_IMAGE, getNewsImageUrl, getOptimizedNewsImage, getYouTubeThumbnail } from "../utils/imageUtils";
 
 /**
  * Reusable NewsCard Component
@@ -65,9 +65,10 @@ export default function NewsCard({
   } = news;
 
   const linkHref = href || (id ? `/article/${id}` : "#");
-  const targetImage = imageSrc || image;
+  const youtubeThumb = news.youtubeUrl ? getYouTubeThumbnail(news.youtubeUrl) : null;
+  const targetImage = imageSrc || image || youtubeThumb;
   const finalImageSrc = targetImage
-    ? (imageSrc ? getNewsImageUrl(imageSrc) : getOptimizedNewsImage(image))
+    ? (imageSrc ? getNewsImageUrl(imageSrc) : getOptimizedNewsImage(targetImage))
     : DEFAULT_NEWS_IMAGE;
   const imageLoading = loading || (imagePriority ? "eager" : "lazy");
 
