@@ -1,26 +1,9 @@
 import React from "react";
 import Link from "next/link";
+import NewsImage from "./NewsImage";
 import { handpickedNewsList } from "../data/handpickedNewsData";
 import { trendingNews } from "../data/newsData";
-
-/**
- * Helper to optimize Unsplash URLs with proper dimensions, format, and compression.
- * Reduces 1.5MB+ heavy images down to lightweight ~10KB-30KB WebP/AVIF payloads.
- */
-function optimizeUnsplash(url, width = 400, quality = 75) {
-  if (!url || typeof url !== "string") return url;
-  if (!url.includes("images.unsplash.com")) return url;
-  try {
-    const parsed = new URL(url);
-    parsed.searchParams.set("w", String(width));
-    parsed.searchParams.set("q", String(quality));
-    parsed.searchParams.set("auto", "format");
-    parsed.searchParams.set("fit", "crop");
-    return parsed.toString();
-  } catch {
-    return url;
-  }
-}
+import { getOptimizedNewsImage } from "../utils/imageUtils";
 
 /**
  * Pre-optimized most read news list at module scope
@@ -28,7 +11,7 @@ function optimizeUnsplash(url, width = 400, quality = 75) {
  */
 const staticMostReadNews = trendingNews.map((item) => ({
   ...item,
-  image: optimizeUnsplash(item.image, 240, 70),
+  image: getOptimizedNewsImage(item.image, 240, 70),
 }));
 
 /**
@@ -75,8 +58,8 @@ export default function HandpickedNewsSection({
                 <article className="group flex flex-col w-full">
                   <div className="w-full aspect-[21/9] sm:aspect-[2.4/1] max-h-[280px] sm:max-h-[320px] overflow-hidden bg-slate-100">
                     <a href={`#news-${displayNews[0].id}`} className="block w-full h-full">
-                      <img
-                        src={optimizeUnsplash(displayNews[0].image, 800, 75)}
+                      <NewsImage
+                        src={getOptimizedNewsImage(displayNews[0].image, 800, 75)}
                         alt={displayNews[0].headline}
                         loading="lazy"
                         decoding="async"
@@ -104,8 +87,8 @@ export default function HandpickedNewsSection({
                     <article key={news.id} className="group flex flex-col">
                       <div className="w-full aspect-[16/9] max-h-[200px] sm:max-h-[230px] overflow-hidden bg-slate-100">
                         <a href={`#news-${news.id}`} className="block w-full h-full">
-                          <img
-                            src={optimizeUnsplash(news.image, 500, 75)}
+                          <NewsImage
+                            src={getOptimizedNewsImage(news.image, 500, 75)}
                             alt={news.headline}
                             loading="lazy"
                             decoding="async"
@@ -135,8 +118,8 @@ export default function HandpickedNewsSection({
                     <article key={news.id} className="group flex flex-col">
                       <div className="w-full aspect-[16/10] sm:aspect-[16/9] max-h-[160px] sm:max-h-[180px] md:max-h-[200px] overflow-hidden bg-slate-100">
                         <a href={`#news-${news.id}`} className="block w-full h-full">
-                          <img
-                            src={optimizeUnsplash(news.image, 450, 75)}
+                          <NewsImage
+                            src={getOptimizedNewsImage(news.image, 450, 75)}
                             alt={news.headline}
                             loading="lazy"
                             decoding="async"
@@ -186,7 +169,7 @@ export default function HandpickedNewsSection({
                     {/* Image on the left side */}
                     <div className="w-24 h-16 sm:w-28 sm:h-18 shrink-0 overflow-hidden bg-slate-100">
                       <a href={`#news-${item.id}`} className="block w-full h-full">
-                        <img
+                        <NewsImage
                           src={item.image}
                           alt={item.headline}
                           loading="lazy"

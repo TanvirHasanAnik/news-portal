@@ -1,5 +1,6 @@
 import React from "react";
 import { Play, Camera, ArrowRight, Video } from "lucide-react";
+import NewsImage from "./NewsImage";
 
 export default function MediaGallery() {
   const videoItems = [
@@ -55,7 +56,7 @@ export default function MediaGallery() {
             >
               {/* Thumbnail with Play Icon */}
               <div className="relative aspect-[16/9] w-full overflow-hidden bg-slate-950">
-                <img
+                <NewsImage
                   src={v.image}
                   alt={v.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 opacity-80 group-hover:opacity-100"

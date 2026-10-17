@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { Clock, MapPin, Share2, Bookmark, Check } from "lucide-react";
+import NewsImage from "./NewsImage";
 
 /**
  * Requirement 1: News Article Card
@@ -68,7 +69,7 @@ export default function NewsArticleCard({
       >
         {/* Featured Image */}
         <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-100">
-          <img
+          <NewsImage
             src={image}
             alt={headline}
             loading="lazy"
@@ -191,7 +192,7 @@ export default function NewsArticleCard({
       >
         {/* Featured Image Thumbnail */}
         <div className="relative aspect-[4/3] w-28 sm:w-36 md:w-40 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-          <img
+          <NewsImage
             src={image}
             alt={headline}
             loading="lazy"
@@ -256,7 +257,7 @@ export default function NewsArticleCard({
         className={`relative aspect-[16/9] sm:aspect-[2.2/1] max-h-[170px] sm:max-h-[190px] md:max-h-[200px] w-full overflow-hidden bg-slate-100 ${imageClassName}`}
       >
         <a href={`#news-${id}`} className="block h-full w-full">
-          <img
+          <NewsImage
             src={image}
             alt={headline}
             loading="lazy"

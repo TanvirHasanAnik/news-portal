@@ -1,4 +1,5 @@
 import React from "react";
+import NewsImage from "./NewsImage";
 import { temporaryNewsList, getSortedNewsByTime } from "../data/temporaryNewsData";
 
 export default function LatestMixedSection() {
@@ -52,7 +53,7 @@ export default function LatestMixedSection() {
                   {/* Image on mid */}
                   <div className="w-full aspect-[16/10] overflow-hidden bg-slate-100">
                     <a href={`#news-${mostRecentStory.id}`} className="block h-full w-full">
-                      <img
+                      <NewsImage
                         src={mostRecentStory.image}
                         alt={mostRecentStory.headline}
                         loading="eager"
@@ -74,7 +75,7 @@ export default function LatestMixedSection() {
                   {/* Left side: Card image takes full space */}
                   <div className="w-full md:w-1/2 lg:w-7/12 shrink-0 overflow-hidden bg-slate-100">
                     <a href={`#news-${mostRecentStory.id}`} className="block h-full w-full">
-                      <img
+                      <NewsImage
                         src={mostRecentStory.image}
                         alt={mostRecentStory.headline}
                         loading="eager"
@@ -113,7 +114,7 @@ export default function LatestMixedSection() {
                   {/* Square-shaped image */}
                   <div className="w-full aspect-square overflow-hidden bg-slate-100">
                     <a href={`#news-${news.id}`} className="block h-full w-full">
-                      <img
+                      <NewsImage
                         src={news.image}
                         alt={news.headline}
                         loading="lazy"
@@ -148,7 +149,7 @@ export default function LatestMixedSection() {
                     {/* Left side: Image */}
                     <div className="w-28 sm:w-32 aspect-[4/3] shrink-0 overflow-hidden bg-slate-100">
                       <a href={`#news-${news.id}`} className="block h-full w-full">
-                        <img
+                        <NewsImage
                           src={news.image}
                           alt={news.headline}
                           loading="lazy"
@@ -193,7 +194,7 @@ export default function LatestMixedSection() {
                       {/* Image left */}
                       <div className="w-24 h-16 sm:w-26 sm:h-18 md:w-20 md:h-16 lg:w-24 lg:h-18 shrink-0 overflow-hidden bg-slate-100">
                         <a href={`#news-${news.id}`} className="block h-full w-full">
-                          <img
+                          <NewsImage
                             src={news.image}
                             alt={news.headline}
                             loading="lazy"
@@ -233,7 +234,7 @@ export default function LatestMixedSection() {
                       {/* First row: only image */}
                       <div className="w-full aspect-[16/10] overflow-hidden bg-slate-100">
                         <a href={`#news-${news.id}`} className="block h-full w-full">
-                          <img
+                          <NewsImage
                             src={news.image}
                             alt={news.headline}
                             loading="lazy"
