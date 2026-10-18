@@ -9,7 +9,7 @@ import {
   Home,
   ChevronDown,
 } from "lucide-react";
-import { categories } from "../data/newsData";
+import { categories, permanentCategories, dynamicCategories } from "../data/newsData";
 import MobileDrawer from "./MobileDrawer";
 import NewsTickerSection from "./NewsTickerSection";
 import {
@@ -36,10 +36,22 @@ export default function Header() {
     hijri: "৪ জমাদিউল আউয়াল ১৪৪৮ হিজরি",
   });
 
-  // All categories for navigation (with Latest/সর্বশেষ first)
-  const allNavCategories = [
+  // Permanent categories (সর্বশেষ & বাছাইকৃত সংবাদ) are always permanent in navigation
+  // and the remaining categories can be dynamic.
+  const permanentNavCategories = permanentCategories || [
     { id: "latest", name: "সর্বশেষ", slug: "latest" },
-    ...categories.filter((c) => c.slug !== "latest"),
+    { id: "handpicked", name: "বাছাইকৃত", slug: "handpicked" },
+  ];
+
+  const dynamicNavCategories =
+    dynamicCategories ||
+    categories.filter(
+      (c) => !permanentNavCategories.some((p) => p.slug === c.slug)
+    );
+
+  const allNavCategories = [
+    ...permanentNavCategories,
+    ...dynamicNavCategories,
   ];
 
   // Overflow categories dropdown state
@@ -89,7 +101,8 @@ export default function Header() {
         available -= widths[i];
         count++;
       }
-      setVisibleCount(Math.max(1, count));
+      // Permanent categories (সর্বশেষ & বাছাইকৃত সংবাদ) always stay visible and never overflow into "আরও"
+      setVisibleCount(Math.max(permanentNavCategories.length, count));
     }
   };
 

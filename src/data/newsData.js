@@ -9,13 +9,24 @@ export const banglaDate = {
   weather: "৩১° সে., রৌদ্রোজ্জ্বল",
 };
 
-export const categories = [
+// Permanent categories that are always anchored in navigation
+export const permanentCategories = [
   {
     id: "latest",
     name: "সর্বশেষ",
     slug: "latest",
     subcategories: [],
   },
+  {
+    id: "handpicked",
+    name: "বাছাইকৃত",
+    slug: "handpicked",
+    subcategories: [],
+  },
+];
+
+// Remaining dynamic categories that can adapt/overflow
+export const dynamicCategories = [
   {
     id: "national",
     name: "জাতীয়",
@@ -70,6 +81,12 @@ export const categories = [
     slug: "opinion",
     subcategories: ["সম্পাদকীয়", "কলাম", "মুক্তমত", "বিশ্লেষণ"],
   },
+];
+
+// All categories list combining permanent and dynamic categories
+export const categories = [
+  ...permanentCategories,
+  ...dynamicCategories,
 ];
 
 export const breakingNews = [

@@ -25,8 +25,12 @@ export async function generateMetadata({ params }) {
   const { category } = await params;
   const categoryData = getCategoryNews(category);
 
+  const pageTitle = categoryData.name.endsWith("সংবাদ")
+    ? `${categoryData.name} | আলো আসবে`
+    : `${categoryData.name} সংবাদ | আলো আসবে`;
+
   return {
-    title: `${categoryData.name} সংবাদ | আলো আসবে`,
+    title: pageTitle,
     description: `${categoryData.name} বিভাগের সর্বশেষ ও তাজা সংবাদ সবার আগে জানুন।`,
   };
 }
@@ -46,7 +50,9 @@ export default async function CategoryPage({ params, searchParams }) {
 
   // Dynamically filter articles if a subcategory is selected
   const displayedArticles = selectedSub
-    ? articles.filter((a) => a.subcategory === selectedSub)
+    ? articles.filter(
+        (a) => a.subcategory === selectedSub || a.originalCategory === selectedSub
+      )
     : articles;
 
   const totalCount = displayedArticles.length;

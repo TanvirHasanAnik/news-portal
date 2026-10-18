@@ -25,6 +25,7 @@ export const categoryAccentMap = {
   lifestyle: "from-lime-600 to-emerald-700 bg-lime-600 border-lime-600 text-lime-600",
   opinion: "from-slate-700 to-slate-900 bg-slate-800 border-slate-800 text-slate-800",
   latest: "from-red-700 to-red-900 bg-red-700 border-red-700 text-red-700",
+  handpicked: "from-red-600 to-rose-700 bg-red-600 border-red-600 text-red-600",
 };
 
 /**
@@ -129,6 +130,22 @@ export function getCategoryNews(categorySlug) {
       if (list && list[0] && !seenIds.has(list[0].id)) {
         articles.push(normalizeArticle(list[0], list[0].category || "সর্বশেষ", slug));
         seenIds.add(list[0].id);
+      }
+    });
+  } else if (decodedSlug === "handpicked") {
+    // Handpicked news showcase (বাছাইকৃত সংবাদ)
+    // The subcategory dynamically comes from the individual handpicked news's main category
+    handpickedNewsList.forEach((item) => {
+      if (!seenIds.has(item.id)) {
+        const article = normalizeArticle(item, "বাছাইকৃত সংবাদ", "handpicked");
+        articles.push({
+          ...article,
+          category: "বাছাইকৃত সংবাদ",
+          categorySlug: "handpicked",
+          subcategory: item.category || article.subcategory || "",
+          originalCategory: item.category,
+        });
+        seenIds.add(item.id);
       }
     });
   } else if (decodedSlug === "opinion") {
