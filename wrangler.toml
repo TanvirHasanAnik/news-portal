@@ -1,0 +1,16 @@
+name = "news-portal"
+main = ".open-next/worker.js"
+compatibility_date = "2026-10-01"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# Uncomment this when you add your D1 database later:
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "news-portal-db"
+# database_id = "your-database-id-here"
+
+# database_id = "your-database-id-here"
