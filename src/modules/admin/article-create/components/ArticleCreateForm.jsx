@@ -6,7 +6,6 @@ import ArticleFormFeedback from "./ArticleFormFeedback";
 import ArticleContentFields from "./ArticleContentFields";
 import ArticleMediaFields from "./ArticleMediaFields";
 import ArticlePublishSettings from "./ArticlePublishSettings";
-import ArticleCurationSettings from "./ArticleCurationSettings";
 import ArticleFormSubmit from "./ArticleFormSubmit";
 
 export default function ArticleCreateForm({ categories = [] }) {
@@ -25,9 +24,6 @@ export default function ArticleCreateForm({ categories = [] }) {
   const [authorName, setAuthorName] = useState("নিজস্ব প্রতিবেদক");
   const [location, setLocation] = useState("ঢাকা");
   const [status, setStatus] = useState("published");
-  const [isBreaking, setIsBreaking] = useState(false);
-  const [isLead, setIsLead] = useState(false);
-  const [isHandpicked, setIsHandpicked] = useState(false);
 
   // Selected Category's subcategories
   const selectedCategory = categories.find((c) => c.slug === categorySlug);
@@ -41,9 +37,6 @@ export default function ArticleCreateForm({ categories = [] }) {
     setImageUrl("");
     setImageCaption("");
     setYoutubeUrl("");
-    setIsBreaking(false);
-    setIsLead(false);
-    setIsHandpicked(false);
     setResult(null);
   };
 
@@ -63,9 +56,6 @@ export default function ArticleCreateForm({ categories = [] }) {
     formData.append("authorName", authorName);
     formData.append("location", location);
     formData.append("status", status);
-    formData.append("isBreaking", String(isBreaking));
-    formData.append("isLead", String(isLead));
-    formData.append("isHandpicked", String(isHandpicked));
 
     startTransition(async () => {
       const res = await createArticleAction(null, formData);
@@ -104,30 +94,15 @@ export default function ArticleCreateForm({ categories = [] }) {
           />
         </div>
 
-        {/* Right Column (1 span): Metadata, Curation, Publishing Controls */}
+        {/* Right Column (1 span): Category & Publishing Controls */}
         <div className="space-y-6">
           <ArticlePublishSettings
-            status={status}
-            setStatus={setStatus}
             categorySlug={categorySlug}
             setCategorySlug={setCategorySlug}
             subcategoryName={subcategoryName}
             setSubcategoryName={setSubcategoryName}
             categories={categories}
             availableSubcategories={availableSubcategories}
-            authorName={authorName}
-            setAuthorName={setAuthorName}
-            location={location}
-            setLocation={setLocation}
-          />
-
-          <ArticleCurationSettings
-            isBreaking={isBreaking}
-            setIsBreaking={setIsBreaking}
-            isLead={isLead}
-            setIsLead={setIsLead}
-            isHandpicked={isHandpicked}
-            setIsHandpicked={setIsHandpicked}
           />
 
           <ArticleFormSubmit

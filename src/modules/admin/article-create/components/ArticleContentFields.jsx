@@ -1,12 +1,11 @@
 "use client";
 
 import React from "react";
-import { FileText, Clock } from "lucide-react";
+import { FileText } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 
 export default function ArticleContentFields({
   headline,
@@ -16,9 +15,6 @@ export default function ArticleContentFields({
   content,
   setContent,
 }) {
-  const wordCount = content.trim() ? content.trim().split(/\s+/).length : 0;
-  const estimatedMins = Math.max(1, Math.ceil(wordCount / 180));
-
   return (
     <Card className="border-slate-200 shadow-sm">
       <CardHeader className="pb-4">
@@ -32,9 +28,6 @@ export default function ArticleContentFields({
               নিবন্ধের শিরোনাম, সারাংশ এবং পূর্ণাঙ্গ সংবাদ লিখুন
             </CardDescription>
           </div>
-          <Badge variant="outline" className="text-slate-600 font-mono">
-            {headline.length} অক্ষর
-          </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -73,15 +66,9 @@ export default function ArticleContentFields({
 
         {/* Detailed Article Body */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="content" className="text-sm font-semibold text-slate-800">
-              বিস্তারিত সংবাদ <span className="text-red-500">*</span>
-            </Label>
-            <div className="flex items-center gap-2 text-xs text-slate-500">
-              <Clock className="w-3.5 h-3.5" />
-              <span>আনুমানিক {estimatedMins} মিনিট পাঠ ({wordCount} শব্দ)</span>
-            </div>
-          </div>
+          <Label htmlFor="content" className="text-sm font-semibold text-slate-800">
+            বিস্তারিত সংবাদ <span className="text-red-500">*</span>
+          </Label>
           <Textarea
             id="content"
             rows={10}
@@ -91,9 +78,6 @@ export default function ArticleContentFields({
             className="font-serif-bangla text-base leading-relaxed"
             required
           />
-          <p className="text-xs text-slate-400">
-            টিপস: প্রতিটি নতুন অনুচ্ছেদের জন্য ডাবল এন্টার চাপুন।
-          </p>
         </div>
       </CardContent>
     </Card>
