@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { convertImageToWebP } from "@/utils/imageConverter";
+import ImageCropperModal from "./ImageCropperModal";
 
 const MAX_IMAGES = 3;
 
@@ -37,6 +38,10 @@ export default function ArticleMediaFields({
   const [uploadError, setUploadError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+
+  // 16:9 Cropper Queue State
+  const [cropQueue, setCropQueue] = useState([]);
+  const [currentCropIndex, setCurrentCropIndex] = useState(0);
 
   // Normalize image list (supports both new 'images' array and legacy 'imageUrl' prop)
   const imageList = Array.isArray(images)
@@ -56,9 +61,9 @@ export default function ArticleMediaFields({
   };
 
   /**
-   * Uploads one or more files to Cloudflare R2 bucket
+   * Receives user selected files and queues them into the 16:9 cropper
    */
-  const handleFilesUpload = async (files) => {
+  const handleFilesSelected = (files) => {
     if (!files || files.length === 0) return;
 
     const remainingSlots = MAX_IMAGES - imageList.length;
@@ -67,10 +72,10 @@ export default function ArticleMediaFields({
       return;
     }
 
-    const filesToUpload = Array.from(files).slice(0, remainingSlots);
+    const filesToQueue = Array.from(files).slice(0, remainingSlots);
 
     // Validation
-    for (const file of filesToUpload) {
+    for (const file of filesToQueue) {
       if (!file.type.startsWith("image/")) {
         setUploadError("অনুগ্রহ করে শুধুমাত্র ছবি ফাইল (JPEG, PNG, WebP, AVIF) নির্বাচন করুন।");
         return;
@@ -81,47 +86,53 @@ export default function ArticleMediaFields({
       }
     }
 
-    setIsUploading(true);
-    setUploadStatus("ছবি প্রসেস করা হচ্ছে...");
     setUploadError(null);
     setUploadSuccess(null);
+    setCropQueue(filesToQueue);
+    setCurrentCropIndex(0);
+  };
 
-    const uploadedUrls = [];
+  /**
+   * Uploads a 16:9 cropped WebP file to Cloudflare R2 bucket
+   */
+  const handleCroppedFileComplete = async (croppedWebpFile) => {
+    setIsUploading(true);
+    setUploadStatus(`ছবি #${currentCropIndex + 1} আপলোড করা হচ্ছে...`);
+    setUploadError(null);
 
     try {
-      for (let i = 0; i < filesToUpload.length; i++) {
-        const rawFile = filesToUpload[i];
+      const formData = new FormData();
+      formData.append("file", croppedWebpFile);
 
-        // 1. Client-Side Conversion to WebP with 0.82 quality setting
-        setUploadStatus(`ছবি #${i + 1} প্রসেস করা হচ্ছে...`);
-        const webpFile = await convertImageToWebP(rawFile, 0.82);
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
 
-        // 2. Upload WebP file to Cloudflare R2
-        setUploadStatus(`ছবি #${i + 1} আপলোড করা হচ্ছে...`);
-        const formData = new FormData();
-        formData.append("file", webpFile);
-
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        const data = await response.json();
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || "আপলোড ব্যর্থ হয়েছে।");
-        }
-
-        uploadedUrls.push(data.url);
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "আপলোড ব্যর্থ হয়েছে।");
       }
 
-      const updated = [...imageList, ...uploadedUrls].slice(0, MAX_IMAGES);
+      const updated = [...imageList, data.url].slice(0, MAX_IMAGES);
       updateImageList(updated);
-      setUploadSuccess(
-        `${uploadedUrls.length}টি ছবি সফলভাবে আপলোড হয়েছে!`
-      );
+
+      if (currentCropIndex + 1 < cropQueue.length) {
+        setCurrentCropIndex((prev) => prev + 1);
+      } else {
+        setCropQueue([]);
+        setCurrentCropIndex(0);
+        setUploadSuccess(
+          cropQueue.length > 1
+            ? `${cropQueue.length}টি ছবি ১৬:৯ অনুপাতে সফলভাবে ক্রপ ও আপলোড হয়েছে!`
+            : "ছবিটি ১৬:৯ অনুপাতে সফলভাবে ক্রপ ও আপলোড হয়েছে!"
+        );
+      }
     } catch (err) {
       console.error("Upload error:", err);
       setUploadError(err.message || "ছবি আপলোড করার সময় প্রযুক্তিগত সমস্যা দেখা দিয়েছে।");
+      setCropQueue([]);
+      setCurrentCropIndex(0);
     } finally {
       setIsUploading(false);
       setUploadStatus("");
@@ -131,10 +142,18 @@ export default function ArticleMediaFields({
     }
   };
 
+  const handleCancelCrop = () => {
+    setCropQueue([]);
+    setCurrentCropIndex(0);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleFileChange = (e) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleFilesUpload(files);
+      handleFilesSelected(files);
     }
   };
 
@@ -143,7 +162,7 @@ export default function ArticleMediaFields({
     setIsDragging(false);
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      handleFilesUpload(files);
+      handleFilesSelected(files);
     }
   };
 
@@ -352,6 +371,18 @@ export default function ArticleMediaFields({
           />
         </div>
       </CardContent>
+
+      {/* 16:9 Locked Image Cropper Modal */}
+      {cropQueue.length > 0 && currentCropIndex < cropQueue.length && (
+        <ImageCropperModal
+          isOpen={true}
+          file={cropQueue[currentCropIndex]}
+          onClose={handleCancelCrop}
+          onCropComplete={handleCroppedFileComplete}
+          currentStep={currentCropIndex + 1}
+          totalSteps={cropQueue.length}
+        />
+      )}
     </Card>
   );
 }
