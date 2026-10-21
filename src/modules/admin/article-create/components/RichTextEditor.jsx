@@ -392,10 +392,6 @@ export default function RichTextEditor({
         >
           {activeFormats.link ? <Unlink className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
         </button>
-
-        <div className="ml-auto flex items-center gap-1.5 text-[11px] text-slate-400 font-medium px-1">
-          <span>WYSIWYG</span>
-        </div>
       </div>
 
       {/* 2. Inline Link Inserter Bar */}
