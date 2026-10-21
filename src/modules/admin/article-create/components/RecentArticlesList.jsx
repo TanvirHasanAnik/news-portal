@@ -27,9 +27,6 @@ export default function RecentArticlesList({ articles = [] }) {
             <CardTitle className="text-base font-bold text-slate-900">
               ডাটাবেজে সংরক্ষিত সাম্প্রতিক আর্টিকেল
             </CardTitle>
-            <CardDescription className="text-xs">
-              SQLite / D1 রিপোজিটরির লাইভ ডাটা
-            </CardDescription>
           </div>
           <Badge variant="outline" className="font-mono text-xs">
             {articles.length} টি
@@ -114,7 +111,6 @@ export default function RecentArticlesList({ articles = [] }) {
                   <Clock className="w-3 h-3" />
                   {art.created_at ? new Date(art.created_at).toLocaleString("bn-BD") : "এখনই"}
                 </span>
-                <span>প্রতিবেদক: {art.author_name || "নিজস্ব প্রতিবেদক"}</span>
               </div>
             </div>
           );
