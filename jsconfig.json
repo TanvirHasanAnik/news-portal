@@ -1,8 +1,11 @@
 {
   "compilerOptions": {
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/schemas/*": ["./src/schemas/*"],
+      "schemas/*": ["./schemas/*"]
     }
   },
-  "include": ["src/**/*", "cloudflare-env.d.ts"]
+  "include": ["src/**/*", "schemas/**/*", "cloudflare-env.d.ts"]
 }
+

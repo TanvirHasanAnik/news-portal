@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { FileText } from "lucide-react";
+import { Controller } from "react-hook-form";
+import { FileText, AlertCircle } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,11 +10,15 @@ import { Label } from "@/components/ui/label";
 import RichTextEditor from "./RichTextEditor";
 
 export default function ArticleContentFields({
-  headline,
+  register,
+  control,
+  errors = {},
+  // Fallbacks for backward compatibility
+  headline = "",
   setHeadline,
-  summary,
+  summary = "",
   setSummary,
-  content,
+  content = "",
   setContent,
 }) {
   return (
@@ -26,57 +31,136 @@ export default function ArticleContentFields({
               সংবাদের মূল বিবরণ
             </CardTitle>
             <CardDescription>
-              নিবন্ধের শিরোনাম, সারাংশ এবং পূর্ণাঙ্গ সংবাদ লিখুন
+              নিবন্ধের শিরোনাম, সংক্ষিপ্ত ভূমিকা এবং বিস্তারিত সংবাদ লিখুন
             </CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Headline */}
+      <CardContent className="space-y-5">
+        {/* 1. Headline Field (Mandatory - Pure Bangla Only) */}
         <div className="space-y-1.5">
           <Label htmlFor="headline" className="text-sm font-semibold text-slate-800">
             সংবাদের শিরোনাম <span className="text-red-500">*</span>
           </Label>
-          <Input
-            id="headline"
-            placeholder="মূল শিরোনাম এখানে লিখুন"
-            value={headline}
-            onChange={(e) => setHeadline(e.target.value)}
-            className="font-serif-bangla text-lg font-medium"
-            required
-          />
+
+          {register ? (
+            <Input
+              id="headline"
+              placeholder="মূল শিরোনাম এখানে লিখুন"
+              {...register("headline")}
+              className={`font-serif-bangla text-lg font-medium transition-colors ${
+                errors?.headline ? "border-red-500 focus:border-red-600 ring-1 ring-red-500/20" : ""
+              }`}
+            />
+          ) : (
+            <Input
+              id="headline"
+              placeholder="মূল শিরোনাম এখানে লিখুন"
+              value={headline}
+              onChange={(e) => setHeadline && setHeadline(e.target.value)}
+              className="font-serif-bangla text-lg font-medium"
+            />
+          )}
+
+          {errors?.headline ? (
+            <p className="text-xs text-red-600 font-medium flex items-center gap-1.5 mt-1">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              {errors.headline.message}
+            </p>
+          ) : (
+            <p className="text-[11px] text-slate-400">
+              শুধুমাত্র বাংলা বর্ণমালায় ৩ থেকে ১৮ শব্দের শিরোনাম লিখুন (লেআউট অক্ষুণ্ণ রাখতে)। কোনো স্ক্রিপ্ট বা কোড গ্রহণযোগ্য নয়।
+            </p>
+          )}
         </div>
 
-        {/* Summary / Lead */}
+        {/* 2. Summary / Lead Field (Optional) */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
             <Label htmlFor="summary" className="text-sm font-semibold text-slate-800">
               সংক্ষিপ্ত ভূমিকা / সারাংশ
             </Label>
-            <span className="text-xs text-slate-400">কার্ডে ও সোশ্যাল শেয়ারে প্রদর্শিত হবে</span>
+            <span className="text-xs text-slate-400">(ঐচ্ছিক)</span>
           </div>
-          <Textarea
-            id="summary"
-            rows={2}
-            placeholder="সংবাদের মূল বার্তা বা হাইলাইট এখানে সংক্ষেপে তুলে ধরুন"
-            value={summary}
-            onChange={(e) => setSummary(e.target.value)}
-            className="font-serif-bangla text-sm"
-          />
+
+          {register ? (
+            <Textarea
+              id="summary"
+              rows={2}
+              placeholder="সংবাদের মূল বার্তা বা হাইলাইট এখানে সংক্ষেপে তুলে ধরুন"
+              {...register("summary")}
+              className={`font-serif-bangla text-sm transition-colors ${
+                errors?.summary ? "border-red-500 focus:border-red-600 ring-1 ring-red-500/20" : ""
+              }`}
+            />
+          ) : (
+            <Textarea
+              id="summary"
+              rows={2}
+              placeholder="সংবাদের মূল বার্তা বা হাইলাইট এখানে সংক্ষেপে তুলে ধরুন"
+              value={summary}
+              onChange={(e) => setSummary && setSummary(e.target.value)}
+              className="font-serif-bangla text-sm"
+            />
+          )}
+
+          {errors?.summary ? (
+            <p className="text-xs text-red-600 font-medium flex items-center gap-1.5 mt-1">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              {errors.summary.message}
+            </p>
+          ) : (
+            <p className="text-[11px] text-slate-400">
+              ঐচ্ছিক; ৫ থেকে ৫০ শব্দের মধ্যে লিখুন। সংবাদ কার্ড ও সোশ্যাল মিডিয়া প্রিভিউতে প্রদর্শিত হবে।
+            </p>
+          )}
         </div>
 
-        {/* Detailed Article Body (Custom WYSIWYG Editor) */}
+        {/* 3. Detailed Article Body (Optional) */}
         <div className="space-y-1.5">
-          <Label htmlFor="content-editor" className="text-sm font-semibold text-slate-800">
-            বিস্তারিত সংবাদ <span className="text-red-500">*</span>
-          </Label>
-          <RichTextEditor
-            value={content}
-            onChange={(jsonString) => setContent(jsonString)}
-          />
+          <div className="flex items-center gap-1.5">
+            <Label htmlFor="content-editor" className="text-sm font-semibold text-slate-800">
+              বিস্তারিত সংবাদ
+            </Label>
+            <span className="text-xs text-slate-400">(ঐচ্ছিক)</span>
+          </div>
+
+          {control ? (
+            <Controller
+              name="content"
+              control={control}
+              render={({ field }) => (
+                <div
+                  className={
+                    errors?.content ? "rounded-md border border-red-500 p-0.5" : ""
+                  }
+                >
+                  <RichTextEditor
+                    value={field.value || ""}
+                    onChange={(jsonString) => field.onChange(jsonString)}
+                  />
+                </div>
+              )}
+            />
+          ) : (
+            <RichTextEditor
+              value={content}
+              onChange={(jsonString) => setContent && setContent(jsonString)}
+            />
+          )}
+
+          {errors?.content ? (
+            <p className="text-xs text-red-600 font-medium flex items-center gap-1.5 mt-1">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              {errors.content.message}
+            </p>
+          ) : (
+            <p className="text-[11px] text-slate-400">
+              ঐচ্ছিক; সম্পূর্ণ সংবাদ লিখুন (১০ থেকে ৪,০০০ শব্দ)। কোনো ক্ষতিকর স্ক্রিপ্ট বা কোড গ্রহণযোগ্য নয়।
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>
   );
 }
-

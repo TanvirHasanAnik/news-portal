@@ -29,8 +29,10 @@ export default function ArticleMediaFields({
   setImages,
   imageUrl,
   setImageUrl,
-  youtubeUrl,
+  youtubeUrl = "",
   setYoutubeUrl,
+  register,
+  errors = {},
 }) {
   const fileInputRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -363,12 +365,36 @@ export default function ArticleMediaFields({
           <Label htmlFor="youtubeUrl" className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
             <Video className="w-4 h-4 text-red-600" /> ইউটিউব ভিডিও লিঙ্ক (ঐচ্ছিক)
           </Label>
-          <Input
-            id="youtubeUrl"
-            placeholder="যেমন: https://www.youtube.com/watch?v=..."
-            value={youtubeUrl}
-            onChange={(e) => setYoutubeUrl(e.target.value)}
-          />
+          {register ? (
+            <Input
+              id="youtubeUrl"
+              placeholder="যেমন: https://www.youtube.com/watch?v=dQw4w9WgXcQ অথবা https://youtu.be/..."
+              {...register("youtubeUrl")}
+              className={`transition-colors ${
+                errors?.youtubeUrl
+                  ? "border-red-500 focus:border-red-600 ring-1 ring-red-500/20"
+                  : ""
+              }`}
+            />
+          ) : (
+            <Input
+              id="youtubeUrl"
+              placeholder="যেমন: https://www.youtube.com/watch?v=dQw4w9WgXcQ অথবা https://youtu.be/..."
+              value={youtubeUrl}
+              onChange={(e) => setYoutubeUrl && setYoutubeUrl(e.target.value)}
+            />
+          )}
+
+          {errors?.youtubeUrl ? (
+            <p className="text-xs text-red-600 font-medium flex items-center gap-1.5 mt-1">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              {errors.youtubeUrl.message}
+            </p>
+          ) : (
+            <p className="text-[11px] text-slate-400">
+              ঐচ্ছিক; সংবাদের সাথে সম্পৃক্ত থাকলে শুধুমাত্র আসল ও কার্যকর ইউটিউব ভিডিও লিঙ্ক দিন (watch, shorts, embed বা youtu.be)।
+            </p>
+          )}
         </div>
       </CardContent>
 

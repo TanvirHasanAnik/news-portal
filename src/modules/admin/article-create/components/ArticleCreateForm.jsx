@@ -1,6 +1,9 @@
 "use client";
 
-import React, { useState, useTransition, useRef, useEffect } from "react";
+import React, { useTransition, useRef, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { articleCreateSchema } from "@/schemas/articleSchema";
 import { createArticleAction } from "@/actions/articleActions";
 import ArticleFormFeedback from "./ArticleFormFeedback";
 import ArticleContentFields from "./ArticleContentFields";
@@ -13,17 +16,36 @@ export default function ArticleCreateForm({ categories = [] }) {
   const [result, setResult] = useState(null);
   const uncommittedImagesRef = useRef(new Set());
 
-  // Form State
-  const [headline, setHeadline] = useState("");
-  const [summary, setSummary] = useState("");
-  const [content, setContent] = useState("");
-  const [categorySlug, setCategorySlug] = useState(categories[2]?.slug || "national");
-  const [subcategoryName, setSubcategoryName] = useState("");
-  const [images, setImages] = useState([]); // Up to 3 images
-  const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [authorName] = useState("নিজস্ব প্রতিবেদক");
-  const [location] = useState("ঢাকা");
-  const [status] = useState("published");
+  const defaultCategorySlug = categories[2]?.slug || categories[0]?.slug || "national";
+
+  // Initialize React Hook Form paired with centralized Zod Article Schema
+  const {
+    register,
+    handleSubmit,
+    control,
+    setValue,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(articleCreateSchema),
+    mode: "onChange",
+    defaultValues: {
+      headline: "",
+      summary: "",
+      content: "",
+      categorySlug: defaultCategorySlug,
+      subcategoryName: "",
+      images: [],
+      youtubeUrl: "",
+      status: "published",
+    },
+  });
+
+  // Watch values for dynamic dependent UI
+  const categorySlug = watch("categorySlug") || defaultCategorySlug;
+  const images = watch("images") || [];
+  const youtubeUrl = watch("youtubeUrl") || "";
 
   // Selected Category's subcategories
   const selectedCategory = categories.find((c) => c.slug === categorySlug);
@@ -46,7 +68,7 @@ export default function ArticleCreateForm({ categories = [] }) {
       }
     });
 
-    setImages(newImages);
+    setValue("images", newImages, { shouldValidate: true });
   };
 
   // Reset form and purge all uncommitted images from Cloudflare R2
@@ -61,11 +83,16 @@ export default function ArticleCreateForm({ categories = [] }) {
       uncommittedImagesRef.current.clear();
     }
 
-    setHeadline("");
-    setSummary("");
-    setContent("");
-    setImages([]);
-    setYoutubeUrl("");
+    reset({
+      headline: "",
+      summary: "",
+      content: "",
+      categorySlug: defaultCategorySlug,
+      subcategoryName: "",
+      images: [],
+      youtubeUrl: "",
+      status: "published",
+    });
     setResult(null);
   };
 
@@ -106,20 +133,20 @@ export default function ArticleCreateForm({ categories = [] }) {
     };
   }, []);
 
-  const handleSave = (targetStatus = "published") => {
+  const onValidSubmit = async (data, targetStatus = "published") => {
     setResult(null);
 
     const formData = new FormData();
-    formData.append("headline", headline);
-    formData.append("summary", summary);
-    formData.append("content", content);
-    formData.append("categorySlug", categorySlug);
-    formData.append("subcategoryName", subcategoryName);
-    formData.append("images", JSON.stringify(images.slice(0, 3)));
-    formData.append("image", images[0] || "");
-    formData.append("youtubeUrl", youtubeUrl);
-    formData.append("authorName", authorName);
-    formData.append("location", location);
+    formData.append("headline", data.headline);
+    formData.append("summary", data.summary || "");
+    formData.append("content", data.content || "");
+    formData.append("categorySlug", data.categorySlug);
+    formData.append("subcategoryName", data.subcategoryName || "");
+    formData.append("images", JSON.stringify(data.images?.slice(0, 3) || []));
+    formData.append("image", data.images?.[0] || "");
+    formData.append("youtubeUrl", data.youtubeUrl || "");
+    formData.append("authorName", "নিজস্ব প্রতিবেদক");
+    formData.append("location", "ঢাকা");
     formData.append("status", targetStatus);
 
     startTransition(async () => {
@@ -128,18 +155,26 @@ export default function ArticleCreateForm({ categories = [] }) {
       if (res?.success) {
         // Article successfully saved in database — commit images so they are retained permanently
         uncommittedImagesRef.current.clear();
+        reset({
+          headline: "",
+          summary: "",
+          content: "",
+          categorySlug: defaultCategorySlug,
+          subcategoryName: "",
+          images: [],
+          youtubeUrl: "",
+          status: "published",
+        });
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     });
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    handleSave("published");
-  };
+  const handleFormSubmit = handleSubmit((data) => onValidSubmit(data, "published"));
+  const handleSaveDraft = handleSubmit((data) => onValidSubmit(data, "draft"));
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form onSubmit={handleFormSubmit} className="space-y-6">
       {/* Success / Error Notification Alert */}
       <ArticleFormFeedback result={result} onReset={handleReset} />
 
@@ -148,36 +183,38 @@ export default function ArticleCreateForm({ categories = [] }) {
         {/* Left Column (2 spans): Primary Content & Media */}
         <div className="lg:col-span-2 space-y-6">
           <ArticleContentFields
-            headline={headline}
-            setHeadline={setHeadline}
-            summary={summary}
-            setSummary={setSummary}
-            content={content}
-            setContent={setContent}
+            register={register}
+            control={control}
+            errors={errors}
+            watch={watch}
+            setValue={setValue}
           />
 
           <ArticleMediaFields
+            register={register}
+            errors={errors}
             images={images}
             setImages={handleImagesChange}
             youtubeUrl={youtubeUrl}
-            setYoutubeUrl={setYoutubeUrl}
+            setYoutubeUrl={(val) => setValue("youtubeUrl", val, { shouldValidate: true })}
           />
         </div>
 
         {/* Right Column (1 span): Category & Publishing Controls */}
         <div className="space-y-6">
           <ArticlePublishSettings
+            register={register}
+            errors={errors}
             categorySlug={categorySlug}
-            setCategorySlug={setCategorySlug}
-            subcategoryName={subcategoryName}
-            setSubcategoryName={setSubcategoryName}
+            setCategorySlug={(slug) => setValue("categorySlug", slug, { shouldValidate: true })}
+            setSubcategoryName={(sub) => setValue("subcategoryName", sub, { shouldValidate: true })}
             categories={categories}
             availableSubcategories={availableSubcategories}
           />
 
           <ArticleFormSubmit
             isPending={isPending}
-            onSaveDraft={() => handleSave("draft")}
+            onSaveDraft={handleSaveDraft}
             onReset={handleReset}
           />
         </div>
@@ -185,4 +222,3 @@ export default function ArticleCreateForm({ categories = [] }) {
     </form>
   );
 }
-
