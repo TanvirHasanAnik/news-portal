@@ -111,18 +111,17 @@ body {
 
 @keyframes slide-in-right {
   from {
-    transform: translate3d(24px, 0, 0);
+    transform: translateX(16px);
     opacity: 0;
   }
   to {
-    transform: translate3d(0, 0, 0);
+    transform: none;
     opacity: 1;
   }
 }
 
 .animate-slide-in {
-  animation: slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  will-change: transform, opacity;
+  animation: slide-in-right 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Accessibility: Honor prefers-reduced-motion preference */

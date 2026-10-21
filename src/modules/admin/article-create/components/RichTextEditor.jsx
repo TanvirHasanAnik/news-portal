@@ -22,7 +22,7 @@ import {
 export default function RichTextEditor({
   value,
   onChange,
-  placeholder = "এখানে সম্পূর্ণ সংবাদ লিখুন... (টুলবার থেকে বোল্ড, আন্ডারলাইন, এইচ২, এইচ৩, তালিকা বা লিংক ব্যবহার করতে পারেন)",
+  placeholder = "এখানে সম্পূর্ণ সংবাদ লিখুন...",
   className = "",
 }) {
   const editorRef = useRef(null);

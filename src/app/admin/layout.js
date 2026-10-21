@@ -9,7 +9,7 @@ export const metadata = {
 
 export default function AdminLayout({ children }) {
   return (
-    <div className="min-h-screen bg-slate-100/70 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-100/70 flex flex-col font-sans subpixel-antialiased">
       {/* 1. Admin Top Navigation Bar */}
       <AdminHeader />
 

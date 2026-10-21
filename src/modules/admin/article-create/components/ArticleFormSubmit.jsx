@@ -16,10 +16,10 @@ export default function ArticleFormSubmit({
         {/* Publish Action Button */}
         <Button
           type="submit"
-          variant="primary"
+          variant="success"
           size="lg"
           disabled={isPending}
-          className="w-full text-base font-bold shadow-md bg-red-600 hover:bg-red-700"
+          className="w-full text-base font-bold shadow-md bg-emerald-600 hover:bg-emerald-700"
         >
           {isPending ? (
             <>

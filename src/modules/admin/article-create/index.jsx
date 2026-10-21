@@ -20,7 +20,7 @@ export default async function ArticleCreateModule() {
   ]);
 
   return (
-    <div className="space-y-8 animate-slide-in">
+    <div className="space-y-8">
       {/* Module Header */}
       <ArticleCreateHeader />
 

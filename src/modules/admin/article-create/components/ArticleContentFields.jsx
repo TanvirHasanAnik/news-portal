@@ -39,7 +39,7 @@ export default function ArticleContentFields({
           </Label>
           <Input
             id="headline"
-            placeholder="যেমন: অর্থনৈতিক করিডোর সম্প্রসারণে নতুন চুক্তি স্বাক্ষর"
+            placeholder="মূল শিরোনাম এখানে লিখুন"
             value={headline}
             onChange={(e) => setHeadline(e.target.value)}
             className="font-serif-bangla text-lg font-medium"
@@ -58,7 +58,7 @@ export default function ArticleContentFields({
           <Textarea
             id="summary"
             rows={2}
-            placeholder="সংবাদের মূল সারসংক্ষেপ এক বা দুই বাক্যে..."
+            placeholder="সংবাদের মূল বার্তা বা হাইলাইট এখানে সংক্ষেপে তুলে ধরুন"
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
             className="font-serif-bangla text-sm"
