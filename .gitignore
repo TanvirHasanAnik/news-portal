@@ -48,3 +48,6 @@ next-env.d.ts
 # local sqlite data
 .data/
 *.sqlite
+
+# temporary office lock files
+~$*
