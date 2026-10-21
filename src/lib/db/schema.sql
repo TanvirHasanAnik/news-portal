@@ -65,8 +65,8 @@ CREATE TABLE IF NOT EXISTS articles (
   category_slug TEXT NOT NULL,
   subcategory_id TEXT REFERENCES subcategories(id),
   subcategory_name TEXT,
-  image TEXT, -- Cloudflare R2 bucket asset URL or static path
-  image_caption TEXT,
+  images TEXT, -- JSON array of image URLs (maximum 3 images)
+  image TEXT, -- Primary featured image (first image from images array)
   youtube_url TEXT,
   author_id TEXT REFERENCES users(id),
   author_name TEXT,

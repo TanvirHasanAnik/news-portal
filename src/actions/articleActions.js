@@ -56,8 +56,30 @@ export async function createArticleAction(prevState, formData) {
     const content = formData.get("content")?.toString().trim();
     const categorySlug = formData.get("categorySlug")?.toString().trim();
     const subcategoryName = formData.get("subcategoryName")?.toString().trim() || "";
-    const image = formData.get("image")?.toString().trim() || "";
-    const imageCaption = formData.get("imageCaption")?.toString().trim() || "";
+    
+    // Parse images array (max 3 images)
+    let images = [];
+    const rawImages = formData.get("images");
+    if (rawImages) {
+      try {
+        const parsed = JSON.parse(rawImages.toString());
+        if (Array.isArray(parsed)) {
+          images = parsed.filter(Boolean);
+        } else if (parsed) {
+          images = [parsed.toString()];
+        }
+      } catch {
+        images = [rawImages.toString().trim()];
+      }
+    }
+    const singleImage = formData.get("image")?.toString().trim();
+    if (images.length === 0 && singleImage) {
+      images = [singleImage];
+    }
+    // Restrict strictly to maximum 3 images
+    images = images.slice(0, 3);
+    const primaryImage = images[0] || null;
+
     const youtubeUrl = formData.get("youtubeUrl")?.toString().trim() || "";
     const authorName = formData.get("authorName")?.toString().trim() || "নিজস্ব প্রতিবেদক";
     const location = formData.get("location")?.toString().trim() || "ঢাকা";
@@ -134,8 +156,8 @@ export async function createArticleAction(prevState, formData) {
       categorySlug,
       subcategoryId,
       subcategoryName: subcategoryName || null,
-      image: image || null,
-      imageCaption: imageCaption || null,
+      images,
+      image: primaryImage,
       youtubeUrl: youtubeUrl || null,
       authorName,
       location,

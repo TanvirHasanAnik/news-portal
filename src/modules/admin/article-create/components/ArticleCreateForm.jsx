@@ -18,12 +18,11 @@ export default function ArticleCreateForm({ categories = [] }) {
   const [content, setContent] = useState("");
   const [categorySlug, setCategorySlug] = useState(categories[2]?.slug || "national");
   const [subcategoryName, setSubcategoryName] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [imageCaption, setImageCaption] = useState("");
+  const [images, setImages] = useState([]); // Up to 3 images
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [authorName, setAuthorName] = useState("নিজস্ব প্রতিবেদক");
-  const [location, setLocation] = useState("ঢাকা");
-  const [status, setStatus] = useState("published");
+  const [authorName] = useState("নিজস্ব প্রতিবেদক");
+  const [location] = useState("ঢাকা");
+  const [status] = useState("published");
 
   // Selected Category's subcategories
   const selectedCategory = categories.find((c) => c.slug === categorySlug);
@@ -34,8 +33,7 @@ export default function ArticleCreateForm({ categories = [] }) {
     setHeadline("");
     setSummary("");
     setContent("");
-    setImageUrl("");
-    setImageCaption("");
+    setImages([]);
     setYoutubeUrl("");
     setResult(null);
   };
@@ -49,8 +47,8 @@ export default function ArticleCreateForm({ categories = [] }) {
     formData.append("content", content);
     formData.append("categorySlug", categorySlug);
     formData.append("subcategoryName", subcategoryName);
-    formData.append("image", imageUrl);
-    formData.append("imageCaption", imageCaption);
+    formData.append("images", JSON.stringify(images.slice(0, 3)));
+    formData.append("image", images[0] || "");
     formData.append("youtubeUrl", youtubeUrl);
     formData.append("authorName", authorName);
     formData.append("location", location);
@@ -89,10 +87,8 @@ export default function ArticleCreateForm({ categories = [] }) {
           />
 
           <ArticleMediaFields
-            imageUrl={imageUrl}
-            setImageUrl={setImageUrl}
-            imageCaption={imageCaption}
-            setImageCaption={setImageCaption}
+            images={images}
+            setImages={setImages}
             youtubeUrl={youtubeUrl}
             setYoutubeUrl={setYoutubeUrl}
           />

@@ -109,6 +109,15 @@ function initializeLocalSchema(sqlite, fs, path) {
     sqlite.exec(schemaSql);
   }
 
+  // Ensure 'images' column exists in articles table for existing database
+  try {
+    const tableInfo = sqlite.prepare("PRAGMA table_info(articles)").all();
+    const hasImagesCol = tableInfo.some((col) => col.name === "images");
+    if (!hasImagesCol) {
+      sqlite.exec("ALTER TABLE articles ADD COLUMN images TEXT;");
+    }
+  } catch (_e) {}
+
   // Check if categories are seeded
   const checkCat = sqlite.prepare("SELECT COUNT(*) as count FROM categories").get();
   if (!checkCat || checkCat.count === 0) {

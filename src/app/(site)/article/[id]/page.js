@@ -69,6 +69,26 @@ export default async function ArticlePage({ params }) {
   // Detailed paragraphs for article body
   const paragraphs = getArticleContent(article);
 
+  // Extract up to 3 images (supports JSON array string, array, or fallback image)
+  let allImages = [];
+  if (Array.isArray(article.images)) {
+    allImages = article.images.filter(Boolean).slice(0, 3);
+  } else if (typeof article.images === "string" && article.images.trim()) {
+    try {
+      const parsed = JSON.parse(article.images);
+      if (Array.isArray(parsed)) {
+        allImages = parsed.filter(Boolean).slice(0, 3);
+      } else if (parsed) {
+        allImages = [String(parsed)];
+      }
+    } catch {
+      allImages = [article.images.trim()];
+    }
+  } else if (article.image) {
+    allImages = [article.image];
+  }
+  const heroImage = allImages[0] || article.image;
+
   // Suggestions: "এই বিভাগের আরও খবর" (More news from the same category)
   const relatedArticles = getRelatedArticles(article.categorySlug, article.id, 4);
 
@@ -118,16 +138,34 @@ export default async function ArticlePage({ params }) {
               {article.headline}
             </h1>
 
-            {/* 2.2 Image (rendered if image was uploaded, or if no video is present) */}
-            {(article.hasCustomImage || !article.youtubeUrl) && (
-              <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-100">
+            {/* 2.2 Primary Featured Image (rendered if image was uploaded, or if no video is present) */}
+            {(article.hasCustomImage || heroImage || !article.youtubeUrl) && heroImage && (
+              <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-100 rounded-lg">
                 <NewsImage
-                  src={article.image}
+                  src={heroImage}
                   alt={article.headline}
                   imagePriority={true}
                   loading="eager"
                   className="h-full w-full object-cover"
                 />
+              </div>
+            )}
+
+            {/* Additional Article Images (up to 3 total) */}
+            {allImages.length > 1 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {allImages.slice(1, 3).map((imgUrl, idx) => (
+                  <div
+                    key={idx}
+                    className="relative aspect-video w-full overflow-hidden rounded-lg bg-slate-100 border border-slate-200 shadow-xs"
+                  >
+                    <NewsImage
+                      src={imgUrl}
+                      alt={`${article.headline} - ছবি ${idx + 2}`}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ))}
               </div>
             )}
 

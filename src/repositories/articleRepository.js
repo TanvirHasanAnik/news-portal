@@ -16,7 +16,7 @@ export async function createArticle(data) {
       id, headline, slug, summary, content,
       category_id, category_name, category_slug,
       subcategory_id, subcategory_name,
-      image, image_caption, youtube_url,
+      images, image, youtube_url,
       author_id, author_name, location, read_time,
       status, is_breaking, is_lead, is_handpicked,
       view_count, published_at, created_at, updated_at
@@ -31,6 +31,33 @@ export async function createArticle(data) {
     )
   `;
 
+  // Parse images: ensure array format and maximum 3 images
+  let imagesJson = null;
+  let primaryImage = data.image || null;
+
+  if (Array.isArray(data.images)) {
+    const sliced = data.images.slice(0, 3);
+    imagesJson = JSON.stringify(sliced);
+    primaryImage = primaryImage || sliced[0] || null;
+  } else if (typeof data.images === "string" && data.images.trim()) {
+    try {
+      const parsed = JSON.parse(data.images);
+      if (Array.isArray(parsed)) {
+        const sliced = parsed.slice(0, 3);
+        imagesJson = JSON.stringify(sliced);
+        primaryImage = primaryImage || sliced[0] || null;
+      } else {
+        imagesJson = JSON.stringify([data.images]);
+        primaryImage = primaryImage || data.images;
+      }
+    } catch {
+      imagesJson = JSON.stringify([data.images]);
+      primaryImage = primaryImage || data.images;
+    }
+  } else if (primaryImage) {
+    imagesJson = JSON.stringify([primaryImage]);
+  }
+
   await db.prepare(insertSql).bind(
     id,
     data.headline,
@@ -42,8 +69,8 @@ export async function createArticle(data) {
     data.categorySlug || "",
     data.subcategoryId || null,
     data.subcategoryName || null,
-    data.image || null,
-    data.imageCaption || null,
+    imagesJson,
+    primaryImage,
     data.youtubeUrl || null,
     data.authorId || "usr_reporter",
     data.authorName || "নিজস্ব প্রতিবেদক",
