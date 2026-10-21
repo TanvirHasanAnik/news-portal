@@ -18,21 +18,13 @@ export default function AdminSidebar() {
     <aside className="w-72 shrink-0 border-r border-slate-200 bg-white min-h-[calc(100vh-65px)] flex flex-col justify-between p-4">
       <div className="space-y-6">
         {/* User Role Card */}
-        <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              বর্তমান ভূমিকা
-            </span>
-            <Badge variant="default" className="bg-red-600 text-white hover:bg-red-700 text-[10px]">
-              সুপার অ্যাডমিন
-            </Badge>
-          </div>
+        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-sm shadow-sm">
-              প্র
+            <div className="w-9 h-9 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-sm shadow-sm shrink-0">
+              সু
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-slate-900 truncate">প্রধান সম্পাদক</p>
+              <p className="text-sm font-bold text-slate-900 truncate">সুপার অ্যাডমিন</p>
               <p className="text-xs text-slate-500 truncate">admin@aloshbe.com</p>
             </div>
           </div>
@@ -40,9 +32,6 @@ export default function AdminSidebar() {
 
         {/* Dynamic Navigation for Registered Active Modules */}
         <nav className="space-y-1">
-          <h4 className="px-2.5 text-xs font-bold text-slate-400 uppercase tracking-wider">
-            সক্রিয় মডিউলসমূহ
-          </h4>
           <div className="space-y-1 pt-1.5">
             {activeModules.map((item) => {
               const Icon = item.icon;
@@ -100,9 +89,6 @@ export default function AdminSidebar() {
           </div>
           <span className="text-xs text-slate-400">↗</span>
         </Link>
-        <p className="px-3 text-[11px] text-slate-400">
-          ক্লাউডফ্লেয়ার D1 ও R2 রেডি আর্কিটেকচার
-        </p>
       </div>
     </aside>
   );

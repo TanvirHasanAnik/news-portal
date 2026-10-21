@@ -23,7 +23,6 @@ export const adminModules = [
     label: "আর্টিকেল তৈরি",
     icon: FilePlus2,
     component: ArticleCreateModule,
-    badge: "Active",
   },
   // Future single-purpose modules can be registered here:
   // {
