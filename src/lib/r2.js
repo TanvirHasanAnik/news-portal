@@ -118,6 +118,12 @@ async function createLocalR2Adapter() {
     },
 
     async delete(key) {
+      if (Array.isArray(key)) {
+        for (const k of key) {
+          await this.delete(k);
+        }
+        return;
+      }
       const sanitizedKey = key.replace(/^\/+/, "");
       const filePath = path.join(storageDir, sanitizedKey);
       if (fs.existsSync(filePath)) {
@@ -165,4 +171,54 @@ export function getPublicImageUrl(key, env) {
 
   // Self-hosted streaming route via Next.js
   return `/api/images/${key.replace(/^\/+/, "")}`;
+}
+
+/**
+ * Extracts the storage key from a public image URL or relative path
+ */
+export function extractKeyFromImageUrl(urlOrKey) {
+  if (!urlOrKey || typeof urlOrKey !== "string") return null;
+
+  if (urlOrKey.includes("/api/images/")) {
+    const after = urlOrKey.split("/api/images/")[1];
+    return decodeURIComponent(after.replace(/^\/+/, ""));
+  }
+
+  try {
+    const parsed = new URL(urlOrKey, "http://dummy");
+    if (parsed.pathname.startsWith("/api/images/")) {
+      return decodeURIComponent(parsed.pathname.replace("/api/images/", "").replace(/^\/+/, ""));
+    }
+    if (parsed.pathname && parsed.pathname.length > 1) {
+      return decodeURIComponent(parsed.pathname.replace(/^\/+/, ""));
+    }
+  } catch {}
+
+  return urlOrKey.replace(/^\/+/, "");
+}
+
+/**
+ * Deletes a single image from Cloudflare R2 by key or URL
+ */
+export async function deleteFromR2(keyOrUrl) {
+  if (!keyOrUrl) return false;
+  const key = extractKeyFromImageUrl(keyOrUrl);
+  if (!key) return false;
+
+  const bucket = await getR2Bucket();
+  await bucket.delete(key);
+  return true;
+}
+
+/**
+ * Deletes multiple images from Cloudflare R2 by keys or URLs
+ */
+export async function deleteMultipleFromR2(keysOrUrls) {
+  if (!Array.isArray(keysOrUrls) || keysOrUrls.length === 0) return 0;
+  const keys = keysOrUrls.map(extractKeyFromImageUrl).filter(Boolean);
+  if (keys.length === 0) return 0;
+
+  const bucket = await getR2Bucket();
+  await bucket.delete(keys);
+  return keys.length;
 }

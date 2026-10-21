@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { getR2Bucket, getPublicImageUrl } from "@/lib/r2";
+import {
+  getR2Bucket,
+  getPublicImageUrl,
+  deleteMultipleFromR2,
+  extractKeyFromImageUrl,
+} from "@/lib/r2";
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -14,10 +19,38 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 /**
  * POST /api/upload
- * Uploads an image to Cloudflare R2 bucket (NEWS_IMAGES_BUCKET) using bucket.put()
+ * - Uploads a new image file to Cloudflare R2 bucket
+ * - Also handles navigator.sendBeacon JSON cleanup requests (when action=cleanup)
  */
 export async function POST(request) {
   try {
+    const contentType = request.headers.get("content-type") || "";
+    const url = new URL(request.url);
+
+    // Support navigator.sendBeacon JSON cleanup on tab close / page unload
+    if (contentType.includes("application/json") || url.searchParams.get("action") === "cleanup") {
+      let body = {};
+      try {
+        body = await request.json();
+      } catch {
+        const text = await request.text();
+        if (text) {
+          try {
+            body = JSON.parse(text);
+          } catch {}
+        }
+      }
+
+      const itemsToDelete = body.urls || body.keys || (body.url ? [body.url] : (body.key ? [body.key] : []));
+      if (Array.isArray(itemsToDelete) && itemsToDelete.length > 0) {
+        const count = await deleteMultipleFromR2(itemsToDelete);
+        return NextResponse.json({ success: true, count, message: "Uncommitted images cleaned up." });
+      }
+
+      return NextResponse.json({ success: true, count: 0 });
+    }
+
+    // Standard Multipart File Upload
     const formData = await request.formData();
     const file = formData.get("file");
 
@@ -84,7 +117,7 @@ export async function POST(request) {
       filename: file.name,
       size: file.size,
       contentType: file.type,
-      message: "ছবিটি সফলভাবে ক্লাউডফ্লেয়ার R2 বাকেটে আপলোড হয়েছে!",
+      message: "ছবিটি সফলভাবে আপলোড হয়েছে!",
     });
   } catch (error) {
     console.error("R2 Upload Error:", error);
@@ -92,6 +125,59 @@ export async function POST(request) {
       {
         success: false,
         error: `আপলোডে ত্রুটি দেখা দিয়েছে: ${error.message}`,
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/upload
+ * Deletes one or multiple images from Cloudflare R2 bucket
+ */
+export async function DELETE(request) {
+  try {
+    const url = new URL(request.url);
+    const queryKey = url.searchParams.get("key");
+    const queryUrl = url.searchParams.get("url");
+
+    let targets = [];
+
+    if (queryKey) targets.push(queryKey);
+    if (queryUrl) targets.push(queryUrl);
+
+    // Also check JSON body if present
+    const contentType = request.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      try {
+        const body = await request.json();
+        if (body.key) targets.push(body.key);
+        if (body.url) targets.push(body.url);
+        if (Array.isArray(body.keys)) targets.push(...body.keys);
+        if (Array.isArray(body.urls)) targets.push(...body.urls);
+      } catch {}
+    }
+
+    if (targets.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "মুছে ফেলার জন্য কোনো ইমেজ কি (key) বা ইউআরএল (url) প্রদান করা হয়নি।" },
+        { status: 400 }
+      );
+    }
+
+    const count = await deleteMultipleFromR2(targets);
+
+    return NextResponse.json({
+      success: true,
+      count,
+      message: `${count}টি ছবি ক্লাউডফ্লেয়ার R2 বাকেট থেকে সফলভাবে মুছে ফেলা হয়েছে।`,
+    });
+  } catch (error) {
+    console.error("R2 Delete Error:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: `ছবি মুছে ফেলতে সমস্যা হয়েছে: ${error.message}`,
       },
       { status: 500 }
     );

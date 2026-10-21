@@ -1,6 +1,6 @@
 "use server";
 
-import { getR2Bucket, getPublicImageUrl } from "@/lib/r2";
+import { getR2Bucket, getPublicImageUrl, deleteMultipleFromR2, deleteFromR2 } from "@/lib/r2";
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -71,7 +71,7 @@ export async function uploadImageAction(formData) {
       filename: file.name,
       size: file.size,
       contentType: file.type,
-      message: "ছবিটি ক্লাউডফ্লেয়ার R2 বাকেটে আপলোড হয়েছে!",
+      message: "ছবিটি সফলভাবে আপলোড হয়েছে!",
     };
   } catch (error) {
     console.error("uploadImageAction error:", error);
@@ -82,3 +82,28 @@ export async function uploadImageAction(formData) {
   }
 }
 
+/**
+ * Server Action: Deletes a single image from Cloudflare R2 bucket
+ */
+export async function deleteImageAction(keyOrUrl) {
+  try {
+    const success = await deleteFromR2(keyOrUrl);
+    return { success };
+  } catch (error) {
+    console.error("deleteImageAction error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Server Action: Deletes multiple images from Cloudflare R2 bucket
+ */
+export async function deleteImagesAction(keysOrUrls) {
+  try {
+    const count = await deleteMultipleFromR2(keysOrUrls);
+    return { success: true, count };
+  } catch (error) {
+    console.error("deleteImagesAction error:", error);
+    return { success: false, error: error.message };
+  }
+}

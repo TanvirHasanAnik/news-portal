@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useRef, useEffect } from "react";
 import { createArticleAction } from "@/actions/articleActions";
 import ArticleFormFeedback from "./ArticleFormFeedback";
 import ArticleContentFields from "./ArticleContentFields";
@@ -11,6 +11,7 @@ import ArticleFormSubmit from "./ArticleFormSubmit";
 export default function ArticleCreateForm({ categories = [] }) {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState(null);
+  const uncommittedImagesRef = useRef(new Set());
 
   // Form State
   const [headline, setHeadline] = useState("");
@@ -28,8 +29,38 @@ export default function ArticleCreateForm({ categories = [] }) {
   const selectedCategory = categories.find((c) => c.slug === categorySlug);
   const availableSubcategories = selectedCategory?.subcategories || [];
 
-  // Reset form
+  // Update images and immediately delete any removed ones from Cloudflare R2
+  const handleImagesChange = (newImages) => {
+    // Track newly added images
+    newImages.forEach((img) => uncommittedImagesRef.current.add(img));
+
+    // Delete any removed images from R2
+    images.forEach((img) => {
+      if (!newImages.includes(img)) {
+        uncommittedImagesRef.current.delete(img);
+        fetch("/api/upload", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: img }),
+        }).catch((e) => console.error("Error deleting image from R2:", e));
+      }
+    });
+
+    setImages(newImages);
+  };
+
+  // Reset form and purge all uncommitted images from Cloudflare R2
   const handleReset = () => {
+    const toDelete = Array.from(uncommittedImagesRef.current);
+    if (toDelete.length > 0) {
+      fetch("/api/upload", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ urls: toDelete }),
+      }).catch((e) => console.error("Error purging images on reset:", e));
+      uncommittedImagesRef.current.clear();
+    }
+
     setHeadline("");
     setSummary("");
     setContent("");
@@ -37,6 +68,43 @@ export default function ArticleCreateForm({ categories = [] }) {
     setYoutubeUrl("");
     setResult(null);
   };
+
+  // Clean up uncommitted images from R2 if user navigates away or closes tab without submitting/drafting
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const pending = Array.from(uncommittedImagesRef.current);
+      if (pending.length > 0) {
+        const payload = JSON.stringify({ urls: pending });
+        if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+          const blob = new Blob([payload], { type: "application/json" });
+          navigator.sendBeacon("/api/upload?action=cleanup", blob);
+        } else {
+          fetch("/api/upload", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+            keepalive: true,
+          }).catch(() => {});
+        }
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      // SPA navigation unmount cleanup
+      const pending = Array.from(uncommittedImagesRef.current);
+      if (pending.length > 0) {
+        fetch("/api/upload", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ urls: pending }),
+          keepalive: true,
+        }).catch(() => {});
+      }
+    };
+  }, []);
 
   const handleSave = (targetStatus = "published") => {
     setResult(null);
@@ -58,6 +126,8 @@ export default function ArticleCreateForm({ categories = [] }) {
       const res = await createArticleAction(null, formData);
       setResult(res);
       if (res?.success) {
+        // Article successfully saved in database — commit images so they are retained permanently
+        uncommittedImagesRef.current.clear();
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     });
@@ -88,7 +158,7 @@ export default function ArticleCreateForm({ categories = [] }) {
 
           <ArticleMediaFields
             images={images}
-            setImages={setImages}
+            setImages={handleImagesChange}
             youtubeUrl={youtubeUrl}
             setYoutubeUrl={setYoutubeUrl}
           />
