@@ -1,6 +1,6 @@
-import LatestMixedSection from "../components/LatestMixedSection";
-import HandpickedNewsSection from "../components/HandpickedNewsSection";
-import CategoryScrollSection from "../components/CategoryScrollSection";
+import LatestMixedSection from "@/components/LatestMixedSection";
+import HandpickedNewsSection from "@/components/HandpickedNewsSection";
+import CategoryScrollSection from "@/components/CategoryScrollSection";
 
 export default function Home() {
   return (
@@ -16,4 +16,3 @@ export default function Home() {
     </>
   );
 }
-

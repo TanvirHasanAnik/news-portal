@@ -7,10 +7,15 @@ compatibility_flags = ["nodejs_compat"]
 directory = ".open-next/assets"
 binding = "ASSETS"
 
-# Uncomment this when you add your D1 database later:
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "news-portal-db"
-# database_id = "your-database-id-here"
+# Cloudflare D1 Database binding
+# For local dev / preview via wrangler, any database_id works.
+# For remote production, create with: npx wrangler d1 create news-portal-db
+[[d1_databases]]
+binding = "DB"
+database_name = "news-portal-db"
+database_id = "news-portal-db-local"
 
-# database_id = "your-database-id-here"
+# Cloudflare R2 Bucket binding (for assets / media)
+# [[r2_buckets]]
+# binding = "ASSETS_BUCKET"
+# bucket_name = "news-portal-assets"

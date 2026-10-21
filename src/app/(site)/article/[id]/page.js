@@ -1,19 +1,19 @@
 import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import NewsImage from "../../../components/NewsImage";
-import NewsCard from "../../../components/NewsCard";
-import AdHolder from "../../../components/AdHolder";
-import MostReadSection from "../../../components/MostReadSection";
-import SocialShareBar from "../../../components/SocialShareBar";
-import YouTubeEmbed from "../../../components/YouTubeEmbed";
+import NewsImage from "@/components/NewsImage";
+import NewsCard from "@/components/NewsCard";
+import AdHolder from "@/components/AdHolder";
+import MostReadSection from "@/components/MostReadSection";
+import SocialShareBar from "@/components/SocialShareBar";
+import YouTubeEmbed from "@/components/YouTubeEmbed";
 import {
   getArticleById,
   getAllArticles,
   getRelatedArticles,
   getArticleContent,
   categoryAccentMap,
-} from "../../../utils/categoryNews";
+} from "@/utils/categoryNews";
 
 /**
  * Prerenders all article routes at build time (Next.js Static Generation)

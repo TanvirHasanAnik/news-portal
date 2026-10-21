@@ -1,11 +1,11 @@
 import React from "react";
 import Link from "next/link";
 import { Home, ChevronRight, Layers, Newspaper } from "lucide-react";
-import NewsArticleCard from "../../../components/NewsArticleCard";
-import SubcategoryDropdown from "../../../components/SubcategoryDropdown";
-import AdHolder from "../../../components/AdHolder";
-import { getCategoryNews, getAllCategorySlugs, categoryAccentMap } from "../../../utils/categoryNews";
-import { categories } from "../../../data/newsData";
+import NewsArticleCard from "@/components/NewsArticleCard";
+import SubcategoryDropdown from "@/components/SubcategoryDropdown";
+import AdHolder from "@/components/AdHolder";
+import { getCategoryNews, getAllCategorySlugs, categoryAccentMap } from "@/utils/categoryNews";
+import { categories } from "@/data/newsData";
 
 /**
  * Prerenders all dynamic category routes at build time as recommended in
