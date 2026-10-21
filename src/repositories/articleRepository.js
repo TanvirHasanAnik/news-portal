@@ -58,7 +58,7 @@ export async function createArticle(data) {
     imagesJson = JSON.stringify([primaryImage]);
   }
 
-  await db.prepare(insertSql).bind(
+  const bindParams = [
     id,
     data.headline,
     slug,
@@ -80,8 +80,66 @@ export async function createArticle(data) {
     data.isBreaking ? 1 : 0,
     data.isLead ? 1 : 0,
     data.isHandpicked ? 1 : 0,
-    publishedAt
-  ).run();
+    publishedAt,
+  ];
+
+  try {
+    await db.prepare(insertSql).bind(...bindParams).run();
+  } catch (err) {
+    if (err?.message?.includes("no column named images")) {
+      // Self-heal: automatically add the missing 'images' column to Cloudflare D1
+      try {
+        await db.prepare("ALTER TABLE articles ADD COLUMN images TEXT").run();
+        await db.prepare(insertSql).bind(...bindParams).run();
+      } catch (_retryErr) {
+        // Fallback: insert without 'images' column, saving primary image into 'image'
+        const fallbackSql = `
+          INSERT INTO articles (
+            id, headline, slug, summary, content,
+            category_id, category_name, category_slug,
+            subcategory_id, subcategory_name,
+            image, youtube_url,
+            author_id, author_name, location, read_time,
+            status, is_breaking, is_lead, is_handpicked,
+            view_count, published_at, created_at, updated_at
+          ) VALUES (
+            ?, ?, ?, ?, ?,
+            ?, ?, ?,
+            ?, ?,
+            ?, ?,
+            ?, ?, ?, ?,
+            ?, ?, ?, ?,
+            0, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+          )
+        `;
+        await db.prepare(fallbackSql).bind(
+          id,
+          data.headline,
+          slug,
+          data.summary || "",
+          data.content || "",
+          data.categoryId || null,
+          data.categoryName || "",
+          data.categorySlug || "",
+          data.subcategoryId || null,
+          data.subcategoryName || null,
+          primaryImage,
+          data.youtubeUrl || null,
+          data.authorId || "usr_reporter",
+          data.authorName || "নিজস্ব প্রতিবেদক",
+          data.location || "ঢাকা",
+          data.readTime || "৩ মিনিট পাঠ",
+          data.status || "published",
+          data.isBreaking ? 1 : 0,
+          data.isLead ? 1 : 0,
+          data.isHandpicked ? 1 : 0,
+          publishedAt
+        ).run();
+      }
+    } else {
+      throw err;
+    }
+  }
 
   // Create initial revision entry in article_revisions
   try {
