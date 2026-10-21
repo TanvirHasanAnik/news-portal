@@ -1,14 +1,19 @@
 "use client";
 
 import React from "react";
-import { Send, RefreshCw } from "lucide-react";
+import { Send, RefreshCw, FileText } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-export default function ArticleFormSubmit({ isPending, status, onReset }) {
+export default function ArticleFormSubmit({
+  isPending,
+  onSaveDraft,
+  onReset,
+}) {
   return (
     <Card className="border-slate-200 shadow-sm">
-      <CardContent className="p-4 space-y-3">
+      <CardContent className="p-4 space-y-2.5">
+        {/* Publish Action Button */}
         <Button
           type="submit"
           variant="primary"
@@ -22,18 +27,31 @@ export default function ArticleFormSubmit({ isPending, status, onReset }) {
             </>
           ) : (
             <>
-              <Send className="w-4 h-4 mr-2" />{" "}
-              {status === "published" ? "সংবাদ প্রকাশ করুন" : "খসড়া সংরক্ষণ করুন"}
+              <Send className="w-4 h-4 mr-2" /> সংবাদ প্রকাশ করুন
             </>
           )}
         </Button>
+
+        {/* Draft Action Button */}
+        <Button
+          type="button"
+          variant="outline"
+          size="default"
+          onClick={onSaveDraft}
+          disabled={isPending}
+          className="w-full text-sm font-semibold border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
+        >
+          <FileText className="w-4 h-4 mr-2 text-slate-500" /> খসড়া হিসেবে সংরক্ষণ
+        </Button>
+
+        {/* Reset Button */}
         <Button
           type="button"
           variant="ghost"
           size="sm"
           onClick={onReset}
           disabled={isPending}
-          className="w-full text-slate-500 hover:text-slate-800"
+          className="w-full text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
         >
           ফর্ম রিসেট করুন
         </Button>
@@ -41,4 +59,3 @@ export default function ArticleFormSubmit({ isPending, status, onReset }) {
     </Card>
   );
 }
-

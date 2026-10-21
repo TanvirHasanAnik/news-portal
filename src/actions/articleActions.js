@@ -68,9 +68,10 @@ export async function createArticleAction(prevState, formData) {
 
     // Validation
     const errors = {};
-    if (!headline || headline.length < 5) {
-      errors.headline = "শিরোনামটি অন্তত ৫ অক্ষরের হতে হবে।";
+    if (!headline || headline.length < 3) {
+      errors.headline = "অন্তত ৩ অক্ষরের একটি শিরোনাম লিখুন।";
     }
+
     let plainContent = content || "";
     try {
       const parsed = JSON.parse(content);
@@ -82,11 +83,17 @@ export async function createArticleAction(prevState, formData) {
       }
     } catch {}
 
-    if (!plainContent || plainContent.length < 20) {
-      errors.content = "সংবাদের বিস্তারিত বিবরণ অন্তত ২০ অক্ষরের হতে হবে।";
-    }
-    if (!categorySlug) {
-      errors.category = "অনুগ্রহ করে একটি বিভাগ নির্বাচন করুন।";
+    // Additional strict validations required for publishing, but flexible for drafts
+    if (status !== "draft") {
+      if (!headline || headline.length < 5) {
+        errors.headline = "শিরোনামটি অন্তত ৫ অক্ষরের হতে হবে।";
+      }
+      if (!plainContent || plainContent.length < 20) {
+        errors.content = "সংবাদের বিস্তারিত বিবরণ অন্তত ২০ অক্ষরের হতে হবে।";
+      }
+      if (!categorySlug) {
+        errors.category = "অনুগ্রহ করে একটি বিভাগ নির্বাচন করুন।";
+      }
     }
 
     if (Object.keys(errors).length > 0) {

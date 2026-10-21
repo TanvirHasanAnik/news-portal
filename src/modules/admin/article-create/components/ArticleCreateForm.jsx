@@ -40,8 +40,7 @@ export default function ArticleCreateForm({ categories = [] }) {
     setResult(null);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSave = (targetStatus = "published") => {
     setResult(null);
 
     const formData = new FormData();
@@ -55,7 +54,7 @@ export default function ArticleCreateForm({ categories = [] }) {
     formData.append("youtubeUrl", youtubeUrl);
     formData.append("authorName", authorName);
     formData.append("location", location);
-    formData.append("status", status);
+    formData.append("status", targetStatus);
 
     startTransition(async () => {
       const res = await createArticleAction(null, formData);
@@ -64,6 +63,11 @@ export default function ArticleCreateForm({ categories = [] }) {
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     });
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    handleSave("published");
   };
 
   return (
@@ -107,7 +111,7 @@ export default function ArticleCreateForm({ categories = [] }) {
 
           <ArticleFormSubmit
             isPending={isPending}
-            status={status}
+            onSaveDraft={() => handleSave("draft")}
             onReset={handleReset}
           />
         </div>
