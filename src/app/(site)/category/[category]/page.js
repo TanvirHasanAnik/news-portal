@@ -6,6 +6,9 @@ import SubcategoryDropdown from "@/components/SubcategoryDropdown";
 import AdHolder from "@/components/AdHolder";
 import { getCategoryNews, getAllCategorySlugs, categoryAccentMap } from "@/utils/categoryNews";
 import { categories } from "@/data/newsData";
+import { getPublishedArticles, mapDbArticleToFrontend } from "@/repositories/articleRepository";
+
+export const dynamic = "force-dynamic";
 
 /**
  * Prerenders all dynamic category routes at build time as recommended in
@@ -48,12 +51,38 @@ export default async function CategoryPage({ params, searchParams }) {
   const categoryData = getCategoryNews(category);
   const { name, articles, subcategories, slug } = categoryData;
 
+  // Fetch live published articles from D1 for this category
+  let dbArticles = [];
+  try {
+    const raw = await getPublishedArticles({ categorySlug: category, limit: 50 });
+    dbArticles = (raw || []).map(mapDbArticleToFrontend);
+  } catch (err) {
+    console.error("Error fetching db articles for category page:", err);
+  }
+
+  // Prepend live db articles at the top of category news list, deduping by id / slug
+  const baseArticles = [...dbArticles, ...articles];
+  const seenKeys = new Set();
+  const mergedArticles = [];
+  for (const item of baseArticles) {
+    if (!item) continue;
+    const key = item.id || item.slug;
+    if (key && !seenKeys.has(key)) {
+      seenKeys.add(key);
+      mergedArticles.push(item);
+    }
+  }
+
   // Dynamically filter articles if a subcategory is selected
   const displayedArticles = selectedSub
-    ? articles.filter(
+    ? mergedArticles.filter(
         (a) => a.subcategory === selectedSub || a.originalCategory === selectedSub
       )
-    : articles;
+    : mergedArticles;
+
+  // Dynamically include subcategories present in live db articles
+  const liveSubcategories = dbArticles.map((a) => a.subcategory).filter(Boolean);
+  const combinedSubcategories = Array.from(new Set([...subcategories, ...liveSubcategories]));
 
   const totalCount = displayedArticles.length;
 
@@ -114,11 +143,11 @@ export default async function CategoryPage({ params, searchParams }) {
             </div>
 
             {/* Mobile View: Subcategory Dropdown option on the most right side */}
-            {subcategories.length > 0 && (
+            {combinedSubcategories.length > 0 && (
               <div className="sm:hidden shrink-0 flex items-center">
                 <SubcategoryDropdown
                   slug={slug}
-                  subcategories={subcategories}
+                  subcategories={combinedSubcategories}
                   selectedSub={selectedSub}
                 />
               </div>
@@ -126,7 +155,7 @@ export default async function CategoryPage({ params, searchParams }) {
           </div>
 
           {/* Desktop Subcategories Selection (Dynamic from News, Bigger, Borderless Design) */}
-          {subcategories.length > 0 && (
+          {combinedSubcategories.length > 0 && (
             <div className="hidden sm:flex mt-6 pt-2 items-center gap-3 sm:gap-4 flex-wrap">
               <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
                 {/* All / সব option */}
@@ -142,7 +171,7 @@ export default async function CategoryPage({ params, searchParams }) {
                 </Link>
 
                 {/* Dynamically extracted subcategories from news data */}
-                {subcategories.map((sub, index) => {
+                {combinedSubcategories.map((sub, index) => {
                   const isSelected = selectedSub === sub;
                   return (
                     <Link

@@ -15,7 +15,7 @@ import { categories, categoryNewsData } from "../data/newsData";
  * Bangla font and responsive for both desktop and phone.
  * Rendered as a React Server Component (SSR).
  */
-export default function CategoryScrollSection() {
+export default function CategoryScrollSection({ dbArticles = [] }) {
   // All main categories with news data
   const displayCategories = categories.filter((c) => categoryNewsData[c.slug]);
 
@@ -25,7 +25,11 @@ export default function CategoryScrollSection() {
         {/* Categories Feed: 2 equal-width columns grid per category */}
         <div className="space-y-12">
           {displayCategories.map((cat, catIdx) => {
-            const articles = categoryNewsData[cat.slug] || [];
+            const staticArticles = categoryNewsData[cat.slug] || [];
+            const catDbArticles = (dbArticles || []).filter(
+              (a) => a.categorySlug === cat.slug || a.category === cat.name
+            );
+            const articles = [...catDbArticles, ...staticArticles];
             if (articles.length === 0) return null;
 
             // Accent colors per category for visual identity

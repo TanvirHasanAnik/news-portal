@@ -9,12 +9,19 @@ import SocialShareBar from "@/components/SocialShareBar";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import ArticleContentRenderer from "@/components/ArticleContentRenderer";
 import {
-  getArticleById,
+  getArticleById as getStaticArticleById,
   getAllArticles,
   getRelatedArticles,
   getArticleContent,
   categoryAccentMap,
 } from "@/utils/categoryNews";
+import {
+  findArticleBySlugOrId,
+  getPublishedArticles,
+  mapDbArticleToFrontend,
+} from "@/repositories/articleRepository";
+
+export const dynamic = "force-dynamic";
 
 /**
  * Prerenders all article routes at build time (Next.js Static Generation)
@@ -32,7 +39,19 @@ export async function generateStaticParams() {
  */
 export async function generateMetadata({ params }) {
   const { id } = await params;
-  const article = getArticleById(id);
+  let article = null;
+  try {
+    const dbRow = await findArticleBySlugOrId(id);
+    if (dbRow) {
+      article = mapDbArticleToFrontend(dbRow);
+    }
+  } catch (err) {
+    console.error("Error fetching db article for metadata:", err);
+  }
+
+  if (!article) {
+    article = getStaticArticleById(id);
+  }
 
   if (!article) {
     return {
@@ -54,7 +73,19 @@ export async function generateMetadata({ params }) {
  */
 export default async function ArticlePage({ params }) {
   const { id } = await params;
-  const article = getArticleById(id);
+  let article = null;
+  try {
+    const dbRow = await findArticleBySlugOrId(id);
+    if (dbRow) {
+      article = mapDbArticleToFrontend(dbRow);
+    }
+  } catch (err) {
+    console.error("Error fetching db article for page:", err);
+  }
+
+  if (!article) {
+    article = getStaticArticleById(id);
+  }
 
   if (!article) {
     notFound();
@@ -90,7 +121,17 @@ export default async function ArticlePage({ params }) {
   const heroImage = allImages[0] || article.image;
 
   // Suggestions: "এই বিভাগের আরও খবর" (More news from the same category)
-  const relatedArticles = getRelatedArticles(article.categorySlug, article.id, 4);
+  let relatedArticles = [];
+  try {
+    const dbRelated = await getPublishedArticles({ categorySlug: article.categorySlug, limit: 6 });
+    const mappedDbRelated = (dbRelated || [])
+      .map(mapDbArticleToFrontend)
+      .filter((a) => a.id !== article.id && a.dbId !== article.dbId && a.slug !== article.slug);
+    const staticRelated = getRelatedArticles(article.categorySlug, article.id, 4);
+    relatedArticles = [...mappedDbRelated, ...staticRelated].slice(0, 4);
+  } catch {
+    relatedArticles = getRelatedArticles(article.categorySlug, article.id, 4);
+  }
 
   return (
     <div className="min-h-screen bg-white py-4 sm:py-6 lg:py-8 font-sans">

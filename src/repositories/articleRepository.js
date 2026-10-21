@@ -189,6 +189,130 @@ export async function getArticleBySlug(slug) {
   return await db.prepare("SELECT * FROM articles WHERE slug = ?").bind(slug).first();
 }
 
+/**
+ * Robust article lookup supporting both raw and URL-decoded slugs and IDs
+ */
+export async function findArticleBySlugOrId(identifier) {
+  if (!identifier) return null;
+  const db = await getDb();
+  const raw = String(identifier).trim();
+  let decoded = raw;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    decoded = raw;
+  }
+
+  // 1. Try slug by decoded and raw
+  let row = await db.prepare("SELECT * FROM articles WHERE slug = ?").bind(decoded).first();
+  if (row) return row;
+
+  if (decoded !== raw) {
+    row = await db.prepare("SELECT * FROM articles WHERE slug = ?").bind(raw).first();
+    if (row) return row;
+  }
+
+  // 2. Try id by raw and decoded
+  row = await db.prepare("SELECT * FROM articles WHERE id = ?").bind(raw).first();
+  if (row) return row;
+
+  if (decoded !== raw) {
+    row = await db.prepare("SELECT * FROM articles WHERE id = ?").bind(decoded).first();
+    if (row) return row;
+  }
+
+  return null;
+}
+
+/**
+ * Fetch published articles ordered newest first
+ */
+export async function getPublishedArticles({ categorySlug, limit = 20, offset = 0 } = {}) {
+  const db = await getDb();
+  if (categorySlug && categorySlug !== "all" && categorySlug !== "latest") {
+    const { results } = await db
+      .prepare(
+        "SELECT * FROM articles WHERE status = 'published' AND category_slug = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"
+      )
+      .bind(categorySlug, limit, offset)
+      .all();
+    return results || [];
+  }
+
+  const { results } = await db
+    .prepare(
+      "SELECT * FROM articles WHERE status = 'published' ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    )
+    .bind(limit, offset)
+    .all();
+  return results || [];
+}
+
+/**
+ * Normalizes SQLite timestamp to valid ISO string for consistent sorting and parsing
+ */
+function normalizeTimestamp(ts) {
+  if (!ts) return new Date().toISOString();
+  if (typeof ts !== "string") return new Date(ts).toISOString();
+  if (ts.includes("T")) return ts;
+  return ts.replace(" ", "T") + "Z";
+}
+
+/**
+ * Maps a database row from SQLite / D1 to the standard frontend article schema
+ */
+export function mapDbArticleToFrontend(dbRow) {
+  if (!dbRow) return null;
+
+  // Normalize images array (max 3)
+  let imagesArray = [];
+  if (Array.isArray(dbRow.images)) {
+    imagesArray = dbRow.images.filter(Boolean).slice(0, 3);
+  } else if (typeof dbRow.images === "string" && dbRow.images.trim()) {
+    try {
+      const parsed = JSON.parse(dbRow.images);
+      if (Array.isArray(parsed)) {
+        imagesArray = parsed.filter(Boolean).slice(0, 3);
+      } else if (parsed) {
+        imagesArray = [String(parsed)];
+      }
+    } catch {
+      imagesArray = [dbRow.images.trim()];
+    }
+  } else if (dbRow.image) {
+    imagesArray = [dbRow.image];
+  }
+
+  const primaryImage = imagesArray[0] || dbRow.image || null;
+  const isoTime = normalizeTimestamp(dbRow.published_at || dbRow.created_at);
+
+  return {
+    id: dbRow.slug || dbRow.id,
+    dbId: dbRow.id,
+    slug: dbRow.slug,
+    headline: dbRow.headline || "",
+    summary: dbRow.summary || "",
+    content: dbRow.content || "",
+    category: dbRow.category_name || "জাতীয়",
+    categorySlug: dbRow.category_slug || "national",
+    subcategory: dbRow.subcategory_name || null,
+    subcategorySlug: dbRow.subcategory_name ? encodeURIComponent(dbRow.subcategory_name) : null,
+    image: primaryImage,
+    images: imagesArray,
+    youtubeUrl: dbRow.youtube_url || null,
+    author: dbRow.author_name || "নিজস্ব প্রতিবেদক",
+    location: dbRow.location || "ঢাকা",
+    time: isoTime,
+    publishedAt: isoTime,
+    createdAt: dbRow.created_at,
+    hasCustomImage: Boolean(primaryImage),
+    status: dbRow.status || "published",
+    isLead: Boolean(dbRow.is_lead),
+    isBreaking: Boolean(dbRow.is_breaking),
+    isHandpicked: Boolean(dbRow.is_handpicked),
+  };
+}
+
 export async function getRecentArticles(limit = 10) {
   const db = await getDb();
   const { results } = await db

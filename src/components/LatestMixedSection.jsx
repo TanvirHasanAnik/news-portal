@@ -3,9 +3,22 @@ import NewsCard from "./NewsCard";
 import AdHolder from "./AdHolder";
 import { temporaryNewsList, getSortedNewsByTime } from "../data/temporaryNewsData";
 
-export default function LatestMixedSection() {
-  // Sorted by time descending
-  const sortedNews = getSortedNewsByTime(temporaryNewsList);
+export default function LatestMixedSection({ dbArticles = [] }) {
+  // Merge live dbArticles with temporaryNewsList, deduping by id or slug
+  const baseNews = [...dbArticles, ...temporaryNewsList];
+  const seen = new Set();
+  const dedupedNews = [];
+  for (const item of baseNews) {
+    if (!item) continue;
+    const key = item.id || item.slug;
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      dedupedNews.push(item);
+    }
+  }
+
+  // Sorted by time descending (live db articles have newer timestamps)
+  const sortedNews = getSortedNewsByTime(dedupedNews);
 
   // #1 Most recent news
   const mostRecentStory = sortedNews[0];
