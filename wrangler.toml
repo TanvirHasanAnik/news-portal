@@ -15,7 +15,7 @@ binding = "DB"
 database_name = "news-portal-db"
 database_id = "news-portal-db-local"
 
-# Cloudflare R2 Bucket binding (for assets / media)
-# [[r2_buckets]]
-# binding = "ASSETS_BUCKET"
-# bucket_name = "news-portal-assets"
+# Cloudflare R2 Bucket binding (for news images)
+[[r2_buckets]]
+binding = "NEWS_IMAGES_BUCKET"
+bucket_name = "news-portal-images"
