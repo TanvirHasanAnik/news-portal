@@ -6,6 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import RichTextEditor from "./RichTextEditor";
 
 export default function ArticleContentFields({
   headline,
@@ -64,19 +65,14 @@ export default function ArticleContentFields({
           />
         </div>
 
-        {/* Detailed Article Body */}
+        {/* Detailed Article Body (Custom WYSIWYG Editor) */}
         <div className="space-y-1.5">
-          <Label htmlFor="content" className="text-sm font-semibold text-slate-800">
+          <Label htmlFor="content-editor" className="text-sm font-semibold text-slate-800">
             বিস্তারিত সংবাদ <span className="text-red-500">*</span>
           </Label>
-          <Textarea
-            id="content"
-            rows={10}
-            placeholder="এখানে সম্পূর্ণ সংবাদ প্যারাগ্রাফ আকারে লিখুন..."
+          <RichTextEditor
             value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="font-serif-bangla text-base leading-relaxed"
-            required
+            onChange={(jsonString) => setContent(jsonString)}
           />
         </div>
       </CardContent>

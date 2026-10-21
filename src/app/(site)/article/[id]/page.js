@@ -7,6 +7,7 @@ import AdHolder from "@/components/AdHolder";
 import MostReadSection from "@/components/MostReadSection";
 import SocialShareBar from "@/components/SocialShareBar";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
+import ArticleContentRenderer from "@/components/ArticleContentRenderer";
 import {
   getArticleById,
   getAllArticles,
@@ -139,7 +140,12 @@ export default async function ArticlePage({ params }) {
             )}
 
             {/* 2.4 Detailed text of the article and nothing else (omitted if no detailed text) */}
-            {paragraphs.length > 0 && (
+            {article.content ? (
+              <ArticleContentRenderer
+                content={article.content}
+                className="text-lg sm:text-xl text-slate-800 leading-relaxed sm:leading-loose space-y-5 sm:space-y-6"
+              />
+            ) : paragraphs.length > 0 ? (
               <div className="font-serif-bangla text-lg sm:text-xl text-slate-800 leading-relaxed sm:leading-loose space-y-5 sm:space-y-6">
                 {paragraphs.map((paragraph, index) => (
                   <p key={index} className="text-justify sm:text-left">
@@ -147,7 +153,7 @@ export default async function ArticlePage({ params }) {
                   </p>
                 ))}
               </div>
-            )}
+            ) : null}
           </main>
 
           {/* Second Column [Ratio 1]: 2 Ad Holders + সর্বাধিক পঠিত Section */}

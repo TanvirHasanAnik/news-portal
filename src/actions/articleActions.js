@@ -9,7 +9,17 @@ import { getCategoryBySlug, getAllCategoriesWithSubcategories } from "@/reposito
  */
 function calculateReadTime(text) {
   if (!text) return "১ মিনিট পাঠ";
-  const words = text.trim().split(/\s+/).length;
+  let plainText = text;
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed?.blocks && Array.isArray(parsed.blocks)) {
+      plainText = parsed.blocks
+        .map((b) => b.text || (b.items ? b.items.map((i) => i.text).join(" ") : ""))
+        .join(" ");
+    }
+  } catch {}
+
+  const words = plainText.trim() ? plainText.trim().split(/\s+/).length : 0;
   const minutes = Math.max(1, Math.ceil(words / 180));
   const banglaDigits = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
   const bnMinutes = String(minutes)
@@ -61,7 +71,18 @@ export async function createArticleAction(prevState, formData) {
     if (!headline || headline.length < 5) {
       errors.headline = "শিরোনামটি অন্তত ৫ অক্ষরের হতে হবে।";
     }
-    if (!content || content.length < 20) {
+    let plainContent = content || "";
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed?.blocks && Array.isArray(parsed.blocks)) {
+        plainContent = parsed.blocks
+          .map((b) => b.text || (b.items ? b.items.map((i) => i.text).join(" ") : ""))
+          .join(" ")
+          .trim();
+      }
+    } catch {}
+
+    if (!plainContent || plainContent.length < 20) {
       errors.content = "সংবাদের বিস্তারিত বিবরণ অন্তত ২০ অক্ষরের হতে হবে।";
     }
     if (!categorySlug) {
