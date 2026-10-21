@@ -113,7 +113,7 @@ export const articleCreateSchema = z.object({
       message: "শিরোনামে কোনো প্রকার কোড, স্ক্রিপ্ট বা বিশেষ চিহ্ন (< >) গ্রহণযোগ্য নয়।",
     })
     .refine((val) => !hasEnglishLetters(val) && BANGLA_EDITORIAL_REGEX.test(val), {
-      message: "শিরোনামে শুধুমাত্র বাংলা বর্ণমালা গ্রহণযোগ্য (ইংরেজি বা কোড অনুমোদিত নয়)।",
+      message: "শিরোনামে শুধুমাত্র বাংলা বর্ণমালা গ্রহণযোগ্য।",
     })
     .refine((val) => countWords(val) >= 3, {
       message: "শিরোনামটি অত্যন্ত সংক্ষিপ্ত। অন্তত ৩টি শব্দের অর্থপূর্ণ শিরোনাম লিখুন।",

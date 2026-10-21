@@ -24,6 +24,7 @@ export default function RichTextEditor({
   onChange,
   placeholder = "এখানে সম্পূর্ণ সংবাদ লিখুন...",
   className = "",
+  error = false,
 }) {
   const editorRef = useRef(null);
   const isUpdatingFromProps = useRef(false);
@@ -276,7 +277,11 @@ export default function RichTextEditor({
 
   return (
     <div
-      className={`rounded-lg border border-slate-300 bg-white transition-colors focus-within:border-slate-800 ${className}`}
+      className={`rounded-lg border bg-white transition-colors ${
+        error
+          ? "border-red-500 focus-within:border-red-600 ring-1 ring-red-500/20"
+          : "border-slate-300 focus-within:border-slate-800"
+      } ${className}`}
     >
       {/* 1. Restricted Minimal Toolbar */}
       <div className="flex flex-wrap items-center gap-1 p-2 bg-slate-50/90 border-b border-slate-200 rounded-t-lg">

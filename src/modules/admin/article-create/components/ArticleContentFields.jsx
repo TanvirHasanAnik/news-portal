@@ -30,9 +30,6 @@ export default function ArticleContentFields({
               <FileText className="w-5 h-5 text-red-600" />
               সংবাদের মূল বিবরণ
             </CardTitle>
-            <CardDescription>
-              নিবন্ধের শিরোনাম, সংক্ষিপ্ত ভূমিকা এবং বিস্তারিত সংবাদ লিখুন
-            </CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -69,7 +66,7 @@ export default function ArticleContentFields({
             </p>
           ) : (
             <p className="text-[11px] text-slate-400">
-              শুধুমাত্র বাংলা বর্ণমালায় ৩ থেকে ১৮ শব্দের শিরোনাম লিখুন (লেআউট অক্ষুণ্ণ রাখতে)। কোনো স্ক্রিপ্ট বা কোড গ্রহণযোগ্য নয়।
+              শুধুমাত্র বাংলা বর্ণমালায় ৩ থেকে ১৮ শব্দের শিরোনাম লিখুন। 
             </p>
           )}
         </div>
@@ -130,22 +127,18 @@ export default function ArticleContentFields({
               name="content"
               control={control}
               render={({ field }) => (
-                <div
-                  className={
-                    errors?.content ? "rounded-md border border-red-500 p-0.5" : ""
-                  }
-                >
-                  <RichTextEditor
-                    value={field.value || ""}
-                    onChange={(jsonString) => field.onChange(jsonString)}
-                  />
-                </div>
+                <RichTextEditor
+                  value={field.value || ""}
+                  onChange={(jsonString) => field.onChange(jsonString)}
+                  error={!!errors?.content}
+                />
               )}
             />
           ) : (
             <RichTextEditor
               value={content}
               onChange={(jsonString) => setContent && setContent(jsonString)}
+              error={!!errors?.content}
             />
           )}
 
@@ -156,7 +149,7 @@ export default function ArticleContentFields({
             </p>
           ) : (
             <p className="text-[11px] text-slate-400">
-              ঐচ্ছিক; সম্পূর্ণ সংবাদ লিখুন (১০ থেকে ৪,০০০ শব্দ)। কোনো ক্ষতিকর স্ক্রিপ্ট বা কোড গ্রহণযোগ্য নয়।
+              ঐচ্ছিক; সম্পূর্ণ সংবাদ লিখুন (১০ থেকে ৪,০০০ শব্দ)।
             </p>
           )}
         </div>
