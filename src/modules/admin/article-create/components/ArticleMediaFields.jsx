@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { convertImageToWebP } from "@/utils/imageConverter";
 
 const MAX_IMAGES = 3;
 
@@ -32,6 +33,7 @@ export default function ArticleMediaFields({
 }) {
   const fileInputRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("");
   const [uploadError, setUploadError] = useState(null);
   const [uploadSuccess, setUploadSuccess] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -80,15 +82,24 @@ export default function ArticleMediaFields({
     }
 
     setIsUploading(true);
+    setUploadStatus("ছবি প্রসেস করা হচ্ছে...");
     setUploadError(null);
     setUploadSuccess(null);
 
     const uploadedUrls = [];
 
     try {
-      for (const file of filesToUpload) {
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const rawFile = filesToUpload[i];
+
+        // 1. Client-Side Conversion to WebP with 0.82 quality setting
+        setUploadStatus(`ছবি #${i + 1} প্রসেস করা হচ্ছে...`);
+        const webpFile = await convertImageToWebP(rawFile, 0.82);
+
+        // 2. Upload WebP file to Cloudflare R2
+        setUploadStatus(`ছবি #${i + 1} আপলোড করা হচ্ছে...`);
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", webpFile);
 
         const response = await fetch("/api/upload", {
           method: "POST",
@@ -106,13 +117,14 @@ export default function ArticleMediaFields({
       const updated = [...imageList, ...uploadedUrls].slice(0, MAX_IMAGES);
       updateImageList(updated);
       setUploadSuccess(
-        `${uploadedUrls.length}টি ছবি সফলভাবে ক্লাউডফ্লেয়ার R2 বাকেটে আপলোড হয়েছে!`
+        `${uploadedUrls.length}টি ছবি সফলভাবে আপলোড হয়েছে!`
       );
     } catch (err) {
-      console.error("R2 Upload error:", err);
+      console.error("Upload error:", err);
       setUploadError(err.message || "ছবি আপলোড করার সময় প্রযুক্তিগত সমস্যা দেখা দিয়েছে।");
     } finally {
       setIsUploading(false);
+      setUploadStatus("");
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -157,7 +169,7 @@ export default function ArticleMediaFields({
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-bold flex items-center gap-2 text-slate-900">
             <ImageIcon className="w-5 h-5 text-indigo-600" />
-            মিডিয়া ও ফিচার্ড ছবি (Cloudflare R2)
+            মিডিয়া ও ফিচার্ড ছবি
           </CardTitle>
           <Badge
             variant="outline"
@@ -171,7 +183,7 @@ export default function ArticleMediaFields({
           </Badge>
         </div>
         <CardDescription>
-          Cloudflare R2 বাকেটে সরাসরি ছবি আপলোড করুন (সর্বোচ্চ {MAX_IMAGES}টি ছবি যুক্ত করতে পারবেন)
+          সংবাদের জন্য ছবি নির্বাচন করুন (সর্বোচ্চ {MAX_IMAGES}টি ছবি যুক্ত করতে পারবেন)
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -216,11 +228,11 @@ export default function ArticleMediaFields({
               <div>
                 <p className="text-sm font-semibold text-slate-800">
                   {isUploading
-                    ? "ক্লাউডফ্লেয়ার R2 বাকেটে ছবি আপলোড করা হচ্ছে..."
+                    ? uploadStatus || "ছবি প্রসেস ও আপলোড করা হচ্ছে..."
                     : `ছবি আপলোড করতে ক্লিক করুন অথবা টেনে আনুন (বাকি আছে ${remainingCount}টি)`}
                 </p>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  JPEG, PNG, WebP, AVIF সমর্থিত (প্রতিটি সর্বোচ্চ ১০MB)
+                  যেকোনো সাধারণ ফরম্যাটের ছবি নির্বাচন করুন (প্রতিটি সর্বোচ্চ ১০MB)
                 </p>
               </div>
             </div>
@@ -292,13 +304,7 @@ export default function ArticleMediaFields({
                     </div>
 
                     {/* Actions bar */}
-                    <div className="p-2 flex items-center justify-between bg-slate-50 border-t border-slate-100">
-                      <div className="flex items-center gap-1">
-                        <Badge variant="outline" className="text-[10px] font-mono text-slate-500 py-0 px-1 gap-0.5">
-                          <FileCheck className="w-2.5 h-2.5 text-indigo-600" /> R2
-                        </Badge>
-                      </div>
-
+                    <div className="p-2 flex items-center justify-end bg-slate-50 border-t border-slate-100">
                       <div className="flex items-center gap-1">
                         {!isPrimary && (
                           <Button

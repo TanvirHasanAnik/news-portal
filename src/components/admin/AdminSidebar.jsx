@@ -15,7 +15,7 @@ export default function AdminSidebar() {
   const activeModules = getAdminModules();
 
   return (
-    <aside className="w-72 shrink-0 border-r border-slate-200 bg-white min-h-[calc(100vh-65px)] flex flex-col justify-between p-4">
+    <aside className="w-full md:w-72 shrink-0 border-r border-slate-200 bg-white md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:overflow-y-auto flex flex-col justify-between p-4 self-start">
       <div className="space-y-6">
         {/* User Role Card */}
         <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
