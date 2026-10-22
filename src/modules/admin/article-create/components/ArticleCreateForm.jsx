@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { articleCreateSchema } from "@/schemas/articleSchema";
 import { createArticleAction } from "@/actions/articleActions";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import ArticleFormFeedback from "./ArticleFormFeedback";
 import ArticleContentFields from "./ArticleContentFields";
 import ArticleMediaFields from "./ArticleMediaFields";
@@ -170,55 +171,96 @@ export default function ArticleCreateForm({ categories = [] }) {
     });
   };
 
-  const handleFormSubmit = handleSubmit((data) => onValidSubmit(data, "published"));
-  const handleSaveDraft = handleSubmit((data) => onValidSubmit(data, "draft"));
+  const [confirmConfig, setConfirmConfig] = useState(null);
+
+  const handleFormSubmit = handleSubmit((data) => {
+    setConfirmConfig({
+      message: "আপনি কি নিশ্চিতভাবে এই সংবাদটি প্রকাশ করতে চান?",
+      onConfirm: () => {
+        setConfirmConfig(null);
+        onValidSubmit(data, "published");
+      },
+    });
+  });
+
+  const handleSaveDraft = handleSubmit((data) => {
+    setConfirmConfig({
+      message: "আপনি কি নিশ্চিতভাবে এই সংবাদটি খসড়া হিসেবে সংরক্ষণ করতে চান?",
+      onConfirm: () => {
+        setConfirmConfig(null);
+        onValidSubmit(data, "draft");
+      },
+    });
+  });
+
+  const requestReset = () => {
+    setConfirmConfig({
+      message: "আপনি কি নিশ্চিত যে ফর্মের সকল তথ্য মুছে ফেলে রিসেট করতে চান?",
+      confirmVariant: "destructive",
+      onConfirm: () => {
+        setConfirmConfig(null);
+        handleReset();
+      },
+    });
+  };
 
   return (
-    <form onSubmit={handleFormSubmit} className="space-y-6">
-      {/* Success / Error Notification Alert */}
-      <ArticleFormFeedback result={result} onReset={handleReset} />
+    <>
+      <form onSubmit={handleFormSubmit} className="space-y-6">
+        {/* Success / Error Notification Alert */}
+        <ArticleFormFeedback result={result} onReset={requestReset} />
 
-      {/* Main 2-Column Responsive Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column (2 spans): Primary Content & Media */}
-        <div className="lg:col-span-2 space-y-6">
-          <ArticleContentFields
-            register={register}
-            control={control}
-            errors={errors}
-            watch={watch}
-            setValue={setValue}
-          />
+        {/* Main 2-Column Responsive Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column (2 spans): Primary Content & Media */}
+          <div className="lg:col-span-2 space-y-6">
+            <ArticleContentFields
+              register={register}
+              control={control}
+              errors={errors}
+              watch={watch}
+              setValue={setValue}
+            />
 
-          <ArticleMediaFields
-            register={register}
-            errors={errors}
-            images={images}
-            setImages={handleImagesChange}
-            youtubeUrl={youtubeUrl}
-            setYoutubeUrl={(val) => setValue("youtubeUrl", val, { shouldValidate: true })}
-          />
+            <ArticleMediaFields
+              register={register}
+              errors={errors}
+              images={images}
+              setImages={handleImagesChange}
+              youtubeUrl={youtubeUrl}
+              setYoutubeUrl={(val) => setValue("youtubeUrl", val, { shouldValidate: true })}
+            />
+          </div>
+
+          {/* Right Column (1 span): Category & Publishing Controls */}
+          <div className="space-y-6">
+            <ArticlePublishSettings
+              register={register}
+              errors={errors}
+              categorySlug={categorySlug}
+              setCategorySlug={(slug) => setValue("categorySlug", slug, { shouldValidate: true })}
+              setSubcategoryName={(sub) => setValue("subcategoryName", sub, { shouldValidate: true })}
+              categories={categories}
+              availableSubcategories={availableSubcategories}
+            />
+
+            <ArticleFormSubmit
+              isPending={isPending}
+              onSaveDraft={handleSaveDraft}
+              onReset={requestReset}
+            />
+          </div>
         </div>
+      </form>
 
-        {/* Right Column (1 span): Category & Publishing Controls */}
-        <div className="space-y-6">
-          <ArticlePublishSettings
-            register={register}
-            errors={errors}
-            categorySlug={categorySlug}
-            setCategorySlug={(slug) => setValue("categorySlug", slug, { shouldValidate: true })}
-            setSubcategoryName={(sub) => setValue("subcategoryName", sub, { shouldValidate: true })}
-            categories={categories}
-            availableSubcategories={availableSubcategories}
-          />
-
-          <ArticleFormSubmit
-            isPending={isPending}
-            onSaveDraft={handleSaveDraft}
-            onReset={handleReset}
-          />
-        </div>
-      </div>
-    </form>
+      {/* Re-confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(confirmConfig)}
+        onClose={() => setConfirmConfig(null)}
+        onConfirm={confirmConfig?.onConfirm}
+        message={confirmConfig?.message}
+        confirmVariant={confirmConfig?.confirmVariant || "default"}
+      />
+    </>
   );
 }

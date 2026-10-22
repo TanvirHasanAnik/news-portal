@@ -7,6 +7,7 @@ import { UserPlus, Shield, UserX, UserCheck, X, Mail, CheckCircle2 } from "lucid
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import {
   createUserAction,
   updateUserRoleAction,
@@ -18,7 +19,7 @@ import { createUserSchema } from "@/schemas/userSchema";
 export function UserManager({ initialUsers = [] }) {
   const [users, setUsers] = useState(initialUsers);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [pendingRoleChange, setPendingRoleChange] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
 
@@ -72,56 +73,52 @@ export function UserManager({ initialUsers = [] }) {
     });
   };
 
-  // Open confirmation modal on role selection
+  // Re-confirmation modal on role selection
   const onRoleSelectChange = (usr, newRole) => {
     if (newRole === usr.role) return;
-    setPendingRoleChange({
-      userId: usr.id,
-      userName: usr.name,
-      oldRole: usr.role,
-      newRole,
+    const oldRoleLabel = ROLE_LABELS[usr.role] || usr.role;
+    const newRoleLabel = ROLE_LABELS[newRole] || newRole;
+
+    setConfirmConfig({
+      message: `আপনি কি "${usr.name}"-এর দায়িত্ব "${oldRoleLabel}" থেকে "${newRoleLabel}"-এ পরিবর্তন করতে চান?`,
+      onConfirm: () => {
+        setConfirmConfig(null);
+        startTransition(async () => {
+          const res = await updateUserRoleAction(usr.id, newRole);
+          if (res.success) {
+            setUsers((prev) =>
+              prev.map((u) => (u.id === usr.id ? { ...u, role: newRole } : u))
+            );
+            setFeedback({ type: "success", message: res.message });
+          } else {
+            setFeedback({ type: "error", message: res.message });
+          }
+          setTimeout(() => setFeedback(null), 3000);
+        });
+      },
     });
-  };
-
-  // Confirmed role update execution
-  const confirmRoleChange = () => {
-    if (!pendingRoleChange) return;
-    const { userId, newRole } = pendingRoleChange;
-    setPendingRoleChange(null);
-
-    startTransition(async () => {
-      const res = await updateUserRoleAction(userId, newRole);
-      if (res.success) {
-        setUsers((prev) =>
-          prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
-        );
-        setFeedback({ type: "success", message: res.message });
-      } else {
-        setFeedback({ type: "error", message: res.message });
-      }
-      setTimeout(() => setFeedback(null), 3000);
-    });
-  };
-
-  const cancelRoleChange = () => {
-    setPendingRoleChange(null);
   };
 
   const handleToggleStatus = (userId, currentStatus, userName) => {
     const actionLabel = currentStatus === "active" ? "নিষ্ক্রিয়" : "পুনরায় সক্রিয়";
-    if (!confirm(`আপনি কি "${userName}" কে ${actionLabel} করতে চান?`)) return;
-
-    startTransition(async () => {
-      const res = await toggleUserStatusAction(userId, currentStatus);
-      if (res.success) {
-        setUsers((prev) =>
-          prev.map((u) => (u.id === userId ? { ...u, status: res.status } : u))
-        );
-        setFeedback({ type: "success", message: res.message });
-      } else {
-        setFeedback({ type: "error", message: res.message });
-      }
-      setTimeout(() => setFeedback(null), 3000);
+    setConfirmConfig({
+      message: `আপনি কি নিশ্চিতভাবে "${userName}" কে ${actionLabel} করতে চান?`,
+      confirmVariant: currentStatus === "active" ? "destructive" : "default",
+      onConfirm: () => {
+        setConfirmConfig(null);
+        startTransition(async () => {
+          const res = await toggleUserStatusAction(userId, currentStatus);
+          if (res.success) {
+            setUsers((prev) =>
+              prev.map((u) => (u.id === userId ? { ...u, status: res.status } : u))
+            );
+            setFeedback({ type: "success", message: res.message });
+          } else {
+            setFeedback({ type: "error", message: res.message });
+          }
+          setTimeout(() => setFeedback(null), 3000);
+        });
+      },
     });
   };
 
@@ -381,42 +378,14 @@ export function UserManager({ initialUsers = [] }) {
         </div>
       )}
 
-      {/* Role Change Confirmation Popup Modal */}
-      {pendingRoleChange && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full border border-slate-200 p-5 space-y-4">
-            <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
-              <Shield className="w-4 h-4 text-amber-600" />
-              <span>দায়িত্ব পরিবর্তন নিশ্চিতকরণ</span>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed">
-              আপনি কি নিশ্চিতভাবে &ldquo;<span className="font-semibold text-slate-900">{pendingRoleChange.userName}</span>&rdquo;-এর দায়িত্ব &ldquo;<span className="font-medium text-slate-800">{ROLE_LABELS[pendingRoleChange.oldRole] || pendingRoleChange.oldRole}</span>&rdquo; থেকে &ldquo;<span className="font-semibold text-emerald-700">{ROLE_LABELS[pendingRoleChange.newRole] || pendingRoleChange.newRole}</span>&rdquo;-এ পরিবর্তন করতে চান?
-            </p>
-
-            <div className="flex justify-end gap-2 pt-1">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={cancelRoleChange}
-                className="text-xs h-8.5 px-3 text-slate-600 border-slate-200 cursor-pointer"
-              >
-                না, বাতিল
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={confirmRoleChange}
-                disabled={isPending}
-                className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 px-4 cursor-pointer"
-              >
-                {isPending ? "পরিবর্তন হচ্ছে..." : "হ্যাঁ, পরিবর্তন করুন"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Re-confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(confirmConfig)}
+        onClose={() => setConfirmConfig(null)}
+        onConfirm={confirmConfig?.onConfirm}
+        message={confirmConfig?.message}
+        confirmVariant={confirmConfig?.confirmVariant || "default"}
+      />
     </div>
   );
 }

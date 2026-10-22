@@ -6,7 +6,7 @@ export function AnalyticsMetricCards({ metrics }) {
     {
       title: "মোট পৃষ্ঠা প্রদর্শন (Views)",
       value: (metrics.totalViews || 0).toLocaleString("bn-BD"),
-      subtitle: "ডাটাবেজ থেকে আসল গণনা",
+      subtitle: "ডাটাবেজ থেকে মোট প্রদর্শন গণনা",
       icon: Eye,
       color: "text-blue-600 bg-blue-50 border-blue-100",
     },

@@ -20,6 +20,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { AlertModal } from "@/components/ui/AlertModal";
 import { saveCuratedBatchAction } from "@/actions/curationActions";
 import { breakingFormSchema } from "@/schemas/curationSchema";
 
@@ -28,7 +30,8 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, startSavingTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
-  const [duplicateError, setDuplicateError] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
+  const [alertConfig, setAlertConfig] = useState(null);
 
   // Initialize React Hook Form with real-time validation via Zod
   const {
@@ -58,9 +61,9 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
         (item) => item.article_id && item.article_id === data.articleId
       );
       if (isAlreadyAdded) {
-        setDuplicateError(
-          `"${selectedArt?.headline || "এই সংবাদটি"}" ইতিমধ্যে জরুরি সংবাদ তালিকায় যুক্ত রয়েছে। একই সংবাদ একাধিকবার তালিকায় যোগ করা যাবে না।`
-        );
+        setAlertConfig({
+          message: `"${selectedArt?.headline || "এই সংবাদটি"}" ইতিমধ্যে জরুরি সংবাদ তালিকায় যুক্ত রয়েছে। একই সংবাদ একাধিকবার তালিকায় যোগ করা যাবে না।`,
+        });
         return;
       }
     }
@@ -81,20 +84,34 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
     reset({ articleId: "", customTitle: "" });
   };
 
-  // Local-only active toggle in browser state
-  const handleToggle = (id) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, is_active: item.is_active ? 0 : 1 } : item
-      )
-    );
-    setIsDirty(true);
+  // Re-confirmation before toggling active/inactive
+  const requestToggle = (item) => {
+    const willHide = item.is_active === 1;
+    setConfirmConfig({
+      message: willHide
+        ? "আপনি কি নিশ্চিতভাবে এই জরুরি সংবাদটি সাময়িক আড়াল করতে চান?"
+        : "আপনি কি নিশ্চিতভাবে এই জরুরি সংবাদটি পুনরায় সক্রিয় করতে চান?",
+      onConfirm: () => {
+        setItems((prev) =>
+          prev.map((i) => (i.id === item.id ? { ...i, is_active: i.is_active ? 0 : 1 } : i))
+        );
+        setIsDirty(true);
+        setConfirmConfig(null);
+      },
+    });
   };
 
-  // Local-only removal from browser state
-  const handleRemove = (id) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-    setIsDirty(true);
+  // Re-confirmation before removing item from list
+  const requestRemove = (id, headline) => {
+    setConfirmConfig({
+      message: `আপনি কি নিশ্চিতভাবে "${headline || "এই জরুরি সংবাদটি"}" ব্রেকিং তালিকা থেকে বাদ দিতে চান?`,
+      confirmVariant: "destructive",
+      onConfirm: () => {
+        setItems((prev) => prev.filter((item) => item.id !== id));
+        setIsDirty(true);
+        setConfirmConfig(null);
+      },
+    });
   };
 
   // Local-only move up
@@ -119,27 +136,37 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
     setIsDirty(true);
   };
 
-  // Reset local changes back to initial state
-  const handleDiscardChanges = () => {
-    if (confirm("আপনি কি নিশ্চিত যে সকল অসংরক্ষিত পরিবর্তন বাতিল করতে চান?")) {
-      setItems(initialItems);
-      setIsDirty(false);
-      setFeedback({ type: "info", message: "সকল পরিবর্তন বাতিল করা হয়েছে।" });
-      setTimeout(() => setFeedback(null), 3000);
-    }
+  // Re-confirmation before discarding local changes
+  const requestDiscard = () => {
+    setConfirmConfig({
+      message: "আপনি কি নিশ্চিত যে সকল অসংরক্ষিত পরিবর্তন বাতিল করতে চান?",
+      onConfirm: () => {
+        setItems(initialItems);
+        setIsDirty(false);
+        setConfirmConfig(null);
+        setFeedback({ type: "info", message: "সকল পরিবর্তন বাতিল করা হয়েছে।" });
+        setTimeout(() => setFeedback(null), 3000);
+      },
+    });
   };
 
-  // Save batch changes to database & trigger on-demand ISR
-  const handleSaveChanges = () => {
-    startSavingTransition(async () => {
-      const res = await saveCuratedBatchAction("breaking", items);
-      if (res.success) {
-        setIsDirty(false);
-        setFeedback({ type: "success", message: res.message });
-      } else {
-        setFeedback({ type: "error", message: res.message });
-      }
-      setTimeout(() => setFeedback(null), 4000);
+  // Re-confirmation before saving batch changes to database & trigger on-demand ISR
+  const requestSave = () => {
+    setConfirmConfig({
+      message: "আপনি কি নিশ্চিতভাবে ব্রেকিং সংবাদের সকল পরিবর্তন সংরক্ষণ করতে চান?",
+      onConfirm: () => {
+        setConfirmConfig(null);
+        startSavingTransition(async () => {
+          const res = await saveCuratedBatchAction("breaking", items);
+          if (res.success) {
+            setIsDirty(false);
+            setFeedback({ type: "success", message: res.message });
+          } else {
+            setAlertConfig({ message: res.message || "সংরক্ষণ সম্পন্ন করা যায়নি।" });
+          }
+          setTimeout(() => setFeedback(null), 4000);
+        });
+      },
     });
   };
 
@@ -171,7 +198,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
               variant="outline"
               size="sm"
               disabled={isSaving}
-              onClick={handleDiscardChanges}
+              onClick={requestDiscard}
               className="text-xs h-9 px-3 text-slate-600 border-slate-200 hover:bg-slate-100 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5 mr-1" />
@@ -183,7 +210,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
             type="button"
             size="sm"
             disabled={isSaving || !isDirty}
-            onClick={handleSaveChanges}
+            onClick={requestSave}
             className={`text-xs h-9 px-4 gap-1.5 shadow-xs font-medium cursor-pointer transition-all ${
               isDirty
                 ? "bg-red-600 hover:bg-red-700 text-white"
@@ -317,31 +344,6 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
         </div>
       </form>
 
-      {/* Duplicate News Popup Modal */}
-      {duplicateError && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full border border-slate-200 p-5 space-y-4">
-            <div className="flex items-center gap-2 text-red-600 font-bold text-sm">
-              <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-              <span>সংবাদটি ইতিমধ্যে তালিকায় রয়েছে</span>
-            </div>
-            <p className="text-xs text-slate-600 leading-relaxed">
-              {duplicateError}
-            </p>
-            <div className="flex justify-end pt-1">
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setDuplicateError(null)}
-                className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 px-4 cursor-pointer"
-              >
-                ঠিক আছে
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Active Breaking List */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
@@ -422,7 +424,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
-                      onClick={() => handleToggle(item.id)}
+                      onClick={() => requestToggle(item)}
                       title={item.is_active ? "নিষ্ক্রিয় করুন" : "সক্রিয় করুন"}
                       className={`p-1.5 rounded cursor-pointer transition-colors ${
                         item.is_active
@@ -435,7 +437,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
 
                     <button
                       type="button"
-                      onClick={() => handleRemove(item.id)}
+                      onClick={() => requestRemove(item.id, item.custom_title || item.article_headline)}
                       title="তালিকা থেকে বাদ দিন"
                       className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-colors"
                     >
@@ -448,6 +450,22 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
           )}
         </div>
       </div>
+
+      {/* Re-confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(confirmConfig)}
+        onClose={() => setConfirmConfig(null)}
+        onConfirm={confirmConfig?.onConfirm}
+        message={confirmConfig?.message}
+        confirmVariant={confirmConfig?.confirmVariant || "default"}
+      />
+
+      {/* Alert / Warning Modal */}
+      <AlertModal
+        isOpen={Boolean(alertConfig)}
+        onClose={() => setAlertConfig(null)}
+        message={alertConfig?.message}
+      />
     </div>
   );
 }

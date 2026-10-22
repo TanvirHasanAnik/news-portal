@@ -19,6 +19,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { AlertModal } from "@/components/ui/AlertModal";
 import { saveCategoriesBatchAction } from "@/actions/categoryActions";
 import { categorySchema, safeBanglaCategoryName } from "@/schemas/categorySchema";
 import { safeSlug } from "@/schemas/baseSchema";
@@ -36,6 +38,8 @@ export function CategoryManager({ initialCategories = [] }) {
   const [subcategoryModalCat, setSubcategoryModalCat] = useState(null);
   const [isSaving, startSavingTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
+  const [alertConfig, setAlertConfig] = useState(null);
 
   // React Hook Form for Category Add Form (real-time validation)
   const {
@@ -71,7 +75,7 @@ export function CategoryManager({ initialCategories = [] }) {
   const onAddCategory = (data) => {
     const cleanSlug = data.slug.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
     if (categories.some((c) => c.slug === cleanSlug)) {
-      alert("এই স্লাগটি ইতিমধ্যে ব্যবহৃত হয়েছে। অনুগ্রহ করে ভিন্ন স্লাগ লিখুন।");
+      setAlertConfig({ message: "এই স্লাগটি ইতিমধ্যে ব্যবহৃত হয়েছে। অনুগ্রহ করে ভিন্ন স্লাগ লিখুন।" });
       return;
     }
 
@@ -90,19 +94,22 @@ export function CategoryManager({ initialCategories = [] }) {
     setShowAddCategory(false);
   };
 
-  // Local removal of category from browser state
+  // Local removal of category from browser state with confirmation
   const handleDeleteCategory = (cat) => {
     if (cat.is_permanent || cat.slug === "latest" || cat.slug === "handpicked") {
-      alert("স্থায়ী ক্যাটাগরি মুছে ফেলা যাবে না।");
+      setAlertConfig({ message: "স্থায়ী ক্যাটাগরি মুছে ফেলা যাবে না।" });
       return;
     }
 
-    if (!confirm(`আপনি কি "${cat.name}" ক্যাটাগরি এবং এর সকল উপ-বিভাগ তালিকা থেকে বাদ দিতে চান?`)) {
-      return;
-    }
-
-    setCategories((prev) => prev.filter((c) => c.id !== cat.id));
-    setIsDirty(true);
+    setConfirmConfig({
+      message: `আপনি কি নিশ্চিতভাবে "${cat.name}" ক্যাটাগরি এবং এর সকল উপ-বিভাগ বাদ দিতে চান?`,
+      confirmVariant: "destructive",
+      onConfirm: () => {
+        setCategories((prev) => prev.filter((c) => c.id !== cat.id));
+        setIsDirty(true);
+        setConfirmConfig(null);
+      },
+    });
   };
 
   // Local addition of subcategory to browser state
@@ -112,7 +119,7 @@ export function CategoryManager({ initialCategories = [] }) {
     const cleanSlug = data.slug.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
     const parentCat = categories.find((c) => c.id === subcategoryModalCat.id);
     if (parentCat?.subcategories?.some((s) => s.slug === cleanSlug)) {
-      alert("এই ক্যাটাগরিতে এই স্লাগটি ইতিমধ্যে রয়েছে। ভিন্ন স্লাগ লিখুন।");
+      setAlertConfig({ message: "এই ক্যাটাগরিতে এই স্লাগটি ইতিমধ্যে রয়েছে। ভিন্ন স্লাগ লিখুন।" });
       return;
     }
 
@@ -137,39 +144,56 @@ export function CategoryManager({ initialCategories = [] }) {
     setSubcategoryModalCat(null);
   };
 
-  // Local removal of subcategory from browser state
-  const handleDeleteSubcategory = (categoryId, subcategoryId) => {
-    setCategories((prev) =>
-      prev.map((c) =>
-        c.id === categoryId
-          ? { ...c, subcategories: (c.subcategories || []).filter((s) => s.id !== subcategoryId) }
-          : c
-      )
-    );
-    setIsDirty(true);
+  // Local removal of subcategory from browser state with confirmation
+  const handleDeleteSubcategory = (categoryId, sub) => {
+    setConfirmConfig({
+      message: `আপনি কি নিশ্চিতভাবে "${sub.name}" উপ-বিভাগটি মুছে ফেলতে চান?`,
+      confirmVariant: "destructive",
+      onConfirm: () => {
+        setCategories((prev) =>
+          prev.map((c) =>
+            c.id === categoryId
+              ? { ...c, subcategories: (c.subcategories || []).filter((s) => s.id !== sub.id) }
+              : c
+          )
+        );
+        setIsDirty(true);
+        setConfirmConfig(null);
+      },
+    });
   };
 
-  // Reset local changes back to initial state
-  const handleDiscardChanges = () => {
-    if (confirm("আপনি কি নিশ্চিত যে সকল অসংরক্ষিত পরিবর্তন বাতিল করতে চান?")) {
-      setCategories(initialCategories);
-      setIsDirty(false);
-      setFeedback({ type: "info", message: "সকল পরিবর্তন বাতিল করা হয়েছে।" });
-      setTimeout(() => setFeedback(null), 3000);
-    }
-  };
-
-  // Save batch changes to database & update live site
-  const handleSaveChanges = () => {
-    startSavingTransition(async () => {
-      const res = await saveCategoriesBatchAction(categories);
-      if (res.success) {
+  // Re-confirmation before discarding local changes
+  const requestDiscard = () => {
+    setConfirmConfig({
+      message: "আপনি কি নিশ্চিত যে সকল অসংরক্ষিত পরিবর্তন বাতিল করতে চান?",
+      onConfirm: () => {
+        setCategories(initialCategories);
         setIsDirty(false);
-        setFeedback({ type: "success", message: res.message });
-      } else {
-        setFeedback({ type: "error", message: res.message });
-      }
-      setTimeout(() => setFeedback(null), 4000);
+        setConfirmConfig(null);
+        setFeedback({ type: "info", message: "সকল পরিবর্তন বাতিল করা হয়েছে।" });
+        setTimeout(() => setFeedback(null), 3000);
+      },
+    });
+  };
+
+  // Re-confirmation before saving batch changes to database & update live site
+  const requestSave = () => {
+    setConfirmConfig({
+      message: "আপনি কি নিশ্চিতভাবে ক্যাটাগরির সকল পরিবর্তন সংরক্ষণ করতে চান?",
+      onConfirm: () => {
+        setConfirmConfig(null);
+        startSavingTransition(async () => {
+          const res = await saveCategoriesBatchAction(categories);
+          if (res.success) {
+            setIsDirty(false);
+            setFeedback({ type: "success", message: res.message });
+          } else {
+            setAlertConfig({ message: res.message || "সংরক্ষণ সম্পন্ন করা যায়নি।" });
+          }
+          setTimeout(() => setFeedback(null), 4000);
+        });
+      },
     });
   };
 
@@ -250,7 +274,7 @@ export function CategoryManager({ initialCategories = [] }) {
               variant="outline"
               size="sm"
               disabled={isSaving}
-              onClick={handleDiscardChanges}
+              onClick={requestDiscard}
               className="text-xs h-9 px-3 text-slate-600 border-slate-200 hover:bg-slate-100 cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5 mr-1" />
@@ -262,7 +286,7 @@ export function CategoryManager({ initialCategories = [] }) {
             type="button"
             size="sm"
             disabled={isSaving || !isDirty}
-            onClick={handleSaveChanges}
+            onClick={requestSave}
             className={`text-xs h-9 px-4 gap-1.5 shadow-xs font-medium cursor-pointer transition-all ${
               isDirty
                 ? "bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -494,7 +518,7 @@ export function CategoryManager({ initialCategories = [] }) {
                             <span>{sub.name}</span>
                             <button
                               type="button"
-                              onClick={() => handleDeleteSubcategory(cat.id, sub.id)}
+                              onClick={() => handleDeleteSubcategory(cat.id, sub)}
                               className="text-slate-400 hover:text-red-600 cursor-pointer"
                               title="মুছুন"
                             >
@@ -601,6 +625,22 @@ export function CategoryManager({ initialCategories = [] }) {
           </div>
         </div>
       )}
+
+      {/* Re-confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(confirmConfig)}
+        onClose={() => setConfirmConfig(null)}
+        onConfirm={confirmConfig?.onConfirm}
+        message={confirmConfig?.message}
+        confirmVariant={confirmConfig?.confirmVariant || "default"}
+      />
+
+      {/* Alert / Warning Modal */}
+      <AlertModal
+        isOpen={Boolean(alertConfig)}
+        onClose={() => setAlertConfig(null)}
+        message={alertConfig?.message}
+      />
     </div>
   );
 }

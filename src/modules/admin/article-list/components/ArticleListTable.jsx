@@ -22,6 +22,7 @@ import {
   deleteArticleAction,
 } from "@/actions/articleActions";
 import { ArticleRevisionsDialog } from "./ArticleRevisionsDialog";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { formatTimeAgo } from "@/utils/dateUtils";
 
 export function ArticleListTable({ initialArticles = [], statusCounts = {}, categories = [] }) {
@@ -31,6 +32,7 @@ export function ArticleListTable({ initialArticles = [], statusCounts = {}, cate
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
+  const [confirmConfig, setConfirmConfig] = useState(null);
 
   // Revision modal state
   const [revisionModal, setRevisionModal] = useState({
@@ -59,7 +61,7 @@ export function ArticleListTable({ initialArticles = [], statusCounts = {}, cate
     return true;
   });
 
-  const handleStatusChange = (articleId, newStatus) => {
+  const executeStatusChange = (articleId, newStatus) => {
     startTransition(async () => {
       const res = await updateArticleStatusAction(articleId, newStatus);
       if (res.success) {
@@ -72,6 +74,21 @@ export function ArticleListTable({ initialArticles = [], statusCounts = {}, cate
       }
       setTimeout(() => setFeedback(null), 4000);
     });
+  };
+
+  const handleStatusChange = (articleId, newStatus, headline) => {
+    if (newStatus === "archived") {
+      setConfirmConfig({
+        message: `আপনি কি "${headline || "এই সংবাদটি"}" আর্কাইভ করতে চান?`,
+        confirmVariant: "destructive",
+        onConfirm: () => {
+          setConfirmConfig(null);
+          executeStatusChange(articleId, newStatus);
+        },
+      });
+      return;
+    }
+    executeStatusChange(articleId, newStatus);
   };
 
   const handleToggleFlag = (articleId, flagName) => {
@@ -88,18 +105,22 @@ export function ArticleListTable({ initialArticles = [], statusCounts = {}, cate
   };
 
   const handleDelete = (articleId, headline) => {
-    if (!window.confirm(`আপনি কি নিশ্চিত যে "${headline}" সংবাদটি মুছে ফেলতে চান?`)) {
-      return;
-    }
-    startTransition(async () => {
-      const res = await deleteArticleAction(articleId);
-      if (res.success) {
-        setArticles((prev) => prev.filter((a) => a.id !== articleId));
-        setFeedback({ type: "success", message: res.message });
-      } else {
-        setFeedback({ type: "error", message: res.message });
-      }
-      setTimeout(() => setFeedback(null), 4000);
+    setConfirmConfig({
+      message: `আপনি কি নিশ্চিত যে "${headline || "এই সংবাদটি"}" মুছে ফেলতে চান?`,
+      confirmVariant: "destructive",
+      onConfirm: () => {
+        setConfirmConfig(null);
+        startTransition(async () => {
+          const res = await deleteArticleAction(articleId);
+          if (res.success) {
+            setArticles((prev) => prev.filter((a) => a.id !== articleId));
+            setFeedback({ type: "success", message: res.message });
+          } else {
+            setFeedback({ type: "error", message: res.message });
+          }
+          setTimeout(() => setFeedback(null), 4000);
+        });
+      },
     });
   };
 
@@ -326,7 +347,7 @@ export function ArticleListTable({ initialArticles = [], statusCounts = {}, cate
                           {art.status === "published" && (
                             <button
                               type="button"
-                              onClick={() => handleStatusChange(art.id, "archived")}
+                              onClick={() => handleStatusChange(art.id, "archived", art.headline)}
                               title="আর্কাইভ করুন"
                               disabled={isPending}
                               className="p-1.5 rounded text-slate-500 hover:text-slate-800 hover:bg-slate-100 cursor-pointer transition-colors"
@@ -372,6 +393,15 @@ export function ArticleListTable({ initialArticles = [], statusCounts = {}, cate
         onClose={() => setRevisionModal({ isOpen: false, articleTitle: "", revisions: [] })}
         articleTitle={revisionModal.articleTitle}
         revisions={revisionModal.revisions}
+      />
+
+      {/* Re-confirmation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(confirmConfig)}
+        onClose={() => setConfirmConfig(null)}
+        onConfirm={confirmConfig?.onConfirm}
+        message={confirmConfig?.message}
+        confirmVariant={confirmConfig?.confirmVariant || "default"}
       />
     </div>
   );
