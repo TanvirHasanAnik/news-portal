@@ -1,39 +1,32 @@
 import React from "react";
-import { Eye, TrendingUp, Newspaper, FolderTree, Users } from "lucide-react";
+import { Eye, TrendingUp, Newspaper, Users } from "lucide-react";
 
 export function AnalyticsMetricCards({ metrics }) {
   const cards = [
     {
       title: "মোট পৃষ্ঠা প্রদর্শন (Views)",
-      value: metrics.totalViews.toLocaleString("bn-BD"),
-      subtitle: "সকল সময়",
+      value: (metrics.totalViews || 0).toLocaleString("bn-BD"),
+      subtitle: "ডাটাবেজ থেকে আসল গণনা",
       icon: Eye,
       color: "text-blue-600 bg-blue-50 border-blue-100",
     },
     {
       title: "আজকের ভিজিট",
-      value: metrics.todayViews.toLocaleString("bn-BD"),
+      value: (metrics.todayViews || 0).toLocaleString("bn-BD"),
       subtitle: "আজকের মোট পাঠ",
       icon: TrendingUp,
       color: "text-emerald-600 bg-emerald-50 border-emerald-100",
     },
     {
       title: "সংবাদ সংখ্যা",
-      value: metrics.totalArticles.toLocaleString("bn-BD"),
+      value: (metrics.totalArticles || 0).toLocaleString("bn-BD"),
       subtitle: "ডাটাবেজে সংরক্ষিত",
       icon: Newspaper,
       color: "text-purple-600 bg-purple-50 border-purple-100",
     },
     {
-      title: "ক্যাটাগরি",
-      value: metrics.totalCategories.toLocaleString("bn-BD"),
-      subtitle: "সক্রিয় বিভাগসমূহ",
-      icon: FolderTree,
-      color: "text-amber-600 bg-amber-50 border-amber-100",
-    },
-    {
       title: "ব্যবহারকারী / দল",
-      value: metrics.totalUsers.toLocaleString("bn-BD"),
+      value: (metrics.totalUsers || 0).toLocaleString("bn-BD"),
       subtitle: "সম্পাদকীয় সদস্য",
       icon: Users,
       color: "text-slate-700 bg-slate-100 border-slate-200",
@@ -41,7 +34,7 @@ export function AnalyticsMetricCards({ metrics }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
       {cards.map((card, idx) => {
         const Icon = card.icon;
         return (
@@ -65,4 +58,3 @@ export function AnalyticsMetricCards({ metrics }) {
     </div>
   );
 }
-

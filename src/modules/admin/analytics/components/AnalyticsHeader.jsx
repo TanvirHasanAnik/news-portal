@@ -17,11 +17,6 @@ export function AnalyticsHeader() {
           পাঠক সংখ্যা, সর্বাধিক পঠিত সংবাদ, বিভাগভিত্তিক ট্রাফিক এবং প্রশাসনিক অডিট লগ।
         </p>
       </div>
-
-      <div className="inline-flex items-center gap-2 text-xs font-medium text-slate-500 bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs self-start sm:self-auto">
-        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-        লাইভ ভিউ ট্র্যাকিং সক্রিয়
-      </div>
     </div>
   );
 }

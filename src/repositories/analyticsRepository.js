@@ -1,62 +1,87 @@
 import { getDb } from "@/lib/db";
+import { getMostReadArticles } from "./articleRepository";
 
 /**
  * Analytics Repository
- * Handles manual view counting, category traffic aggregates, top pages, and audit logs
+ * Handles authentic manual view counting, category traffic aggregates, top pages, and audit logs
  */
 
 export async function getAnalyticsSummary() {
   const db = await getDb();
   const today = new Date().toISOString().slice(0, 10);
 
-  const [totalViewsRes, todayViewsRes, articlesCountRes, categoriesCountRes, usersCountRes] =
+  const [totalViewsRes, todayViewsRes, articlesCountRes, usersCountRes] =
     await Promise.all([
       db.prepare("SELECT COALESCE(SUM(view_count), 0) as total FROM articles").first(),
       db.prepare("SELECT COUNT(*) as count FROM analytics_page_views WHERE viewed_date = ?").bind(today).first(),
       db.prepare("SELECT COUNT(*) as count FROM articles").first(),
-      db.prepare("SELECT COUNT(*) as count FROM categories").first(),
       db.prepare("SELECT COUNT(*) as count FROM users").first(),
     ]);
 
   return {
-    totalViews: (totalViewsRes?.total || 0) + 12450, // Seed realistic baseline for manual view counting
-    todayViews: (todayViewsRes?.count || 0) + 382,
+    totalViews: totalViewsRes?.total || 0,
+    todayViews: todayViewsRes?.count || 0,
     totalArticles: articlesCountRes?.count || 0,
-    totalCategories: categoriesCountRes?.count || 0,
     totalUsers: usersCountRes?.count || 0,
   };
 }
 
+/**
+ * Returns views and article counts for ALL categories
+ * Dictated by views count and sorted descending
+ */
 export async function getCategoryViewsStats() {
   const db = await getDb();
   const { results } = await db
     .prepare(
-      `SELECT category_name, category_slug, 
-              COUNT(*) as article_count, 
-              COALESCE(SUM(view_count), 0) as total_views 
-       FROM articles 
-       GROUP BY category_slug 
-       ORDER BY total_views DESC`
+      `SELECT c.name as category_name, 
+              c.slug as category_slug, 
+              COUNT(a.id) as article_count, 
+              COALESCE(SUM(a.view_count), 0) as total_views 
+       FROM categories c 
+       LEFT JOIN articles a ON a.category_slug = c.slug 
+       GROUP BY c.id 
+       ORDER BY total_views DESC, c.sort_order ASC`
     )
     .all();
 
   return results || [];
 }
 
-export async function getTopArticles(limit = 7) {
-  const db = await getDb();
-  const { results } = await db
-    .prepare(
-      `SELECT id, headline, slug, category_name, view_count, published_at, created_at, image 
-       FROM articles 
-       WHERE status = 'published' 
-       ORDER BY view_count DESC, created_at DESC 
-       LIMIT ?`
-    )
-    .bind(limit)
-    .all();
+/**
+ * Top articles wrapper delegating to reusable getMostReadArticles function
+ */
+export async function getTopArticles(limit = 10) {
+  return await getMostReadArticles(limit);
+}
 
-  return results || [];
+/**
+ * Records an authentic article page view in the database
+ */
+export async function recordArticleView(articleId, { categorySlug = "", subcategoryName = "", path = "" } = {}) {
+  if (!articleId) return;
+  try {
+    const db = await getDb();
+    const today = new Date().toISOString().slice(0, 10);
+    const id = `pv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+    // 1. Increment article's total view_count
+    await db
+      .prepare("UPDATE articles SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?")
+      .bind(articleId)
+      .run();
+
+    // 2. Insert into analytics_page_views for date & category tracking
+    await db
+      .prepare(
+        `INSERT INTO analytics_page_views (id, path, article_id, category_slug, subcategory_name, viewed_date, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`
+      )
+      .bind(id, path || `/article/${articleId}`, articleId, categorySlug || null, subcategoryName || null, today)
+      .run();
+  } catch (err) {
+    console.error("recordArticleView error:", err);
+  }
 }
 
 export async function getRecentAuditLogs(limit = 15) {
@@ -96,4 +121,3 @@ export async function recordAuditLog({
 
   return { id };
 }
-

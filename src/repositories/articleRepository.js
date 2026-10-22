@@ -295,6 +295,8 @@ export function mapDbArticleToFrontend(dbRow) {
     content: dbRow.content || "",
     category: dbRow.category_name || "জাতীয়",
     categorySlug: dbRow.category_slug || "national",
+    category_name: dbRow.category_name || "জাতীয়",
+    category_slug: dbRow.category_slug || "national",
     subcategory: dbRow.subcategory_name || null,
     subcategorySlug: dbRow.subcategory_name ? encodeURIComponent(dbRow.subcategory_name) : null,
     image: primaryImage,
@@ -447,5 +449,84 @@ export async function getArticleStatusCounts() {
 
   return counts;
 }
+
+/**
+ * Reusable Business Logic for Most Read News (সর্বাধিক পঠিত সংবাদ):
+ *
+ * 1. Individual News 7-Day Validity:
+ *    - Each news article is considered fresh/valid for 7 days from its published date:
+ *      datetime(published_at, '+7 days') >= datetime('now').
+ *    - Active 7-day news are prioritized and ranked primarily by their views during that 7-day window.
+ *
+ * 2. Latest News as Fillers:
+ *    - If there are fewer than `limit` articles within their 7-day validity (or if all news are older),
+ *      the database's latest published news (even if out of 7-day validity) are kept as fillers,
+ *      sorted from latest to oldest (created_at DESC) up to `limit` items.
+ *
+ * 3. Authentic Database Only:
+ *    - Strictly queries from the database (no synthetic mock fillers).
+ *    - Reused in both Admin TopArticlesTable and public frontend MostReadSection.
+ */
+export async function getMostReadArticles(limit = 10) {
+  const db = await getDb();
+  let dbRows = [];
+
+  try {
+    const query = `
+      SELECT a.*,
+             CASE 
+               WHEN datetime(COALESCE(a.published_at, a.created_at), '+7 days') >= datetime('now') THEN 1 
+               ELSE 0 
+             END as is_within_validity_week,
+             (
+               SELECT COUNT(*)
+               FROM analytics_page_views v
+               WHERE v.article_id = a.id
+                 AND v.created_at <= datetime(COALESCE(a.published_at, a.created_at), '+7 days')
+             ) as individual_logged_views
+      FROM articles a
+      WHERE a.status = 'published'
+      ORDER BY 
+        is_within_validity_week DESC,
+        CASE 
+          WHEN datetime(COALESCE(a.published_at, a.created_at), '+7 days') >= datetime('now') THEN 
+            MAX(COALESCE(a.view_count, 0), (
+              SELECT COUNT(*) 
+              FROM analytics_page_views v 
+              WHERE v.article_id = a.id 
+                AND v.created_at <= datetime(COALESCE(a.published_at, a.created_at), '+7 days')
+            ))
+          ELSE 0 
+        END DESC,
+        a.created_at DESC
+      LIMIT ?
+    `;
+    const res = await db.prepare(query).bind(limit).all();
+    dbRows = res.results || [];
+  } catch (err) {
+    console.error("getMostReadArticles query error:", err);
+  }
+
+  // Map database articles to frontend format
+  return dbRows.map((row) => {
+    const mapped = mapDbArticleToFrontend(row);
+    const isWithinWeek = row.is_within_validity_week === 1;
+    const loggedWeekViews = Number(row.individual_logged_views) || 0;
+    const directViews = Number(row.view_count) || 0;
+
+    // For articles within 7-day validity, use their 7-day views; for out-of-validity fillers, use logged 7-day views or direct views
+    const weekViews = isWithinWeek ? Math.max(directViews, loggedWeekViews) : loggedWeekViews;
+
+    return {
+      ...mapped,
+      view_count: weekViews,
+      week_views: weekViews,
+      views: weekViews > 0 ? `${weekViews.toLocaleString("bn-BD")} পঠিত` : "সর্বশেষ সংবাদ",
+      isWithinValidityWeek: isWithinWeek,
+    };
+  });
+}
+
+
 
 

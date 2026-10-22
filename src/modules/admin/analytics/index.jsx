@@ -15,7 +15,7 @@ export default async function AnalyticsModule() {
   const [summary, categoryStats, topArticles, auditLogs] = await Promise.all([
     getAnalyticsSummary(),
     getCategoryViewsStats(),
-    getTopArticles(6),
+    getTopArticles(10),
     getRecentAuditLogs(8),
   ]);
 

@@ -18,8 +18,10 @@ import {
 import {
   findArticleBySlugOrId,
   getPublishedArticles,
+  getMostReadArticles,
   mapDbArticleToFrontend,
 } from "@/repositories/articleRepository";
+import { recordArticleView } from "@/repositories/analyticsRepository";
 
 export const dynamic = "force-dynamic";
 
@@ -74,8 +76,9 @@ export async function generateMetadata({ params }) {
 export default async function ArticlePage({ params }) {
   const { id } = await params;
   let article = null;
+  let dbRow = null;
   try {
-    const dbRow = await findArticleBySlugOrId(id);
+    dbRow = await findArticleBySlugOrId(id);
     if (dbRow) {
       article = mapDbArticleToFrontend(dbRow);
     }
@@ -89,6 +92,23 @@ export default async function ArticlePage({ params }) {
 
   if (!article) {
     notFound();
+  }
+
+  // Record authentic page view in database
+  if (dbRow?.id) {
+    recordArticleView(dbRow.id, {
+      categorySlug: article.categorySlug,
+      subcategoryName: article.subcategory,
+      path: `/article/${id}`,
+    }).catch(() => {});
+  }
+
+  // Fetch top 10 most read articles for the sidebar MostReadSection
+  let mostReadArticles = [];
+  try {
+    mostReadArticles = await getMostReadArticles(10);
+  } catch (err) {
+    console.error("Error fetching most read articles for sidebar:", err);
   }
 
   // Get accent badge color for the category
@@ -245,7 +265,7 @@ export default async function ArticlePage({ params }) {
             <AdHolder size="300x250" />
 
             {/* সর্বাধিক পঠিত section under the ad holders (reused from handpicked section of homepage) */}
-            <MostReadSection />
+            <MostReadSection newsList={mostReadArticles} />
           </aside>
 
         </div>
