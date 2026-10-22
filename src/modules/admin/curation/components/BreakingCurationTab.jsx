@@ -28,11 +28,14 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, startSavingTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
+  const [duplicateError, setDuplicateError] = useState(null);
 
   // Initialize React Hook Form with real-time validation via Zod
   const {
     register,
     handleSubmit,
+    setValue,
+    trigger,
     reset,
     formState: { errors },
   } = useForm({
@@ -47,13 +50,28 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
   // Local-only addition to browser state on valid form submit
   const onAddItem = (data) => {
     const selectedArt = articles.find((a) => a.id === data.articleId);
+    const customTitleTrimmed = (data.customTitle || "").trim();
+
+    // Check if article is already in the breaking news list
+    if (data.articleId) {
+      const isAlreadyAdded = items.some(
+        (item) => item.article_id && item.article_id === data.articleId
+      );
+      if (isAlreadyAdded) {
+        setDuplicateError(
+          `"${selectedArt?.headline || "এই সংবাদটি"}" ইতিমধ্যে জরুরি সংবাদ তালিকায় যুক্ত রয়েছে। একই সংবাদ একাধিকবার তালিকায় যোগ করা যাবে না।`
+        );
+        return;
+      }
+    }
+
     const newItem = {
       id: `temp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       type: "breaking",
       article_id: data.articleId || null,
-      article_headline: selectedArt?.headline || data.customTitle,
+      article_headline: selectedArt?.headline || customTitleTrimmed,
       category_name: selectedArt?.category_name || "জরুরি",
-      custom_title: data.customTitle || "",
+      custom_title: customTitleTrimmed,
       is_active: 1,
       created_at: new Date().toISOString(),
     };
@@ -180,7 +198,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
             ) : (
               <>
                 <Save className="w-3.5 h-3.5" />
-                পরিবর্তন সংরক্ষণ করুন (ISR আপডেট)
+                পরিবর্তন সংরক্ষণ করুন
               </>
             )}
           </Button>
@@ -239,16 +257,23 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
             </label>
             <select
               {...register("articleId")}
-              className={`w-full h-9 rounded-md border bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 ${
-                errors.articleId ? "border-red-400 focus:ring-red-400" : "border-slate-200 focus:ring-red-500"
+              onChange={(e) => {
+                register("articleId").onChange(e);
+                trigger("customTitle");
+              }}
+              className={`w-full h-9 rounded-md border bg-white px-3 py-1.5 text-xs text-slate-800 transition-colors focus:outline-none focus:border-slate-400 ${
+                errors.articleId ? "border-red-400" : "border-slate-300"
               }`}
             >
               <option value="">-- সংবাদ নির্বাচন করুন (ঐচ্ছিক) --</option>
-              {articles.map((art) => (
-                <option key={art.id} value={art.id}>
-                  [{art.category_name}] {art.headline}
-                </option>
-              ))}
+              {articles.map((art) => {
+                const isAdded = items.some((item) => item.article_id === art.id);
+                return (
+                  <option key={art.id} value={art.id}>
+                    [{art.category_name}] {art.headline} {isAdded ? " (ইতিমধ্যে যুক্ত)" : ""}
+                  </option>
+                );
+              })}
             </select>
             {errors.articleId && (
               <p className="text-[11px] text-red-500 font-medium mt-1">{errors.articleId.message}</p>
@@ -258,14 +283,18 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
           {/* Custom title override with real-time error display */}
           <div className="sm:col-span-6">
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              জরুরি শিরোনাম (টিকার টেক্সট) <span className="text-red-500">*</span>
+              জরুরি শিরোনাম / টিকার টেক্সট (ঐচ্ছিক)
             </label>
             <Input
               type="text"
-              placeholder="সংক্ষিপ্ত জরুরি ব্রেকিং শিরোনাম লিখুন..."
+              placeholder="খালি রাখলে নির্বাচিত সংবাদের মূল শিরোনাম প্রদর্শিত হবে..."
               {...register("customTitle")}
+              onChange={(e) => {
+                register("customTitle").onChange(e);
+                trigger("customTitle");
+              }}
               className={`text-xs h-9 ${
-                errors.customTitle ? "border-red-400 focus-visible:ring-red-400" : "focus-visible:ring-red-500"
+                errors.customTitle ? "border-red-400 focus-visible:ring-red-400" : "border-slate-300 focus-visible:ring-slate-400"
               }`}
             />
             {errors.customTitle && (
@@ -287,6 +316,31 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
           </Button>
         </div>
       </form>
+
+      {/* Duplicate News Popup Modal */}
+      {duplicateError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full border border-slate-200 p-5 space-y-4">
+            <div className="flex items-center gap-2 text-red-600 font-bold text-sm">
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+              <span>সংবাদটি ইতিমধ্যে তালিকায় রয়েছে</span>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {duplicateError}
+            </p>
+            <div className="flex justify-end pt-1">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setDuplicateError(null)}
+                className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 px-4 cursor-pointer"
+              >
+                ঠিক আছে
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Active Breaking List */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">

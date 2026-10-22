@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { safeString, safeEmail } from "./baseSchema.js";
+import { safeString, safeEmail, hasScriptInjection } from "./baseSchema.js";
 import { USER_ROLES } from "../lib/auth/index.js";
 
 const validRoles = Object.values(USER_ROLES);
@@ -15,18 +15,18 @@ export const createUserSchema = z.object({
     label: "ইমেইল ঠিকানা",
     required: true,
   }),
+  password: z
+    .string()
+    .trim()
+    .min(6, { message: "পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।" })
+    .max(100, { message: "পাসওয়ার্ড সর্বোচ্চ ১০০ অক্ষরের মধ্যে হতে হবে।" })
+    .refine((val) => !hasScriptInjection(val), {
+      message: "পাসওয়ার্ডে অননুমোদিত কোড বা স্ক্রিপ্ট ব্যবহার করা যাবে না।",
+    }),
   role: z.enum(validRoles, {
     errorMap: () => ({ message: "একটি বৈধ দায়িত্ব বা রোল নির্বাচন করুন।" }),
   }),
-  bio: safeString({
-    label: "সংক্ষিপ্ত পরিচিতি",
-    min: 0,
-    max: 300,
-    required: false,
-    allowEmpty: true,
-  })
-    .optional()
-    .default(""),
+  bio: z.string().optional().default(""),
 });
 
 export const updateUserRoleSchema = z.object({

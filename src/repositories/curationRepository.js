@@ -30,6 +30,18 @@ export async function getCuratedNews(type) {
 
 export async function addCuratedNews({ type, articleId, customTitle = "", customUrl = "", priority }) {
   const db = await getDb();
+
+  // Prevent duplicate article from being curated in the same type
+  if (articleId) {
+    const existing = await db
+      .prepare("SELECT id FROM curated_news WHERE type = ? AND article_id = ?")
+      .bind(type, articleId)
+      .first();
+    if (existing) {
+      throw new Error(`এই সংবাদটি ইতিমধ্যে তালিকায় বিদ্যমান।`);
+    }
+  }
+
   const id = `cur_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
 
   // If no priority specified, place it at the very top (highest priority + 10)
@@ -151,14 +163,19 @@ export async function saveCuratedNewsBatch(type, items = []) {
 
   // 3. Insert the new batch of items in order with priority = (items.length - i) * 10
   const activeArticleIds = new Set();
+  const insertedArticleIds = new Set();
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
+    const articleId = item.article_id || null;
+    if (articleId) {
+      if (insertedArticleIds.has(articleId)) continue;
+      insertedArticleIds.add(articleId);
+    }
     const id = item.id && !String(item.id).startsWith("temp_")
       ? String(item.id)
       : `cur_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
     const priority = (items.length - i) * 10;
     const isActive = item.is_active === 0 ? 0 : 1;
-    const articleId = item.article_id || null;
     const customTitle = item.custom_title || null;
     const customUrl = item.custom_url || null;
 

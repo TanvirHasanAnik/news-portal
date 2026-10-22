@@ -118,6 +118,15 @@ function initializeLocalSchema(sqlite, fs, path) {
     }
   } catch (_e) {}
 
+  // Ensure 'password' column exists in users table for existing database
+  try {
+    const userTableInfo = sqlite.prepare("PRAGMA table_info(users)").all();
+    const hasPasswordCol = userTableInfo.some((col) => col.name === "password");
+    if (!hasPasswordCol) {
+      sqlite.exec("ALTER TABLE users ADD COLUMN password TEXT;");
+    }
+  } catch (_e) {}
+
   // Check if categories are seeded
   const checkCat = sqlite.prepare("SELECT COUNT(*) as count FROM categories").get();
   if (!checkCat || checkCat.count === 0) {

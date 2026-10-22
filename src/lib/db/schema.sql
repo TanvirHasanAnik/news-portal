@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
+  password TEXT,
   role TEXT NOT NULL CHECK(role IN ('super_admin', 'admin', 'editor_in_chief', 'editor', 'sub_editor', 'reporter')),
   status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'disabled', 'invited')),
   avatar TEXT,

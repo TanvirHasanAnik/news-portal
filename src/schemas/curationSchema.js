@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { safeString, safeUrl, safeInteger } from "./baseSchema.js";
+import { safeString, safeUrl, safeInteger, hasScriptInjection } from "./baseSchema.js";
+import { BANGLA_EDITORIAL_REGEX, countWords, hasEnglishLetters } from "./articleSchema.js";
 
 export const curatedItemSchema = z
   .object({
@@ -88,45 +89,67 @@ export const curatedBatchSchema = z.array(
   })
 );
 
-export const handpickedFormSchema = z
-  .object({
-    articleId: z.string().optional().default(""),
-    customTitle: safeString({
-      label: "বিকল্প শিরোনাম",
-      min: 0,
-      max: 180,
-      required: false,
-      allowEmpty: true,
-    })
-      .optional()
-      .default(""),
-  })
-  .refine(
-    (data) => Boolean((data.articleId && data.articleId.trim()) || (data.customTitle && data.customTitle.trim())),
-    {
-      message: "একটি প্রকাশিত সংবাদ নির্বাচন করুন অথবা শিরোনাম লিখুন।",
-      path: ["customTitle"],
-    }
-  );
+export const handpickedFormSchema = z.object({
+  articleId: z.string().trim().min(1, { message: "অনুগ্রহ করে একটি প্রকাশিত সংবাদ নির্বাচন করুন।" }),
+});
 
 export const breakingFormSchema = z
   .object({
     articleId: z.string().optional().default(""),
-    customTitle: safeString({
-      label: "জরুরি শিরোনাম",
-      min: 0,
-      max: 180,
-      required: false,
-      allowEmpty: true,
-    })
-      .optional()
-      .default(""),
+    customTitle: z.string().trim().optional().default(""),
   })
-  .refine(
-    (data) => Boolean((data.articleId && data.articleId.trim()) || (data.customTitle && data.customTitle.trim())),
-    {
-      message: "একটি প্রকাশিত সংবাদ নির্বাচন করুন অথবা জরুরি শিরোনাম লিখুন।",
-      path: ["customTitle"],
+  .superRefine((data, ctx) => {
+    const artId = (data.articleId || "").trim();
+    const title = (data.customTitle || "").trim();
+
+    // 1. If both article and title are absent, show mandatory message
+    if (!artId && !title) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "অনুগ্রহ করে একটি প্রকাশিত সংবাদ নির্বাচন করুন অথবা জরুরি শিরোনাম লিখুন।",
+        path: ["customTitle"],
+      });
+      return;
     }
-  );
+
+    // 2. If title is written, validate it in real-time
+    if (title) {
+      if (hasScriptInjection(title)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "শিরোনামে কোনো প্রকার কোড, স্ক্রিপ্ট বা বিশেষ চিহ্ন (< >) গ্রহণযোগ্য নয়।",
+          path: ["customTitle"],
+        });
+        return;
+      }
+
+      if (hasEnglishLetters(title) || !BANGLA_EDITORIAL_REGEX.test(title)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "শিরোনামে শুধুমাত্র বাংলা বর্ণমালা গ্রহণযোগ্য।",
+          path: ["customTitle"],
+        });
+        return;
+      }
+
+      const words = countWords(title);
+      if (words < 3) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "শিরোনামটি অত্যন্ত সংক্ষিপ্ত। অন্তত ৩টি শব্দের অর্থপূর্ণ শিরোনাম লিখুন।",
+          path: ["customTitle"],
+        });
+        return;
+      }
+
+      if (words > 18) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "শিরোনামটি অত্যন্ত দীর্ঘ (সর্বোচ্চ ১৮ শব্দ)। পত্রিকার লেআউট সুরক্ষায় ১৮ শব্দের মধ্যে সীমাবদ্ধ রাখুন।",
+          path: ["customTitle"],
+        });
+        return;
+      }
+    }
+  });
 

@@ -18,6 +18,7 @@ import { createUserSchema } from "@/schemas/userSchema";
 export function UserManager({ initialUsers = [] }) {
   const [users, setUsers] = useState(initialUsers);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [pendingRoleChange, setPendingRoleChange] = useState(null);
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
 
@@ -33,8 +34,8 @@ export function UserManager({ initialUsers = [] }) {
     defaultValues: {
       name: "",
       email: "",
+      password: "",
       role: USER_ROLES.REPORTER,
-      bio: "",
     },
   });
 
@@ -43,8 +44,9 @@ export function UserManager({ initialUsers = [] }) {
       const formData = new FormData();
       formData.append("name", data.name.trim());
       formData.append("email", data.email.trim());
+      formData.append("password", data.password.trim());
       formData.append("role", data.role);
-      formData.append("bio", data.bio || "");
+      formData.append("bio", "");
 
       const res = await createUserAction(null, formData);
       if (res.success) {
@@ -56,12 +58,12 @@ export function UserManager({ initialUsers = [] }) {
             email: data.email.trim(),
             role: data.role,
             status: "active",
-            bio: data.bio || "",
+            bio: "",
             created_at: new Date().toISOString(),
           },
         ]);
         setFeedback({ type: "success", message: res.message });
-        reset({ name: "", email: "", role: USER_ROLES.REPORTER, bio: "" });
+        reset({ name: "", email: "", password: "", role: USER_ROLES.REPORTER });
         setShowAddModal(false);
       } else {
         setFeedback({ type: "error", message: res.message });
@@ -70,7 +72,23 @@ export function UserManager({ initialUsers = [] }) {
     });
   };
 
-  const handleRoleChange = (userId, newRole) => {
+  // Open confirmation modal on role selection
+  const onRoleSelectChange = (usr, newRole) => {
+    if (newRole === usr.role) return;
+    setPendingRoleChange({
+      userId: usr.id,
+      userName: usr.name,
+      oldRole: usr.role,
+      newRole,
+    });
+  };
+
+  // Confirmed role update execution
+  const confirmRoleChange = () => {
+    if (!pendingRoleChange) return;
+    const { userId, newRole } = pendingRoleChange;
+    setPendingRoleChange(null);
+
     startTransition(async () => {
       const res = await updateUserRoleAction(userId, newRole);
       if (res.success) {
@@ -83,6 +101,10 @@ export function UserManager({ initialUsers = [] }) {
       }
       setTimeout(() => setFeedback(null), 3000);
     });
+  };
+
+  const cancelRoleChange = () => {
+    setPendingRoleChange(null);
   };
 
   const handleToggleStatus = (userId, currentStatus, userName) => {
@@ -132,7 +154,7 @@ export function UserManager({ initialUsers = [] }) {
 
         <Button
           onClick={() => {
-            reset({ name: "", email: "", role: USER_ROLES.REPORTER, bio: "" });
+            reset({ name: "", email: "", password: "", role: USER_ROLES.REPORTER });
             setShowAddModal(true);
           }}
           className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-9 gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
@@ -184,7 +206,7 @@ export function UserManager({ initialUsers = [] }) {
                       ) : (
                         <select
                           value={usr.role}
-                          onChange={(e) => handleRoleChange(usr.id, e.target.value)}
+                          onChange={(e) => onRoleSelectChange(usr, e.target.value)}
                           disabled={isPending}
                           className="h-7 rounded border border-slate-200 bg-white px-2 text-xs text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
                         >
@@ -249,7 +271,7 @@ export function UserManager({ initialUsers = [] }) {
         </div>
       </div>
 
-      {/* Invite / Add User Modal with React Hook Form Real-time Validation */}
+      {/* Add User Modal with React Hook Form Real-time Validation */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden">
@@ -257,7 +279,7 @@ export function UserManager({ initialUsers = [] }) {
               <div className="flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-slate-700" />
                 <h3 className="text-sm font-bold text-slate-900">
-                  নতুন সদস্য যোগ বা আমন্ত্রণ
+                  নতুন ব্যবহারকারী যোগ করুন
                 </h3>
               </div>
               <button
@@ -271,7 +293,7 @@ export function UserManager({ initialUsers = [] }) {
             <form onSubmit={handleSubmit(onCreateUser)} className="p-5 space-y-3.5">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  সদস্যের পুরো নাম <span className="text-red-500">*</span>
+                  ব্যবহারকারীর পুরো নাম <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"
@@ -301,6 +323,24 @@ export function UserManager({ initialUsers = [] }) {
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  প্রাথমিক পাসওয়ার্ড <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="password"
+                  placeholder="কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড"
+                  {...register("password")}
+                  className={`text-xs h-9 ${errors.password ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                />
+                {errors.password && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{errors.password.message}</p>
+                )}
+                <p className="text-[10px] text-slate-400 mt-1">
+                  সুপার অ্যাডমিন কর্তৃক নির্ধারিত; ব্যবহারকারী পরবর্তীতে এটি পরিবর্তন করতে পারবেন।
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   দায়িত্ব ও পদবী (Role) <span className="text-red-500">*</span>
                 </label>
                 <select
@@ -315,21 +355,6 @@ export function UserManager({ initialUsers = [] }) {
                 </select>
                 {errors.role && (
                   <p className="text-[11px] text-red-500 font-medium mt-1">{errors.role.message}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  সংক্ষিপ্ত পরিচিতি বা পদবী নোট (ঐচ্ছিক)
-                </label>
-                <Input
-                  type="text"
-                  placeholder="নিজস্ব প্রতিবেদক / সিনিয়র রিপোর্টার"
-                  {...register("bio")}
-                  className={`text-xs h-9 ${errors.bio ? "border-red-400 focus-visible:ring-red-400" : ""}`}
-                />
-                {errors.bio && (
-                  <p className="text-[11px] text-red-500 font-medium mt-1">{errors.bio.message}</p>
                 )}
               </div>
 
@@ -352,6 +377,43 @@ export function UserManager({ initialUsers = [] }) {
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Role Change Confirmation Popup Modal */}
+      {pendingRoleChange && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full border border-slate-200 p-5 space-y-4">
+            <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
+              <Shield className="w-4 h-4 text-amber-600" />
+              <span>দায়িত্ব পরিবর্তন নিশ্চিতকরণ</span>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              আপনি কি নিশ্চিতভাবে &ldquo;<span className="font-semibold text-slate-900">{pendingRoleChange.userName}</span>&rdquo;-এর দায়িত্ব &ldquo;<span className="font-medium text-slate-800">{ROLE_LABELS[pendingRoleChange.oldRole] || pendingRoleChange.oldRole}</span>&rdquo; থেকে &ldquo;<span className="font-semibold text-emerald-700">{ROLE_LABELS[pendingRoleChange.newRole] || pendingRoleChange.newRole}</span>&rdquo;-এ পরিবর্তন করতে চান?
+            </p>
+
+            <div className="flex justify-end gap-2 pt-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={cancelRoleChange}
+                className="text-xs h-8.5 px-3 text-slate-600 border-slate-200 cursor-pointer"
+              >
+                না, বাতিল
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={confirmRoleChange}
+                disabled={isPending}
+                className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 px-4 cursor-pointer"
+              >
+                {isPending ? "পরিবর্তন হচ্ছে..." : "হ্যাঁ, পরিবর্তন করুন"}
+              </Button>
+            </div>
           </div>
         </div>
       )}

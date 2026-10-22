@@ -22,18 +22,18 @@ export async function getUserById(id) {
 }
 
 /**
- * Creates a new user or invites a user by email
+ * Creates a new user with initial email, password, and role
  */
-export async function createUser({ name, email, role = "reporter", status = "active", bio = "" }) {
+export async function createUser({ name, email, password = "", role = "reporter", status = "active", bio = "" }) {
   const db = await getDb();
   const id = `usr_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
 
   await db
     .prepare(
-      `INSERT INTO users (id, name, email, role, status, bio, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+      `INSERT INTO users (id, name, email, password, role, status, bio, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
     )
-    .bind(id, name, email.trim().toLowerCase(), role, status, bio)
+    .bind(id, name, email.trim().toLowerCase(), password, role, status, bio)
     .run();
 
   return { id, name, email, role, status };

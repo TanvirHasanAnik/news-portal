@@ -103,6 +103,21 @@ export async function saveCuratedBatchAction(type, items) {
 
     const validatedItems = curatedBatchSchema.parse(items);
 
+    // Business Logic: Prevent duplicate articles in the curated list
+    const seenArticles = new Set();
+    for (const item of validatedItems) {
+      const artId = item.article_id || item.articleId;
+      if (artId) {
+        if (seenArticles.has(artId)) {
+          return {
+            success: false,
+            message: `তালিকায় একই সংবাদ একাধিকবার যুক্ত রয়েছে। অনুলিপিটি সরিয়ে পুনরায় সংরক্ষণ করুন।`,
+          };
+        }
+        seenArticles.add(artId);
+      }
+    }
+
     await saveCuratedNewsBatch(type, validatedItems);
 
     await recordAuditLog({

@@ -28,6 +28,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
   const [isDirty, setIsDirty] = useState(false);
   const [isSaving, startSavingTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
+  const [duplicateError, setDuplicateError] = useState(null);
 
   // Initialize React Hook Form with real-time validation via Zod
   const {
@@ -40,27 +41,39 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
     mode: "onChange",
     defaultValues: {
       articleId: "",
-      customTitle: "",
     },
   });
 
   // Local-only addition to browser state on valid form submit
   const onAddItem = (data) => {
     const selectedArt = articles.find((a) => a.id === data.articleId);
+    if (!selectedArt) return;
+
+    // Check if article is already in the handpicked list
+    const isAlreadyAdded = items.some(
+      (item) => item.article_id && item.article_id === data.articleId
+    );
+    if (isAlreadyAdded) {
+      setDuplicateError(
+        `"${selectedArt.headline}" সংবাদটি ইতিমধ্যে বাছাইকৃত তালিকায় যুক্ত রয়েছে। একই সংবাদ একাধিকবার তালিকায় যোগ করা যাবে না।`
+      );
+      return;
+    }
+
     const newItem = {
       id: `temp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       type: "handpicked",
-      article_id: data.articleId || null,
-      article_headline: selectedArt?.headline || data.customTitle,
-      category_name: selectedArt?.category_name || "বিশেষ",
-      custom_title: data.customTitle || "",
+      article_id: selectedArt.id,
+      article_headline: selectedArt.headline,
+      category_name: selectedArt.category_name || "সাধারণ",
+      custom_title: "",
       is_active: 1,
       created_at: new Date().toISOString(),
     };
 
     setItems((prev) => [newItem, ...prev]);
     setIsDirty(true);
-    reset({ articleId: "", customTitle: "" });
+    reset({ articleId: "" });
   };
 
   // Local-only active toggle in browser state
@@ -180,7 +193,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
             ) : (
               <>
                 <Save className="w-3.5 h-3.5" />
-                পরিবর্তন সংরক্ষণ করুন (ISR আপডেট)
+                পরিবর্তন সংরক্ষণ করুন
               </>
             )}
           </Button>
@@ -231,62 +244,73 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 items-end">
           {/* Article selection dropdown */}
-          <div className="sm:col-span-7">
+          <div className="flex-1 w-full">
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              প্রকাশিত সংবাদ নির্বাচন করুন
+              প্রকাশিত সংবাদ নির্বাচন করুন <span className="text-red-500">*</span>
             </label>
             <select
               {...register("articleId")}
-              className={`w-full h-9 rounded-md border bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 ${
-                errors.articleId ? "border-red-400 focus:ring-red-400" : "border-slate-200 focus:ring-amber-500"
+              className={`w-full h-9 rounded-md border bg-white px-3 py-1.5 text-xs text-slate-800 transition-colors focus:outline-none focus:border-slate-400 ${
+                errors.articleId ? "border-red-400" : "border-slate-300"
               }`}
             >
-              <option value="">-- সংবাদ নির্বাচন করুন (ঐচ্ছিক) --</option>
-              {articles.map((art) => (
-                <option key={art.id} value={art.id}>
-                  [{art.category_name}] {art.headline}
-                </option>
-              ))}
+              <option value="">-- সংবাদ নির্বাচন করুন --</option>
+              {articles.map((art) => {
+                const isAdded = items.some((item) => item.article_id === art.id);
+                return (
+                  <option key={art.id} value={art.id}>
+                    [{art.category_name || "সাধারণ"}] {art.headline} {isAdded ? " (ইতিমধ্যে যুক্ত)" : ""}
+                  </option>
+                );
+              })}
             </select>
             {errors.articleId && (
               <p className="text-[11px] text-red-500 font-medium mt-1">{errors.articleId.message}</p>
             )}
           </div>
 
-          {/* Custom title override with real-time error display */}
-          <div className="sm:col-span-5">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              বিকল্প/কাস্টম শিরোনাম (ঐচ্ছিক)
-            </label>
-            <Input
-              type="text"
-              placeholder="সংক্ষিপ্ত বিকল্প শিরোনাম..."
-              {...register("customTitle")}
-              className={`text-xs h-9 ${
-                errors.customTitle ? "border-red-400 focus-visible:ring-red-400" : "focus-visible:ring-amber-500"
-              }`}
-            />
-            {errors.customTitle && (
-              <p className="text-[11px] text-red-500 font-medium mt-1">{errors.customTitle.message}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center pt-1">
-          <p className="text-[11px] text-slate-500">
-            তালিকায় যোগ হবে ব্রাউজার মেমরিতে। চূড়ান্ত করতে উপরের &ldquo;পরিবর্তন সংরক্ষণ করুন&rdquo; বোতামে চাপুন।
-          </p>
           <Button
             type="submit"
-            className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-9 px-4 gap-1.5 shadow-xs cursor-pointer"
+            className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-9 px-4 gap-1.5 shadow-xs cursor-pointer shrink-0"
           >
             <BookmarkCheck className="w-3.5 h-3.5" />
             তালিকায় যোগ করুন
           </Button>
         </div>
+
+        <div className="pt-1">
+          <p className="text-[11px] text-slate-500">
+            তালিকায় যোগ হবে ব্রাউজার মেমরিতে। চূড়ান্ত করতে উপরের &ldquo;পরিবর্তন সংরক্ষণ করুন&rdquo; বোতামে চাপুন।
+          </p>
+        </div>
       </form>
+
+      {/* Duplicate News Popup Modal */}
+      {duplicateError && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full border border-slate-200 p-5 space-y-4">
+            <div className="flex items-center gap-2 text-red-600 font-bold text-sm">
+              <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
+              <span>সংবাদটি ইতিমধ্যে তালিকায় রয়েছে</span>
+            </div>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {duplicateError}
+            </p>
+            <div className="flex justify-end pt-1">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setDuplicateError(null)}
+                className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 px-4 cursor-pointer"
+              >
+                ঠিক আছে
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Active Handpicked List */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">

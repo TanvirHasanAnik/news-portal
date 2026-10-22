@@ -15,6 +15,7 @@ export async function createUserAction(prevState, formData) {
     const rawData = {
       name: formData.get("name")?.toString() || "",
       email: formData.get("email")?.toString() || "",
+      password: formData.get("password")?.toString() || "",
       role: formData.get("role")?.toString() || "reporter",
       bio: formData.get("bio")?.toString() || "",
     };
@@ -24,6 +25,7 @@ export async function createUserAction(prevState, formData) {
     const created = await createUser({
       name: validated.name,
       email: validated.email,
+      password: validated.password,
       role: validated.role,
       status: "active",
       bio: validated.bio || "",
