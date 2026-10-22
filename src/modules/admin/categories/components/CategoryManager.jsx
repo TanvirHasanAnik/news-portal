@@ -1,83 +1,171 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { FolderTree, Plus, Trash2, X, Tag, ShieldAlert, Lock, Sparkles, Clock } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  FolderTree,
+  Plus,
+  Trash2,
+  X,
+  Save,
+  RotateCcw,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  createCategoryAction,
-  deleteCategoryAction,
-  createSubcategoryAction,
-  deleteSubcategoryAction,
-} from "@/actions/categoryActions";
+import { saveCategoriesBatchAction } from "@/actions/categoryActions";
+import { categorySchema } from "@/schemas/categorySchema";
+import { safeString, safeSlug, safeInteger } from "@/schemas/baseSchema";
+import { z } from "zod";
+
+const subcategoryFormSchema = z.object({
+  name: safeString({ label: "উপ-বিভাগের নাম", min: 2, max: 60, required: true }),
+  slug: safeSlug({ label: "উপ-বিভাগের স্লাগ", min: 2, max: 60, required: true }),
+  sortOrder: safeInteger({ label: "সাজানোর ক্রম", min: 0, max: 10000, defaultValue: 10 }),
+});
 
 export function CategoryManager({ initialCategories = [] }) {
   const [categories, setCategories] = useState(initialCategories);
+  const [isDirty, setIsDirty] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [subcategoryModalCat, setSubcategoryModalCat] = useState(null);
-  const [isPending, startTransition] = useTransition();
+  const [isSaving, startSavingTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
 
-  // Form states
-  const [catName, setCatName] = useState("");
-  const [catSlug, setCatSlug] = useState("");
-  const [catOrder, setCatOrder] = useState("0");
+  // React Hook Form for Category Add Form (real-time validation)
+  const {
+    register: registerCat,
+    handleSubmit: handleSubmitCat,
+    reset: resetCat,
+    formState: { errors: catErrors },
+  } = useForm({
+    resolver: zodResolver(categorySchema),
+    mode: "onChange",
+    defaultValues: {
+      name: "",
+      slug: "",
+      sortOrder: 10,
+    },
+  });
 
-  const [subName, setSubName] = useState("");
-  const [subSlug, setSubSlug] = useState("");
-  const [subOrder, setSubOrder] = useState("0");
+  // React Hook Form for Subcategory Add Modal (real-time validation)
+  const {
+    register: registerSub,
+    handleSubmit: handleSubmitSub,
+    reset: resetSub,
+    formState: { errors: subErrors },
+  } = useForm({
+    resolver: zodResolver(subcategoryFormSchema),
+    mode: "onChange",
+    defaultValues: {
+      name: "",
+      slug: "",
+      sortOrder: 10,
+    },
+  });
 
-  // Create Category Handler
-  const handleCreateCategory = (e) => {
-    e.preventDefault();
-    if (!catName || !catSlug) return;
+  // Local addition of category to browser state
+  const onAddCategory = (data) => {
+    const cleanSlug = data.slug.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    if (categories.some((c) => c.slug === cleanSlug)) {
+      alert("এই স্লাগটি ইতিমধ্যে ব্যবহৃত হয়েছে। অনুগ্রহ করে ভিন্ন স্লাগ লিখুন।");
+      return;
+    }
 
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.append("name", catName);
-      formData.append("slug", catSlug);
-      formData.append("sortOrder", catOrder);
+    const newCategory = {
+      id: `temp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name: data.name.trim(),
+      slug: cleanSlug,
+      sort_order: Number(data.sortOrder) || (categories.length + 1) * 10,
+      is_permanent: 0,
+      subcategories: [],
+    };
 
-      const res = await createCategoryAction(null, formData);
-      if (res.success) {
-        setCategories((prev) => [
-          ...prev,
-          {
-            id: `cat_${catSlug}`,
-            name: catName,
-            slug: catSlug,
-            sort_order: Number(catOrder),
-            is_permanent: 0,
-            subcategories: [],
-          },
-        ]);
-        setFeedback({ type: "success", message: res.message });
-        setCatName("");
-        setCatSlug("");
-        setCatOrder("0");
-        setShowAddCategory(false);
-      } else {
-        setFeedback({ type: "error", message: res.message });
-      }
-      setTimeout(() => setFeedback(null), 4000);
-    });
+    setCategories((prev) => [...prev, newCategory]);
+    setIsDirty(true);
+    resetCat({ name: "", slug: "", sortOrder: 10 });
+    setShowAddCategory(false);
   };
 
-  // Delete Category Handler
+  // Local removal of category from browser state
   const handleDeleteCategory = (cat) => {
-    if (cat.is_permanent) {
+    if (cat.is_permanent || cat.slug === "latest" || cat.slug === "handpicked") {
       alert("স্থায়ী ক্যাটাগরি মুছে ফেলা যাবে না।");
       return;
     }
-    if (!confirm(`আপনি কি নিশ্চিত যে "${cat.name}" ক্যাটাগরি এবং এর সকল সাব-ক্যাটাগরি মুছে ফেলতে চান?`)) {
+
+    if (!confirm(`আপনি কি "${cat.name}" ক্যাটাগরি এবং এর সকল উপ-বিভাগ তালিকা থেকে বাদ দিতে চান?`)) {
       return;
     }
 
-    startTransition(async () => {
-      const res = await deleteCategoryAction(cat.id);
+    setCategories((prev) => prev.filter((c) => c.id !== cat.id));
+    setIsDirty(true);
+  };
+
+  // Local addition of subcategory to browser state
+  const onAddSubcategory = (data) => {
+    if (!subcategoryModalCat) return;
+
+    const cleanSlug = data.slug.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    const parentCat = categories.find((c) => c.id === subcategoryModalCat.id);
+    if (parentCat?.subcategories?.some((s) => s.slug === cleanSlug)) {
+      alert("এই ক্যাটাগরিতে এই স্লাগটি ইতিমধ্যে রয়েছে। ভিন্ন স্লাগ লিখুন।");
+      return;
+    }
+
+    const newSubcategory = {
+      id: `temp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      category_id: subcategoryModalCat.id,
+      name: data.name.trim(),
+      slug: cleanSlug,
+      sort_order: Number(data.sortOrder) || ((parentCat?.subcategories?.length || 0) + 1) * 10,
+    };
+
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id === subcategoryModalCat.id
+          ? { ...c, subcategories: [...(c.subcategories || []), newSubcategory] }
+          : c
+      )
+    );
+
+    setIsDirty(true);
+    resetSub({ name: "", slug: "", sortOrder: 10 });
+    setSubcategoryModalCat(null);
+  };
+
+  // Local removal of subcategory from browser state
+  const handleDeleteSubcategory = (categoryId, subcategoryId) => {
+    setCategories((prev) =>
+      prev.map((c) =>
+        c.id === categoryId
+          ? { ...c, subcategories: (c.subcategories || []).filter((s) => s.id !== subcategoryId) }
+          : c
+      )
+    );
+    setIsDirty(true);
+  };
+
+  // Reset local changes back to initial state
+  const handleDiscardChanges = () => {
+    if (confirm("আপনি কি নিশ্চিত যে সকল অসংরক্ষিত পরিবর্তন বাতিল করতে চান?")) {
+      setCategories(initialCategories);
+      setIsDirty(false);
+      setFeedback({ type: "info", message: "সকল পরিবর্তন বাতিল করা হয়েছে।" });
+      setTimeout(() => setFeedback(null), 3000);
+    }
+  };
+
+  // Save batch changes to database & update live site
+  const handleSaveChanges = () => {
+    startSavingTransition(async () => {
+      const res = await saveCategoriesBatchAction(categories);
       if (res.success) {
-        setCategories((prev) => prev.filter((c) => c.id !== cat.id));
+        setIsDirty(false);
         setFeedback({ type: "success", message: res.message });
       } else {
         setFeedback({ type: "error", message: res.message });
@@ -86,357 +174,353 @@ export function CategoryManager({ initialCategories = [] }) {
     });
   };
 
-  // Create Subcategory Handler
-  const handleCreateSubcategory = (e) => {
-    e.preventDefault();
-    if (!subcategoryModalCat || !subName || !subSlug) return;
-
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.append("categoryId", subcategoryModalCat.id);
-      formData.append("name", subName);
-      formData.append("slug", subSlug);
-      formData.append("sortOrder", subOrder);
-
-      const res = await createSubcategoryAction(null, formData);
-      if (res.success) {
-        setCategories((prev) =>
-          prev.map((c) => {
-            if (c.id === subcategoryModalCat.id) {
-              return {
-                ...c,
-                subcategories: [
-                  ...(c.subcategories || []),
-                  { id: `sub_${Date.now()}`, name: subName, slug: subSlug, sort_order: Number(subOrder) },
-                ],
-              };
-            }
-            return c;
-          })
-        );
-        setFeedback({ type: "success", message: res.message });
-        setSubName("");
-        setSubSlug("");
-        setSubOrder("0");
-        setSubcategoryModalCat(null);
-      } else {
-        setFeedback({ type: "error", message: res.message });
-      }
-      setTimeout(() => setFeedback(null), 4000);
-    });
-  };
-
-  // Delete Subcategory Handler
-  const handleDeleteSubcategory = (categoryId, subcategoryId, subName) => {
-    if (!confirm(`"${subName}" সাব-ক্যাটাগরি মুছে ফেলতে চান?`)) return;
-
-    startTransition(async () => {
-      const res = await deleteSubcategoryAction(subcategoryId);
-      if (res.success) {
-        setCategories((prev) =>
-          prev.map((c) => {
-            if (c.id === categoryId) {
-              return {
-                ...c,
-                subcategories: (c.subcategories || []).filter((s) => s.id !== subcategoryId),
-              };
-            }
-            return c;
-          })
-        );
-        setFeedback({ type: "success", message: res.message });
-      } else {
-        setFeedback({ type: "error", message: res.message });
-      }
-      setTimeout(() => setFeedback(null), 4000);
-    });
-  };
-
-  // Split categories into permanent system categories and dynamic content categories
-  const permanentCats = categories.filter(
-    (c) => c.is_permanent || c.slug === "latest" || c.slug === "handpicked"
-  );
+  // Separate dynamic categories from permanent system categories
   const dynamicCats = categories.filter(
     (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked"
   );
 
   return (
     <div className="space-y-6">
-      {/* Feedback banner */}
-      {feedback && (
-        <div
-          className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between ${
-            feedback.type === "success"
-              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-              : "bg-red-50 text-red-800 border border-red-200"
-          }`}
-        >
-          <span>{feedback.message}</span>
-          <button onClick={() => setFeedback(null)}>×</button>
+      {/* Top Status & Save Action Bar */}
+      <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          {isDirty ? (
+            <span className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
+              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+              অসংরক্ষিত পরিবর্তন রয়েছে
+            </span>
+          ) : (
+            <span className="flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+              সব পরিবর্তন সংরক্ষিত
+            </span>
+          )}
+          <span className="text-xs text-slate-500 hidden sm:inline">
+            মোট সক্রিয় ক্যাটাগরি: {dynamicCats.length}
+          </span>
         </div>
-      )}
 
-      {/* 1. Permanent System Categories (Never treated as dynamic categories) */}
-      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 mb-3">
-          <div className="flex items-center gap-2">
-            <Lock className="w-4 h-4 text-slate-700" />
-            <h2 className="text-sm font-bold text-slate-900">
-              স্থায়ী সিস্টেম ক্যাটাগরি (Permanent Categories)
-            </h2>
-          </div>
-          <Badge variant="outline" className="text-[10px] bg-white border-slate-300 text-slate-600">
-            অপরিবর্তনীয়
-          </Badge>
-        </div>
-        <p className="text-xs text-slate-500 mb-4">
-          'সর্বশেষ' ও 'বাছাইকৃত' ওয়েবসাইটের স্থায়ী ক্যাটাগরি। এগুলো ডায়নামিক বিষয়ভিত্তিক ক্যাটাগরি নয় এবং এগুলোর অধীনে আলাদা কোনো সাব-ক্যাটাগরি বা মোছার অপশন প্রযোজ্য নয়।
-        </p>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-          {permanentCats.map((pCat) => {
-            const isLatest = pCat.slug === "latest";
-            return (
-              <div
-                key={pCat.id}
-                className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-xs flex items-start gap-3"
-              >
-                <div className="p-2 rounded-lg bg-slate-100 text-slate-700 shrink-0 mt-0.5">
-                  {isLatest ? <Clock className="w-4 h-4 text-blue-600" /> : <Sparkles className="w-4 h-4 text-amber-600" />}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900 text-sm">{pCat.name}</span>
-                    <Badge variant="secondary" className="text-[10px] font-mono py-0 px-1.5">
-                      /{pCat.slug}
-                    </Badge>
-                  </div>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    {isLatest
-                      ? "সকল বিভাগের প্রকাশিত সংবাদের স্বয়ংক্রিয় রিয়েলটাইম স্ট্রিম।"
-                      : "সম্পাদকীয় কিউরেশন (Handpicked) ব্যবস্থাপনার মাধ্যমে বাছাইকৃত সংবাদ।"}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 2. Dynamic Content Categories Header & Add Button */}
-      <div className="flex items-center justify-between pt-2">
-        <div>
-          <h2 className="text-base font-bold text-slate-900">
-            ডায়নামিক সংবাদ ক্যাটাগরি ({dynamicCats.length})
-          </h2>
-          <p className="text-xs text-slate-500 mt-0.5">
-            বিষয়ভিত্তিক সংবাদ বিভাগ ও সংশ্লিষ্ট সাব-ক্যাটাগরি পরিচালনা
-          </p>
-        </div>
-        <Button
-          onClick={() => setShowAddCategory((prev) => !prev)}
-          className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 gap-1.5 cursor-pointer shadow-xs"
-        >
-          <Plus className="w-4 h-4" />
-          {showAddCategory ? "ফর্ম বন্ধ করুন" : "নতুন ক্যাটাগরি তৈরি"}
-        </Button>
-      </div>
-
-      {/* Add New Category Box */}
-      {showAddCategory && (
-        <form
-          onSubmit={handleCreateCategory}
-          className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4 animate-in fade-in duration-200"
-        >
-          <h3 className="text-sm font-bold text-slate-900">নতুন ডায়নামিক ক্যাটাগরি ফরম</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                ক্যাটাগরির নাম (বাংলা)
-              </label>
-              <Input
-                type="text"
-                placeholder="যেমন: পরিবেশ ও জলবায়ু"
-                value={catName}
-                onChange={(e) => setCatName(e.target.value)}
-                required
-                className="text-xs h-9"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                স্লাগ (English Slug)
-              </label>
-              <Input
-                type="text"
-                placeholder="যেমন: environment"
-                value={catSlug}
-                onChange={(e) => setCatSlug(e.target.value)}
-                required
-                className="text-xs h-9"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                সাজানোর ক্রম (Sort Order)
-              </label>
-              <Input
-                type="number"
-                placeholder="10"
-                value={catOrder}
-                onChange={(e) => setCatOrder(e.target.value)}
-                className="text-xs h-9"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          {isDirty && (
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => setShowAddCategory(false)}
+              disabled={isSaving}
+              onClick={handleDiscardChanges}
+              className="text-xs h-9 px-3 text-slate-600 border-slate-200 hover:bg-slate-100 cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5 mr-1" />
+              বাতিল করুন
+            </Button>
+          )}
+
+          <Button
+            type="button"
+            size="sm"
+            disabled={isSaving || !isDirty}
+            onClick={handleSaveChanges}
+            className={`text-xs h-9 px-4 gap-1.5 shadow-xs font-medium cursor-pointer transition-all ${
+              isDirty
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
+            }`}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                সংরক্ষণ হচ্ছে...
+              </>
+            ) : (
+              <>
+                <Save className="w-3.5 h-3.5" />
+                পরিবর্তন সংরক্ষণ করুন
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Feedback banner */}
+      {feedback && (
+        <div
+          className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between transition-all ${
+            feedback.type === "success"
+              ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
+              : feedback.type === "error"
+              ? "bg-red-50 text-red-800 border border-red-200"
+              : "bg-slate-50 text-slate-800 border border-slate-200"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {feedback.type === "success" ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-red-600" />
+            )}
+            <span>{feedback.message}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedback(null)}
+            className="text-slate-400 hover:text-slate-700 font-bold px-1 cursor-pointer"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Section Header & Add Category Button */}
+      <div className="flex items-center justify-between pt-1">
+        <div>
+          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <FolderTree className="w-4 h-4 text-emerald-600" />
+            সংবাদ ক্যাটাগরি তালিকা ({dynamicCats.length})
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            বিষয়ভিত্তিক সংবাদ বিভাগ ও সংশ্লিষ্ট উপ-বিভাগ পরিচালনা করুন
+          </p>
+        </div>
+
+        <Button
+          type="button"
+          onClick={() => setShowAddCategory((prev) => !prev)}
+          className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-9 gap-1.5 cursor-pointer shadow-xs"
+        >
+          <Plus className="w-4 h-4" />
+          {showAddCategory ? "ফর্ম বন্ধ করুন" : "নতুন ক্যাটাগরি যোগ করুন"}
+        </Button>
+      </div>
+
+      {/* Add New Category Box with Real-Time React Hook Form Validation */}
+      {showAddCategory && (
+        <form
+          onSubmit={handleSubmitCat(onAddCategory)}
+          className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4 animate-in fade-in duration-150"
+        >
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-slate-900">নতুন ক্যাটাগরি তৈরি</h3>
+            <span className="text-[11px] text-slate-400">
+              যোগ করার পর উপরের সংরক্ষণ বোতামে চাপুন
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                ক্যাটাগরির নাম (বাংলা) <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="text"
+                placeholder="যেমন: পরিবেশ ও জলবায়ু"
+                {...registerCat("name")}
+                className={`text-xs h-9 ${
+                  catErrors.name ? "border-red-400 focus-visible:ring-red-400" : ""
+                }`}
+              />
+              {catErrors.name && (
+                <p className="text-[11px] text-red-500 font-medium mt-1">{catErrors.name.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                ইংরেজি স্লাগ (Slug) <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="text"
+                placeholder="যেমন: environment"
+                {...registerCat("slug")}
+                className={`text-xs h-9 font-mono ${
+                  catErrors.slug ? "border-red-400 focus-visible:ring-red-400" : ""
+                }`}
+              />
+              {catErrors.slug && (
+                <p className="text-[11px] text-red-500 font-medium mt-1">{catErrors.slug.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                সাজানোর ক্রম
+              </label>
+              <Input
+                type="number"
+                placeholder="10"
+                {...registerCat("sortOrder")}
+                className={`text-xs h-9 ${
+                  catErrors.sortOrder ? "border-red-400 focus-visible:ring-red-400" : ""
+                }`}
+              />
+              {catErrors.sortOrder && (
+                <p className="text-[11px] text-red-500 font-medium mt-1">{catErrors.sortOrder.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                resetCat();
+                setShowAddCategory(false);
+              }}
+              className="text-xs h-8.5 text-slate-600 border-slate-200"
             >
               বাতিল
             </Button>
             <Button
               type="submit"
               size="sm"
-              disabled={isPending}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 px-4"
             >
-              ক্যাটাগরি সংরক্ষণ করুন
+              তালিকায় যোগ করুন
             </Button>
           </div>
         </form>
       )}
 
-      {/* Dynamic Categories Cards List */}
+      {/* Dynamic Categories Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {dynamicCats.map((cat) => (
-          <div
-            key={cat.id}
-            className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-start justify-between gap-2 pb-3 border-b border-slate-100">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-slate-900 text-sm">{cat.name}</span>
-                  <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-mono">
-                    /{cat.slug}
-                  </Badge>
-                  {cat.is_permanent ? (
-                    <Badge variant="outline" className="text-[9px] py-0 text-slate-400">
-                      স্থায়ী
+        {dynamicCats.length === 0 ? (
+          <div className="col-span-full py-12 text-center text-slate-400 text-xs bg-white rounded-xl border border-slate-200">
+            কোনো ক্যাটাগরি পাওয়া যায়নি। &ldquo;নতুন ক্যাটাগরি যোগ করুন&rdquo; বোতামে চাপুন।
+          </div>
+        ) : (
+          dynamicCats.map((cat) => (
+            <div
+              key={cat.id}
+              className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col justify-between hover:border-slate-300 transition-colors"
+            >
+              <div>
+                <div className="flex items-start justify-between gap-2 pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 text-sm">{cat.name}</span>
+                    <Badge variant="secondary" className="text-[10px] py-0 px-1.5 font-mono text-slate-600">
+                      /{cat.slug}
                     </Badge>
-                  ) : null}
-                </div>
+                  </div>
 
-                {!cat.is_permanent && (
                   <button
                     type="button"
                     onClick={() => handleDeleteCategory(cat)}
                     className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-colors"
-                    title="ক্যাটাগরি মুছুন"
+                    title="ক্যাটাগরি বাদ দিন"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
-                )}
-              </div>
-
-              {/* Subcategories list */}
-              <div className="py-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] font-semibold text-slate-500">
-                    উপ-বিভাগ ({cat.subcategories?.length || 0}):
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setSubcategoryModalCat(cat)}
-                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
-                  >
-                    <Plus className="w-3 h-3" />
-                    সাব-ক্যাটাগরি যোগ করুন
-                  </button>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5 min-h-[32px]">
-                  {cat.subcategories && cat.subcategories.length > 0 ? (
-                    cat.subcategories.map((sub) => (
-                      <span
-                        key={sub.id}
-                        className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs group"
-                      >
-                        <span>{sub.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteSubcategory(cat.id, sub.id, sub.name)}
-                          className="text-slate-400 hover:text-red-600 cursor-pointer"
-                          title="মুছুন"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-[11px] text-slate-400 italic">
-                      কোনো সাব-ক্যাটাগরি যোগ করা হয়নি
+                {/* Subcategories list */}
+                <div className="py-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      উপ-বিভাগ ({cat.subcategories?.length || 0}):
                     </span>
-                  )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        resetSub({ name: "", slug: "", sortOrder: 10 });
+                        setSubcategoryModalCat(cat);
+                      }}
+                      className="text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      উপ-বিভাগ যোগ করুন
+                    </button>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5 min-h-[32px]">
+                    {cat.subcategories && cat.subcategories.length > 0 ? (
+                      cat.subcategories.map((sub) => (
+                        <span
+                          key={sub.id}
+                          className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs"
+                        >
+                          <span>{sub.name}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteSubcategory(cat.id, sub.id)}
+                            className="text-slate-400 hover:text-red-600 cursor-pointer"
+                            title="মুছুন"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[11px] text-slate-400 italic">
+                        কোনো উপ-বিভাগ নেই
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="pt-2 border-t border-slate-100 text-[10px] text-slate-400 flex justify-between">
-              <span>ক্রম: #{cat.sort_order || 0}</span>
-              <span>আইডি: {cat.slug}</span>
+              <div className="pt-2 border-t border-slate-100 text-[10px] text-slate-400 flex justify-between">
+                <span>ক্রম: #{cat.sort_order || 0}</span>
+                <span>স্লাগ: /{cat.slug}</span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
 
-      {/* Subcategory Add Modal */}
+      {/* Subcategory Add Modal with React Hook Form Real-time Validation */}
       {subcategoryModalCat && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <h3 className="text-sm font-bold text-slate-900">
-                "{subcategoryModalCat.name}" এর অধীনে সাব-ক্যাটাগরি
+                &ldquo;{subcategoryModalCat.name}&rdquo; এর জন্য নতুন উপ-বিভাগ
               </h3>
               <button
-                onClick={() => setSubcategoryModalCat(null)}
+                type="button"
+                onClick={() => {
+                  resetSub();
+                  setSubcategoryModalCat(null);
+                }}
                 className="text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateSubcategory} className="p-4 space-y-3">
+            <form onSubmit={handleSubmitSub(onAddSubcategory)} className="p-4 space-y-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  সাব-ক্যাটাগরির নাম (বাংলা)
+                  উপ-বিভাগের নাম (বাংলা) <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"
                   placeholder="যেমন: রাজধানী"
-                  value={subName}
-                  onChange={(e) => setSubName(e.target.value)}
-                  required
-                  className="text-xs h-9"
+                  {...registerSub("name")}
+                  className={`text-xs h-9 ${
+                    subErrors.name ? "border-red-400 focus-visible:ring-red-400" : ""
+                  }`}
                 />
+                {subErrors.name && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{subErrors.name.message}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  স্লাগ (English Slug)
+                  ইংরেজি স্লাগ (Slug) <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"
                   placeholder="যেমন: capital"
-                  value={subSlug}
-                  onChange={(e) => setSubSlug(e.target.value)}
-                  required
-                  className="text-xs h-9"
+                  {...registerSub("slug")}
+                  className={`text-xs h-9 font-mono ${
+                    subErrors.slug ? "border-red-400 focus-visible:ring-red-400" : ""
+                  }`}
                 />
+                {subErrors.slug && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{subErrors.slug.message}</p>
+                )}
               </div>
 
               <div>
@@ -445,11 +529,15 @@ export function CategoryManager({ initialCategories = [] }) {
                 </label>
                 <Input
                   type="number"
-                  placeholder="1"
-                  value={subOrder}
-                  onChange={(e) => setSubOrder(e.target.value)}
-                  className="text-xs h-9"
+                  placeholder="10"
+                  {...registerSub("sortOrder")}
+                  className={`text-xs h-9 ${
+                    subErrors.sortOrder ? "border-red-400 focus-visible:ring-red-400" : ""
+                  }`}
                 />
+                {subErrors.sortOrder && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{subErrors.sortOrder.message}</p>
+                )}
               </div>
 
               <div className="pt-2 flex justify-end gap-2">
@@ -457,17 +545,20 @@ export function CategoryManager({ initialCategories = [] }) {
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setSubcategoryModalCat(null)}
+                  onClick={() => {
+                    resetSub();
+                    setSubcategoryModalCat(null);
+                  }}
+                  className="text-xs h-8.5 text-slate-600 border-slate-200"
                 >
                   বাতিল
                 </Button>
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={isPending}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 px-4"
                 >
-                  যোগ করুন
+                  উপ-বিভাগ যোগ করুন
                 </Button>
               </div>
             </form>
@@ -477,4 +568,3 @@ export function CategoryManager({ initialCategories = [] }) {
     </div>
   );
 }
-

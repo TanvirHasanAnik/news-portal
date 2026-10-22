@@ -176,4 +176,123 @@ export async function deleteSubcategory(id) {
   return await db.prepare("DELETE FROM subcategories WHERE id = ?").bind(id).run();
 }
 
+/**
+ * Saves a batch of categories and their subcategories from the browser state.
+ * Preserves permanent system categories, updates existing ones,
+ * deletes removed dynamic categories, and inserts new ones.
+ */
+export async function saveCategoriesBatch(categoriesList = []) {
+  const db = await getDb();
+
+  // 1. Fetch current dynamic categories in database
+  const { results: currentDbCats } = await db
+    .prepare(
+      "SELECT id, slug, is_permanent FROM categories WHERE is_permanent = 0 AND slug NOT IN ('latest', 'handpicked')"
+    )
+    .all();
+  const currentDbCatIds = new Set((currentDbCats || []).map((c) => c.id));
+
+  // Extract incoming dynamic categories
+  const incomingDynamic = categoriesList.filter(
+    (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked"
+  );
+  const incomingCatIds = new Set(
+    incomingDynamic
+      .map((c) => c.id)
+      .filter((id) => id && !String(id).startsWith("temp_"))
+  );
+
+  // 2. Delete categories that were removed in browser
+  for (const dbCat of currentDbCats || []) {
+    if (!incomingCatIds.has(dbCat.id)) {
+      await db.prepare("DELETE FROM subcategories WHERE category_id = ?").bind(dbCat.id).run();
+      await db.prepare("DELETE FROM categories WHERE id = ?").bind(dbCat.id).run();
+    }
+  }
+
+  // 3. Insert or update incoming dynamic categories & their subcategories
+  for (let i = 0; i < incomingDynamic.length; i++) {
+    const cat = incomingDynamic[i];
+    let catId = cat.id;
+    const isNew = !catId || String(catId).startsWith("temp_") || !currentDbCatIds.has(catId);
+    const sortOrder = Number(cat.sort_order ?? (i + 1) * 10);
+
+    if (isNew) {
+      catId = `cat_${cat.slug.toLowerCase().replace(/[^a-z0-9]/g, "_")}_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 5)}`;
+      await db
+        .prepare(
+          `INSERT INTO categories (id, name, slug, is_permanent, sort_order, created_at, updated_at)
+           VALUES (?, ?, ?, 0, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+        )
+        .bind(catId, cat.name, cat.slug, sortOrder)
+        .run();
+    } else {
+      await db
+        .prepare(
+          `UPDATE categories
+           SET name = ?, slug = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP
+           WHERE id = ?`
+        )
+        .bind(cat.name, cat.slug, sortOrder, catId)
+        .run();
+
+      // Keep denormalized article category names in sync
+      await db
+        .prepare("UPDATE articles SET category_name = ?, category_slug = ? WHERE category_id = ?")
+        .bind(cat.name, cat.slug, catId)
+        .run();
+    }
+
+    // Handle subcategories for this category
+    const incomingSubs = Array.isArray(cat.subcategories) ? cat.subcategories : [];
+    const { results: currentDbSubs } = await db
+      .prepare("SELECT id FROM subcategories WHERE category_id = ?")
+      .bind(catId)
+      .all();
+    const currentSubIds = new Set((currentDbSubs || []).map((s) => s.id));
+    const incomingSubIds = new Set(
+      incomingSubs
+        .map((s) => s.id)
+        .filter((id) => id && !String(id).startsWith("temp_"))
+    );
+
+    // Delete removed subcategories
+    for (const subId of currentSubIds) {
+      if (!incomingSubIds.has(subId)) {
+        await db.prepare("DELETE FROM subcategories WHERE id = ?").bind(subId).run();
+      }
+    }
+
+    // Insert or update subcategories
+    for (let j = 0; j < incomingSubs.length; j++) {
+      const sub = incomingSubs[j];
+      let subId = sub.id;
+      const isSubNew = !subId || String(subId).startsWith("temp_") || !currentSubIds.has(subId);
+      const subSortOrder = Number(sub.sort_order ?? (j + 1) * 10);
+
+      if (isSubNew) {
+        subId = `sub_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+        await db
+          .prepare(
+            `INSERT INTO subcategories (id, category_id, name, slug, sort_order, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+          )
+          .bind(subId, catId, sub.name, sub.slug, subSortOrder)
+          .run();
+      } else {
+        await db
+          .prepare(
+            `UPDATE subcategories
+             SET name = ?, slug = ?, sort_order = ?, updated_at = CURRENT_TIMESTAMP
+             WHERE id = ?`
+          )
+          .bind(sub.name, sub.slug, subSortOrder, subId)
+          .run();
+      }
+    }
+  }
+
+  return { success: true };
+}
+
 

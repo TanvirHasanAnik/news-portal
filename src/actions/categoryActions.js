@@ -6,34 +6,39 @@ import {
   deleteCategory,
   createSubcategory,
   deleteSubcategory,
+  saveCategoriesBatch,
 } from "@/repositories/categoryRepository";
+import { recordAuditLog } from "@/repositories/analyticsRepository";
+import {
+  categorySchema,
+  subcategorySchema,
+  categoryBatchSchema,
+  formatZodError,
+} from "@/schemas";
 
 export async function createCategoryAction(prevState, formData) {
   try {
-    const name = formData.get("name")?.toString().trim();
-    const slug = formData.get("slug")?.toString().trim().toLowerCase();
-    const sortOrder = parseInt(formData.get("sortOrder")?.toString() || "0", 10);
+    const rawData = {
+      name: formData.get("name")?.toString() || "",
+      slug: formData.get("slug")?.toString() || "",
+      sortOrder: formData.get("sortOrder")?.toString() || "10",
+    };
 
-    if (!name) {
-      return { success: false, message: "ক্যাটাগরির নাম আবশ্যক।" };
-    }
-    if (!slug) {
-      return { success: false, message: "ক্যাটাগরির ইংরেজি স্লাগ (Slug) আবশ্যক।" };
-    }
+    const validated = categorySchema.parse(rawData);
 
-    await createCategory({ name, slug, sortOrder });
+    await createCategory(validated);
     revalidatePath("/admin");
     revalidatePath("/");
 
-    return { success: true, message: `"${name}" ক্যাটাগরি সফলভাবে তৈরি করা হয়েছে!` };
+    return { success: true, message: `"${validated.name}" ক্যাটাগরি সফলভাবে তৈরি করা হয়েছে!` };
   } catch (error) {
-    return { success: false, message: `ক্যাটাগরি তৈরিতে ত্রুটি: ${error.message}` };
+    return { success: false, message: formatZodError(error, "ক্যাটাগরি তৈরিতে সমস্যা হয়েছে।") };
   }
 }
 
 export async function deleteCategoryAction(categoryId) {
   try {
-    if (!categoryId) {
+    if (!categoryId || typeof categoryId !== "string") {
       return { success: false, message: "ক্যাটাগরি আইডি আবশ্যক।" };
     }
     await deleteCategory(categoryId);
@@ -48,43 +53,72 @@ export async function deleteCategoryAction(categoryId) {
 
 export async function createSubcategoryAction(prevState, formData) {
   try {
-    const categoryId = formData.get("categoryId")?.toString().trim();
-    const name = formData.get("name")?.toString().trim();
-    const slug = formData.get("slug")?.toString().trim().toLowerCase();
-    const sortOrder = parseInt(formData.get("sortOrder")?.toString() || "0", 10);
+    const rawData = {
+      categoryId: formData.get("categoryId")?.toString() || "",
+      name: formData.get("name")?.toString() || "",
+      slug: formData.get("slug")?.toString() || "",
+      sortOrder: formData.get("sortOrder")?.toString() || "10",
+    };
 
-    if (!categoryId) {
-      return { success: false, message: "মূল ক্যাটাগরি নির্বাচন করুন।" };
-    }
-    if (!name) {
-      return { success: false, message: "সাব-ক্যাটাগরির নাম আবশ্যক।" };
-    }
-    if (!slug) {
-      return { success: false, message: "সাব-ক্যাটাগরির স্লাগ আবশ্যক।" };
-    }
+    const validated = subcategorySchema.parse(rawData);
 
-    await createSubcategory({ categoryId, name, slug, sortOrder });
+    await createSubcategory(validated);
     revalidatePath("/admin");
     revalidatePath("/");
 
-    return { success: true, message: `"${name}" সাব-ক্যাটাগরি সফলভাবে যোগ করা হয়েছে!` };
+    return { success: true, message: `"${validated.name}" উপ-বিভাগ সফলভাবে যোগ করা হয়েছে!` };
   } catch (error) {
-    return { success: false, message: `সাব-ক্যাটাগরি যোগে ত্রুটি: ${error.message}` };
+    return { success: false, message: formatZodError(error, "উপ-বিভাগ যোগে সমস্যা হয়েছে।") };
   }
 }
 
 export async function deleteSubcategoryAction(subcategoryId) {
   try {
-    if (!subcategoryId) {
-      return { success: false, message: "সাব-ক্যাটাগরি আইডি আবশ্যক।" };
+    if (!subcategoryId || typeof subcategoryId !== "string") {
+      return { success: false, message: "উপ-বিভাগ আইডি আবশ্যক।" };
     }
     await deleteSubcategory(subcategoryId);
     revalidatePath("/admin");
     revalidatePath("/");
 
-    return { success: true, message: "সাব-ক্যাটাগরি সফলভাবে মুছে ফেলা হয়েছে।" };
+    return { success: true, message: "উপ-বিভাগ সফলভাবে মুছে ফেলা হয়েছে।" };
   } catch (error) {
     return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Server Action: Saves the batch of categories & subcategories from browser state,
+ * synchronizes with database, and triggers On-Demand ISR for all affected pages.
+ */
+export async function saveCategoriesBatchAction(categories) {
+  try {
+    const validatedCategories = categoryBatchSchema.parse(categories);
+
+    await saveCategoriesBatch(validatedCategories);
+
+    await recordAuditLog({
+      action: "batch_update_categories",
+      targetType: "categories",
+      details: { count: validatedCategories.length },
+    });
+
+    // On-Demand Incremental Static Regeneration (ISR)
+    revalidatePath("/");
+    revalidatePath("/admin");
+    revalidatePath("/(site)", "layout");
+    for (const cat of validatedCategories) {
+      if (cat.slug) {
+        revalidatePath(`/category/${cat.slug}`);
+      }
+    }
+
+    return {
+      success: true,
+      message: "ক্যাটাগরি ও উপ-বিভাগের পরিবর্তনগুলো সফলভাবে সংরক্ষিত হয়েছে!",
+    };
+  } catch (error) {
+    return { success: false, message: formatZodError(error, "সংরক্ষণ সম্পন্ন করা যায়নি।") };
   }
 }
 

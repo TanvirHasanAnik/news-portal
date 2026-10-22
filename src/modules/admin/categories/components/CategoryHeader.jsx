@@ -17,10 +17,6 @@ export function CategoryHeader() {
           সংবাদ ক্যাটাগরি, উপ-বিভাগ এবং মেনুর সাজসজ্জা পরিচালনা করুন।
         </p>
       </div>
-
-      <div className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 self-start sm:self-auto">
-        সুপার অ্যাডমিন ফিচার
-      </div>
     </div>
   );
 }

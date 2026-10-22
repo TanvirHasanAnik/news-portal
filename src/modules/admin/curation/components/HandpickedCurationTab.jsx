@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   ChevronUp,
   ChevronDown,
@@ -19,39 +21,46 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { saveCuratedBatchAction } from "@/actions/curationActions";
+import { handpickedFormSchema } from "@/schemas/curationSchema";
 
 export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
   const [items, setItems] = useState(initialItems);
   const [isDirty, setIsDirty] = useState(false);
-  const [selectedArticleId, setSelectedArticleId] = useState("");
-  const [customTitle, setCustomTitle] = useState("");
   const [isSaving, startSavingTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
 
-  // Local-only addition to browser state
-  const handleAddItem = (e) => {
-    e.preventDefault();
-    if (!selectedArticleId && !customTitle.trim()) {
-      alert("অনুগ্রহ করে একটি প্রকাশিত সংবাদ নির্বাচন করুন অথবা শিরোনাম লিখুন।");
-      return;
-    }
+  // Initialize React Hook Form with real-time validation via Zod
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(handpickedFormSchema),
+    mode: "onChange",
+    defaultValues: {
+      articleId: "",
+      customTitle: "",
+    },
+  });
 
-    const selectedArt = articles.find((a) => a.id === selectedArticleId);
+  // Local-only addition to browser state on valid form submit
+  const onAddItem = (data) => {
+    const selectedArt = articles.find((a) => a.id === data.articleId);
     const newItem = {
       id: `temp_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       type: "handpicked",
-      article_id: selectedArticleId || null,
-      article_headline: selectedArt?.headline || customTitle,
+      article_id: data.articleId || null,
+      article_headline: selectedArt?.headline || data.customTitle,
       category_name: selectedArt?.category_name || "বিশেষ",
-      custom_title: customTitle,
+      custom_title: data.customTitle || "",
       is_active: 1,
       created_at: new Date().toISOString(),
     };
 
     setItems((prev) => [newItem, ...prev]);
     setIsDirty(true);
-    setSelectedArticleId("");
-    setCustomTitle("");
+    reset({ articleId: "", customTitle: "" });
   };
 
   // Local-only active toggle in browser state
@@ -207,9 +216,9 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
         </div>
       )}
 
-      {/* Add New Handpicked Item Box (Operates locally on browser state) */}
+      {/* Add New Handpicked Item Box with React Hook Form Real-time Validation */}
       <form
-        onSubmit={handleAddItem}
+        onSubmit={handleSubmit(onAddItem)}
         className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4"
       >
         <div className="flex items-center justify-between">
@@ -226,23 +235,27 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
           {/* Article selection dropdown */}
           <div className="sm:col-span-7">
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              প্রকাশিত সংবাদ নির্বাচন করুন <span className="text-red-500">*</span>
+              প্রকাশিত সংবাদ নির্বাচন করুন
             </label>
             <select
-              value={selectedArticleId}
-              onChange={(e) => setSelectedArticleId(e.target.value)}
-              className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+              {...register("articleId")}
+              className={`w-full h-9 rounded-md border bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 ${
+                errors.articleId ? "border-red-400 focus:ring-red-400" : "border-slate-200 focus:ring-amber-500"
+              }`}
             >
-              <option value="">-- সংবাদ নির্বাচন করুন --</option>
+              <option value="">-- সংবাদ নির্বাচন করুন (ঐচ্ছিক) --</option>
               {articles.map((art) => (
                 <option key={art.id} value={art.id}>
                   [{art.category_name}] {art.headline}
                 </option>
               ))}
             </select>
+            {errors.articleId && (
+              <p className="text-[11px] text-red-500 font-medium mt-1">{errors.articleId.message}</p>
+            )}
           </div>
 
-          {/* Custom title override */}
+          {/* Custom title override with real-time error display */}
           <div className="sm:col-span-5">
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               বিকল্প/কাস্টম শিরোনাম (ঐচ্ছিক)
@@ -250,10 +263,14 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
             <Input
               type="text"
               placeholder="সংক্ষিপ্ত বিকল্প শিরোনাম..."
-              value={customTitle}
-              onChange={(e) => setCustomTitle(e.target.value)}
-              className="text-xs h-9 focus-visible:ring-amber-500"
+              {...register("customTitle")}
+              className={`text-xs h-9 ${
+                errors.customTitle ? "border-red-400 focus-visible:ring-red-400" : "focus-visible:ring-amber-500"
+              }`}
             />
+            {errors.customTitle && (
+              <p className="text-[11px] text-red-500 font-medium mt-1">{errors.customTitle.message}</p>
+            )}
           </div>
         </div>
 

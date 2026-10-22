@@ -9,28 +9,32 @@ import {
   saveCuratedNewsBatch,
 } from "@/repositories/curationRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
+import { curatedItemSchema, curatedBatchSchema, formatZodError } from "@/schemas";
 
 export async function addCuratedNewsAction(prevState, formData) {
   try {
-    const type = formData.get("type")?.toString().trim(); // handpicked | breaking
-    const articleId = formData.get("articleId")?.toString().trim() || null;
-    const customTitle = formData.get("customTitle")?.toString().trim() || "";
-    const customUrl = formData.get("customUrl")?.toString().trim() || "";
-    const priority = parseInt(formData.get("priority")?.toString() || "0", 10);
+    const rawData = {
+      type: formData.get("type")?.toString().trim(),
+      articleId: formData.get("articleId")?.toString().trim() || null,
+      customTitle: formData.get("customTitle")?.toString().trim() || null,
+      customUrl: formData.get("customUrl")?.toString().trim() || null,
+      priority: formData.get("priority")?.toString() || "0",
+    };
 
-    if (!type) {
-      return { success: false, message: "কিউরেশন ধরন আবশ্যক।" };
-    }
-    if (!articleId && !customTitle) {
-      return { success: false, message: "একটি আর্টিকেল নির্বাচন করুন অথবা শিরোনাম লিখুন।" };
-    }
+    const validated = curatedItemSchema.parse(rawData);
 
-    await addCuratedNews({ type, articleId, customTitle, customUrl, priority });
+    await addCuratedNews({
+      type: validated.type,
+      articleId: validated.articleId,
+      customTitle: validated.customTitle || "",
+      customUrl: validated.customUrl || "",
+      priority: validated.priority,
+    });
 
     await recordAuditLog({
       action: "add_curation",
       targetType: "curated_news",
-      details: { type, articleId, customTitle },
+      details: { type: validated.type, articleId: validated.articleId, customTitle: validated.customTitle },
     });
 
     revalidatePath("/admin");
@@ -39,10 +43,10 @@ export async function addCuratedNewsAction(prevState, formData) {
 
     return {
       success: true,
-      message: `আইটেমটি সফলভাবে ${type === "handpicked" ? "বাছাইকৃত" : "জরুরি সংবাদ"} তালিকায় যুক্ত হয়েছে!`,
+      message: `আইটেমটি সফলভাবে ${validated.type === "handpicked" ? "বাছাইকৃত" : "জরুরি সংবাদ"} তালিকায় যুক্ত হয়েছে!`,
     };
   } catch (error) {
-    return { success: false, message: `সংযোজনে সমস্যা: ${error.message}` };
+    return { success: false, message: formatZodError(error, "আইটেম যুক্ত করা সম্ভব হয়নি।") };
   }
 }
 
@@ -93,16 +97,18 @@ export async function reorderCuratedNewsAction(orderedIds) {
  */
 export async function saveCuratedBatchAction(type, items) {
   try {
-    if (!type || !Array.isArray(items)) {
-      return { success: false, message: "অবৈধ তথ্য পাঠানো হয়েছে।" };
+    if (!type || (type !== "handpicked" && type !== "breaking")) {
+      return { success: false, message: "অবৈধ কিউরেশন ধরন।" };
     }
 
-    await saveCuratedNewsBatch(type, items);
+    const validatedItems = curatedBatchSchema.parse(items);
+
+    await saveCuratedNewsBatch(type, validatedItems);
 
     await recordAuditLog({
       action: "batch_update_curation",
       targetType: "curated_news",
-      details: { type, count: items.length },
+      details: { type, count: validatedItems.length },
     });
 
     // Trigger On-Demand Incremental Static Regeneration (ISR)
@@ -112,10 +118,10 @@ export async function saveCuratedBatchAction(type, items) {
 
     return {
       success: true,
-      message: `পরিবর্তনগুলো সফলভাবে ডেটাবেসে সংরক্ষিত ও লাইভ ওয়েবসাইটে আপডেট (ISR) হয়েছে!`,
+      message: `পরিবর্তনগুলো সফলভাবে ডেটাবেসে সংরক্ষিত ও লাইভ ওয়েবসাইটে আপডেট হয়েছে!`,
     };
   } catch (error) {
-    return { success: false, message: `সংরক্ষণ ব্যর্থ হয়েছে: ${error.message}` };
+    return { success: false, message: formatZodError(error, "সংরক্ষণ সম্পন্ন করা যায়নি।") };
   }
 }
 

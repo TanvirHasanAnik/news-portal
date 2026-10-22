@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { hasScriptInjection, hasMaliciousScripts, formatZodError } from "./baseSchema.js";
 
 /**
  * Standard Bangladesh Newsportal Editorial & Layout Rules:
@@ -46,33 +47,14 @@ export function hasEnglishLetters(text) {
  * Detects HTML tags, angle brackets, script tags, and code injection attempts
  */
 export function hasDisallowedCode(text) {
-  if (!text || typeof text !== "string") return false;
-  // Disallow angle brackets (strictly prevents any HTML / XML / JSX tags)
-  if (/[<>]/.test(text)) return true;
-  // Disallow JavaScript pseudo-protocol
-  if (/javascript\s*:/i.test(text)) return true;
-  // Disallow inline event handlers like onclick=, onerror=
-  if (/on\w+\s*=/i.test(text)) return true;
-  // Disallow dynamic execution or console calls
-  if (/(?:eval|Function|setTimeout|setInterval)\s*\(/i.test(text)) return true;
-  if (/\b(?:console\.(?:log|warn|error)|alert|prompt)\s*\(/i.test(text)) return true;
-  // Disallow code tokens like <?, %>, =>
-  if (/<\?|%>|<\/|=>/i.test(text)) return true;
-  return false;
+  return hasScriptInjection(text);
 }
 
 /**
  * Detects malicious scripts inside rich HTML or JSON content
  */
 export function hasMaliciousContent(text) {
-  if (!text || typeof text !== "string") return false;
-  if (/<\s*script\b/i.test(text)) return true;
-  if (/javascript\s*:/i.test(text)) return true;
-  if (/on\w+\s*=/i.test(text)) return true;
-  if (/(?:eval|Function|setTimeout|setInterval)\s*\(/i.test(text)) return true;
-  if (/\b(?:console\.(?:log|warn|error)|alert|prompt)\s*\(/i.test(text)) return true;
-  if (/<\s*(?:iframe|object|embed|applet|meta|link|style)\b/i.test(text)) return true;
-  return false;
+  return hasMaliciousScripts(text);
 }
 
 /**

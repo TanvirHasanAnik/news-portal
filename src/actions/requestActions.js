@@ -6,38 +6,43 @@ import {
   updateAdminRequestStatus,
 } from "@/repositories/requestRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
+import {
+  createAdminRequestSchema,
+  updateAdminRequestStatusSchema,
+  formatZodError,
+} from "@/schemas";
 
 export async function createAdminRequestAction(prevState, formData) {
   try {
-    const requestType = formData.get("requestType")?.toString().trim();
-    const targetUserId = formData.get("targetUserId")?.toString().trim() || null;
-    const note = formData.get("note")?.toString().trim() || "";
-    const requestedRole = formData.get("requestedRole")?.toString().trim() || null;
-    const requestedEmail = formData.get("requestedEmail")?.toString().trim() || null;
-    const requestedName = formData.get("requestedName")?.toString().trim() || null;
+    const rawData = {
+      requestType: formData.get("requestType")?.toString().trim(),
+      targetUserId: formData.get("targetUserId")?.toString().trim() || null,
+      note: formData.get("note")?.toString().trim() || "",
+      requestedRole: formData.get("requestedRole")?.toString().trim() || null,
+      requestedEmail: formData.get("requestedEmail")?.toString().trim() || null,
+      requestedName: formData.get("requestedName")?.toString().trim() || null,
+    };
 
-    if (!requestType) {
-      return { success: false, message: "আবেদনের ধরণ আবশ্যক।" };
-    }
+    const validated = createAdminRequestSchema.parse(rawData);
 
     const payload = {
-      note,
-      newRole: requestedRole,
-      email: requestedEmail,
-      name: requestedName,
+      note: validated.note,
+      newRole: validated.requestedRole,
+      email: validated.requestedEmail,
+      name: validated.requestedName,
     };
 
     await createAdminRequest({
       requesterId: "usr_reporter", // When auth is hooked, replaced by logged-in user id
-      requestType,
-      targetUserId,
+      requestType: validated.requestType,
+      targetUserId: validated.targetUserId,
       payload,
     });
 
     await recordAuditLog({
       action: "submit_admin_request",
       targetType: "admin_request",
-      details: { requestType, targetUserId },
+      details: { requestType: validated.requestType, targetUserId: validated.targetUserId },
     });
 
     revalidatePath("/admin");
@@ -47,37 +52,39 @@ export async function createAdminRequestAction(prevState, formData) {
       message: "সুপার অ্যাডমিনের পর্যালোচনার জন্য আবেদনটি সফলভাবে জমা হয়েছে!",
     };
   } catch (error) {
-    return { success: false, message: `আবেদন জমাদানে ত্রুটি: ${error.message}` };
+    return { success: false, message: formatZodError(error, "আবেদন জমাদানে সমস্যা হয়েছে।") };
   }
 }
 
 export async function updateAdminRequestStatusAction(requestId, newStatus, reviewerNote = "") {
   try {
-    if (!requestId || !newStatus) {
-      return { success: false, message: "অনুরোধ আইডি ও স্ট্যাটাস আবশ্যক।" };
-    }
+    const validated = updateAdminRequestStatusSchema.parse({
+      requestId,
+      newStatus,
+      reviewerNote: reviewerNote || "",
+    });
 
-    await updateAdminRequestStatus(requestId, {
-      status: newStatus,
+    await updateAdminRequestStatus(validated.requestId, {
+      status: validated.newStatus,
       reviewedBy: "usr_superadmin",
-      reviewerNote,
+      reviewerNote: validated.reviewerNote,
     });
 
     await recordAuditLog({
-      action: newStatus === "approved" ? "approve_request" : "reject_request",
+      action: validated.newStatus === "approved" ? "approve_request" : "reject_request",
       targetType: "admin_request",
-      targetId: requestId,
-      details: { status: newStatus, reviewerNote },
+      targetId: validated.requestId,
+      details: { status: validated.newStatus, reviewerNote: validated.reviewerNote },
     });
 
     revalidatePath("/admin");
 
     return {
       success: true,
-      message: `আবেদনটি সফলভাবে ${newStatus === "approved" ? "অনুমোদন" : "প্রত্যাখ্যান"} করা হয়েছে।`,
+      message: `আবেদনটি সফলভাবে ${validated.newStatus === "approved" ? "অনুমোদন" : "প্রত্যাখ্যান"} করা হয়েছে।`,
     };
   } catch (error) {
-    return { success: false, message: error.message };
+    return { success: false, message: formatZodError(error, "স্ট্যাটাস আপডেটে সমস্যা হয়েছে।") };
   }
 }
 

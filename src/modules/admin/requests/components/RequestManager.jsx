@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   CheckCircle,
   XCircle,
@@ -21,6 +23,7 @@ import {
 } from "@/actions/requestActions";
 import { ROLE_LABELS, USER_ROLES } from "@/lib/auth";
 import { formatTimeAgo } from "@/utils/dateUtils";
+import { createAdminRequestSchema } from "@/schemas/requestSchema";
 
 export function RequestManager({ initialRequests = [], users = [] }) {
   const [requests, setRequests] = useState(initialRequests);
@@ -29,29 +32,42 @@ export function RequestManager({ initialRequests = [], users = [] }) {
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
 
-  // New Request Form State
-  const [requestType, setRequestType] = useState("new_user");
-  const [targetUserId, setTargetUserId] = useState("");
-  const [reqName, setReqName] = useState("");
-  const [reqEmail, setReqEmail] = useState("");
-  const [reqRole, setReqRole] = useState(USER_ROLES.REPORTER);
-  const [note, setNote] = useState("");
+  // Initialize React Hook Form with real-time validation via Zod
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(createAdminRequestSchema),
+    mode: "onChange",
+    defaultValues: {
+      requestType: "new_user",
+      targetUserId: "",
+      requestedName: "",
+      requestedEmail: "",
+      requestedRole: USER_ROLES.REPORTER,
+      note: "",
+    },
+  });
+
+  const requestType = watch("requestType");
 
   const filteredRequests = requests.filter((r) => {
     if (activeStatus !== "all" && r.status !== activeStatus) return false;
     return true;
   });
 
-  const handleCreateRequest = (e) => {
-    e.preventDefault();
+  const onCreateRequest = (data) => {
     startTransition(async () => {
       const formData = new FormData();
-      formData.append("requestType", requestType);
-      formData.append("targetUserId", targetUserId);
-      formData.append("requestedName", reqName);
-      formData.append("requestedEmail", reqEmail);
-      formData.append("requestedRole", reqRole);
-      formData.append("note", note);
+      formData.append("requestType", data.requestType);
+      formData.append("targetUserId", data.targetUserId || "");
+      formData.append("requestedName", data.requestedName || "");
+      formData.append("requestedEmail", data.requestedEmail || "");
+      formData.append("requestedRole", data.requestedRole || "");
+      formData.append("note", data.note.trim());
 
       const res = await createAdminRequestAction(null, formData);
       if (res.success) {
@@ -59,18 +75,21 @@ export function RequestManager({ initialRequests = [], users = [] }) {
           {
             id: `req_${Date.now()}`,
             requester_name: "অ্যাডমিন",
-            request_type: requestType,
+            request_type: data.requestType,
             status: "pending",
-            payload: JSON.stringify({ note, name: reqName, email: reqEmail, newRole: reqRole }),
+            payload: JSON.stringify({
+              note: data.note,
+              name: data.requestedName,
+              email: data.requestedEmail,
+              newRole: data.requestedRole,
+            }),
             created_at: new Date().toISOString(),
           },
           ...prev,
         ]);
         setFeedback({ type: "success", message: res.message });
         setShowCreateModal(false);
-        setNote("");
-        setReqName("");
-        setReqEmail("");
+        reset();
       } else {
         setFeedback({ type: "error", message: res.message });
       }
@@ -79,7 +98,6 @@ export function RequestManager({ initialRequests = [], users = [] }) {
   };
 
   const handleUpdateStatus = (id, newStatus) => {
-    const actionLabel = newStatus === "approved" ? "অনুমোদন" : "প্রত্যাখ্যান";
     const reviewerNote = prompt(`আবেদনের জন্য মন্তব্য লিখুন (ঐচ্ছিক):`, "");
     if (reviewerNote === null) return;
 
@@ -99,67 +117,74 @@ export function RequestManager({ initialRequests = [], users = [] }) {
     });
   };
 
-  const getRequestTypeDetails = (type) => {
-    switch (type) {
-      case "new_user":
-        return { label: "নতুন সদস্য আবেদন", icon: UserPlus, color: "text-blue-700 bg-blue-50" };
-      case "disable_user":
-        return { label: "সদস্য নিষ্ক্রিয় আবেদন", icon: UserX, color: "text-red-700 bg-red-50" };
-      case "role_change":
-        return { label: "রোল পরিবর্তন আবেদন", icon: ShieldAlert, color: "text-purple-700 bg-purple-50" };
-      default:
-        return { label: "সাধারণ আবেদন", icon: Send, color: "text-slate-700 bg-slate-50" };
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Feedback banner */}
       {feedback && (
         <div
-          className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between ${
+          className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between transition-all ${
             feedback.type === "success"
               ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
               : "bg-red-50 text-red-800 border border-red-200"
           }`}
         >
           <span>{feedback.message}</span>
-          <button onClick={() => setFeedback(null)}>×</button>
+          <button onClick={() => setFeedback(null)} className="cursor-pointer">×</button>
         </div>
       )}
 
-      {/* Control Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-        {/* Status Filters */}
-        <div className="flex items-center gap-1.5">
-          {[
-            { id: "all", label: "সকল" },
-            { id: "pending", label: "অপেক্ষমান" },
-            { id: "approved", label: "অনুমোদিত" },
-            { id: "rejected", label: "প্রত্যাখ্যাত" },
-          ].map((tab) => {
-            const isActive = activeStatus === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveStatus(tab.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                  isActive
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
+      {/* Action Header & Tabs */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Filter Badges */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg">
+          <button
+            onClick={() => setActiveStatus("all")}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              activeStatus === "all"
+                ? "bg-white text-slate-900 shadow-2xs"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            সবগুলো ({requests.length})
+          </button>
+          <button
+            onClick={() => setActiveStatus("pending")}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              activeStatus === "pending"
+                ? "bg-white text-amber-700 shadow-2xs"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            অপেক্ষমাণ ({requests.filter((r) => r.status === "pending").length})
+          </button>
+          <button
+            onClick={() => setActiveStatus("approved")}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              activeStatus === "approved"
+                ? "bg-white text-emerald-700 shadow-2xs"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            অনুমোদিত ({requests.filter((r) => r.status === "approved").length})
+          </button>
+          <button
+            onClick={() => setActiveStatus("rejected")}
+            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              activeStatus === "rejected"
+                ? "bg-white text-red-600 shadow-2xs"
+                : "text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            প্রত্যাখ্যাত ({requests.filter((r) => r.status === "rejected").length})
+          </button>
         </div>
 
-        {/* Submit request button for Admins */}
         <Button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs h-8.5 gap-1.5 cursor-pointer shadow-xs"
+          onClick={() => {
+            reset();
+            setShowCreateModal(true);
+          }}
+          className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-9 gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           নতুন আবেদন জমা দিন
@@ -167,68 +192,78 @@ export function RequestManager({ initialRequests = [], users = [] }) {
       </div>
 
       {/* Requests List */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-xs divide-y divide-slate-100 overflow-hidden">
+      <div className="space-y-3">
         {filteredRequests.length === 0 ? (
-          <div className="py-12 text-center text-slate-400 text-xs">
-            এই ক্যাটাগরিতে কোনো আবেদন পাওয়া যায়নি।
+          <div className="p-12 text-center text-slate-400 text-xs bg-white rounded-xl border border-slate-200">
+            এই ফিল্টারে কোনো আবেদন পাওয়া যায়নি।
           </div>
         ) : (
           filteredRequests.map((req) => {
-            const typeInfo = getRequestTypeDetails(req.request_type);
-            const Icon = typeInfo.icon;
-
             let parsedPayload = {};
-            if (req.payload) {
-              try {
-                parsedPayload = JSON.parse(req.payload);
-              } catch {}
-            }
+            try {
+              parsedPayload = JSON.parse(req.payload || "{}");
+            } catch {}
 
             return (
-              <div key={req.id} className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors">
-                <div className="flex items-start gap-3.5 min-w-0">
-                  <div className={`p-2 rounded-lg shrink-0 ${typeInfo.color}`}>
-                    <Icon className="w-5 h-5" />
+              <div
+                key={req.id}
+                className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-300 transition-colors"
+              >
+                <div className="flex items-start gap-3.5">
+                  <div
+                    className={`p-2.5 rounded-lg shrink-0 mt-0.5 ${
+                      req.request_type === "new_user"
+                        ? "bg-blue-50 text-blue-600"
+                        : req.request_type === "disable_user"
+                        ? "bg-red-50 text-red-600"
+                        : "bg-amber-50 text-amber-600"
+                    }`}
+                  >
+                    {req.request_type === "new_user" ? (
+                      <UserPlus className="w-5 h-5" />
+                    ) : req.request_type === "disable_user" ? (
+                      <UserX className="w-5 h-5" />
+                    ) : (
+                      <ShieldAlert className="w-5 h-5" />
+                    )}
                   </div>
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-bold text-slate-900 text-xs sm:text-sm">
-                        {typeInfo.label}
+
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-slate-900">
+                        {req.request_type === "new_user"
+                          ? "নতুন সদস্য যোগের আবেদন"
+                          : req.request_type === "disable_user"
+                          ? "সদস্য নিষ্ক্রিয় করার আবেদন"
+                          : req.request_type === "role_change"
+                          ? "দায়িত্ব/রোল পরিবর্তনের আবেদন"
+                          : "সাধারণ কিউরেশন আবেদন"}
                       </span>
-                      <span className="text-[11px] text-slate-400">
-                        প্রেরক: <strong className="text-slate-700">{req.requester_name || "অ্যাডমিন"}</strong>
-                      </span>
-                      <span>•</span>
-                      <span className="text-[11px] text-slate-400">
+                      <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
                         {formatTimeAgo(req.created_at)}
                       </span>
                     </div>
 
-                    {/* Details note */}
-                    <div className="text-xs text-slate-600">
-                      {req.target_user_name && (
-                        <p>
-                          টার্গেট সদস্য: <span className="font-semibold text-slate-800">{req.target_user_name}</span> ({req.target_user_email})
-                        </p>
-                      )}
+                    <div className="mt-1 text-xs text-slate-600 space-y-0.5">
                       {parsedPayload.name && (
                         <p>
-                          প্রস্তাবিত নাম: <strong>{parsedPayload.name}</strong> ({parsedPayload.email}) - পদবী: {ROLE_LABELS[parsedPayload.newRole] || parsedPayload.newRole}
+                          সদস্যের নাম: <strong className="text-slate-900">{parsedPayload.name}</strong> ({parsedPayload.email || "ইমেইল নেই"})
                         </p>
                       )}
-                      {parsedPayload.newRole && !parsedPayload.name && (
+                      {parsedPayload.newRole && (
                         <p>
-                          প্রস্তাবিত নতুন রোল: <strong>{ROLE_LABELS[parsedPayload.newRole] || parsedPayload.newRole}</strong>
+                          প্রস্তাবিত রোল: <strong>{ROLE_LABELS[parsedPayload.newRole] || parsedPayload.newRole}</strong>
                         </p>
                       )}
                       {parsedPayload.note && (
                         <p className="text-slate-500 italic mt-0.5">
-                          " {parsedPayload.note} "
+                          &ldquo;{parsedPayload.note}&rdquo;
                         </p>
                       )}
                       {req.reviewer_note && (
                         <p className="text-[11px] text-amber-700 bg-amber-50 p-1.5 rounded mt-1">
-                          পর্যালোচনা নোট: {req.reviewer_note}
+                          মন্তব্য: {req.reviewer_note}
                         </p>
                       )}
                     </div>
@@ -276,15 +311,16 @@ export function RequestManager({ initialRequests = [], users = [] }) {
         )}
       </div>
 
-      {/* New Request Modal */}
+      {/* New Request Modal with React Hook Form Real-time Validation */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
               <h3 className="text-sm font-bold text-slate-900">
-                সুপার অ্যাডমিনের নিকট নতুন আবেদন
+                নতুন আবেদন
               </h3>
               <button
+                type="button"
                 onClick={() => setShowCreateModal(false)}
                 className="text-slate-400 hover:text-slate-600 cursor-pointer"
               >
@@ -292,14 +328,13 @@ export function RequestManager({ initialRequests = [], users = [] }) {
               </button>
             </div>
 
-            <form onSubmit={handleCreateRequest} className="p-5 space-y-3.5">
+            <form onSubmit={handleSubmit(onCreateRequest)} className="p-5 space-y-3.5">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  আবেদনের ধরণ
+                  আবেদনের ধরণ <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={requestType}
-                  onChange={(e) => setRequestType(e.target.value)}
+                  {...register("requestType")}
                   className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
                 >
                   <option value="new_user">নতুন সদস্য যুক্ত করার আবেদন</option>
@@ -307,6 +342,9 @@ export function RequestManager({ initialRequests = [], users = [] }) {
                   <option value="disable_user">সদস্য নিষ্ক্রিয় করার আবেদন</option>
                   <option value="curation_change">কিউরেশন পরিবর্তনের আবেদন</option>
                 </select>
+                {errors.requestType && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{errors.requestType.message}</p>
+                )}
               </div>
 
               {requestType === "new_user" && (
@@ -318,12 +356,14 @@ export function RequestManager({ initialRequests = [], users = [] }) {
                     <Input
                       type="text"
                       placeholder="নাম লিখুন"
-                      value={reqName}
-                      onChange={(e) => setReqName(e.target.value)}
-                      required
-                      className="text-xs h-9"
+                      {...register("requestedName")}
+                      className={`text-xs h-9 ${errors.requestedName ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                     />
+                    {errors.requestedName && (
+                      <p className="text-[11px] text-red-500 font-medium mt-1">{errors.requestedName.message}</p>
+                    )}
                   </div>
+
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
                       ইমেইল
@@ -331,19 +371,20 @@ export function RequestManager({ initialRequests = [], users = [] }) {
                     <Input
                       type="email"
                       placeholder="email@example.com"
-                      value={reqEmail}
-                      onChange={(e) => setReqEmail(e.target.value)}
-                      required
-                      className="text-xs h-9"
+                      {...register("requestedEmail")}
+                      className={`text-xs h-9 ${errors.requestedEmail ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                     />
+                    {errors.requestedEmail && (
+                      <p className="text-[11px] text-red-500 font-medium mt-1">{errors.requestedEmail.message}</p>
+                    )}
                   </div>
+
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      পদবী (Role)
+                      পদবী বা দায়িত্ব
                     </label>
                     <select
-                      value={reqRole}
-                      onChange={(e) => setReqRole(e.target.value)}
+                      {...register("requestedRole")}
                       className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
                     >
                       {Object.entries(ROLE_LABELS).map(([k, l]) => (
@@ -356,58 +397,58 @@ export function RequestManager({ initialRequests = [], users = [] }) {
                 </>
               )}
 
-              {(requestType === "disable_user" || requestType === "role_change") && (
-                <>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      সদস্য নির্বাচন করুন
-                    </label>
-                    <select
-                      value={targetUserId}
-                      onChange={(e) => setTargetUserId(e.target.value)}
-                      required
-                      className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                    >
-                      <option value="">-- সদস্য নির্বাচন করুন --</option>
-                      {users.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name} ({u.email})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {requestType === "role_change" && (
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">
-                        প্রস্তাবিত নতুন রোল
-                      </label>
-                      <select
-                        value={reqRole}
-                        onChange={(e) => setReqRole(e.target.value)}
-                        className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
-                      >
-                        {Object.entries(ROLE_LABELS).map(([k, l]) => (
-                          <option key={k} value={k}>
-                            {l}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </>
+              {(requestType === "role_change" || requestType === "disable_user") && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    সদস্য নির্বাচন করুন
+                  </label>
+                  <select
+                    {...register("targetUserId")}
+                    className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  >
+                    <option value="">-- সদস্য নির্বাচন করুন --</option>
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.email}) [{ROLE_LABELS[u.role] || u.role}]
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {requestType === "role_change" && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    নতুন প্রস্তাবিত পদবী (Role)
+                  </label>
+                  <select
+                    {...register("requestedRole")}
+                    className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  >
+                    {Object.entries(ROLE_LABELS).map(([k, l]) => (
+                      <option key={k} value={k}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  আবেদনের কারণ বা বিস্তারিত নোট
+                  আবেদনের যৌক্তিকতা বা বিবরণ <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   rows={3}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="অনুরোধের কারণ উল্লেখ করুন..."
-                  className="w-full rounded-md border border-slate-200 p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  placeholder="আবেদনের কারণ বা মন্তব্য লিখুন..."
+                  {...register("note")}
+                  className={`w-full rounded-md border bg-white p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 ${
+                    errors.note ? "border-red-400 focus:ring-red-400" : "border-slate-200 focus:ring-slate-900"
+                  }`}
                 />
+                {errors.note && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{errors.note.message}</p>
+                )}
               </div>
 
               <div className="pt-2 flex justify-end gap-2">
@@ -423,9 +464,10 @@ export function RequestManager({ initialRequests = [], users = [] }) {
                   type="submit"
                   size="sm"
                   disabled={isPending}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white"
+                  className="bg-slate-900 hover:bg-slate-800 text-white gap-1.5"
                 >
-                  আবেদন জমা দিন
+                  <Send className="w-3.5 h-3.5" />
+                  {isPending ? "জমা হচ্ছে..." : "আবেদন জমা দিন"}
                 </Button>
               </div>
             </form>
@@ -435,4 +477,3 @@ export function RequestManager({ initialRequests = [], users = [] }) {
     </div>
   );
 }
-

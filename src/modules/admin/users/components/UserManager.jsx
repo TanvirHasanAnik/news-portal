@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { UserPlus, Shield, UserX, UserCheck, X, Mail, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +13,7 @@ import {
   toggleUserStatusAction,
 } from "@/actions/userActions";
 import { ROLE_LABELS, ROLE_BADGE_STYLES, USER_ROLES } from "@/lib/auth";
+import { createUserSchema } from "@/schemas/userSchema";
 
 export function UserManager({ initialUsers = [] }) {
   const [users, setUsers] = useState(initialUsers);
@@ -18,22 +21,30 @@ export function UserManager({ initialUsers = [] }) {
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
 
-  // Add User Form State
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState(USER_ROLES.REPORTER);
-  const [bio, setBio] = useState("");
+  // Initialize React Hook Form with real-time validation via Zod
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(createUserSchema),
+    mode: "onChange",
+    defaultValues: {
+      name: "",
+      email: "",
+      role: USER_ROLES.REPORTER,
+      bio: "",
+    },
+  });
 
-  const handleCreateUser = (e) => {
-    e.preventDefault();
-    if (!name || !email) return;
-
+  const onCreateUser = (data) => {
     startTransition(async () => {
       const formData = new FormData();
-      formData.append("name", name);
-      formData.append("email", email);
-      formData.append("role", role);
-      formData.append("bio", bio);
+      formData.append("name", data.name.trim());
+      formData.append("email", data.email.trim());
+      formData.append("role", data.role);
+      formData.append("bio", data.bio || "");
 
       const res = await createUserAction(null, formData);
       if (res.success) {
@@ -41,19 +52,16 @@ export function UserManager({ initialUsers = [] }) {
           ...prev,
           {
             id: `usr_${Date.now()}`,
-            name,
-            email,
-            role,
+            name: data.name.trim(),
+            email: data.email.trim(),
+            role: data.role,
             status: "active",
-            bio,
+            bio: data.bio || "",
             created_at: new Date().toISOString(),
           },
         ]);
         setFeedback({ type: "success", message: res.message });
-        setName("");
-        setEmail("");
-        setRole(USER_ROLES.REPORTER);
-        setBio("");
+        reset({ name: "", email: "", role: USER_ROLES.REPORTER, bio: "" });
         setShowAddModal(false);
       } else {
         setFeedback({ type: "error", message: res.message });
@@ -100,95 +108,107 @@ export function UserManager({ initialUsers = [] }) {
       {/* Feedback banner */}
       {feedback && (
         <div
-          className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between ${
+          className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between transition-all ${
             feedback.type === "success"
               ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
               : "bg-red-50 text-red-800 border border-red-200"
           }`}
         >
           <span>{feedback.message}</span>
-          <button onClick={() => setFeedback(null)}>×</button>
+          <button onClick={() => setFeedback(null)} className="cursor-pointer">×</button>
         </div>
       )}
 
-      {/* Action Row */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-slate-500">
-          সক্রিয় সদস্য তালিকা ও অ্যাক্সেস রোল
-        </p>
+      {/* Action Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-base font-bold text-slate-900">
+            নিবন্ধিত সদস্য তালিকা ({users.length})
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            প্রতিবেদক, বার্তা সম্পাদক ও অন্যান্য সদস্যদের দায়িত্ব নির্ধারণ করুন
+          </p>
+        </div>
+
         <Button
-          onClick={() => setShowAddModal(true)}
-          className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 gap-1.5 cursor-pointer shadow-xs"
+          onClick={() => {
+            reset({ name: "", email: "", role: USER_ROLES.REPORTER, bio: "" });
+            setShowAddModal(true);
+          }}
+          className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-9 gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
         >
           <UserPlus className="w-4 h-4" />
-          নতুন সদস্য আমন্ত্রণ (Invite)
+          নতুন সদস্য যোগ করুন
         </Button>
       </div>
 
-      {/* Users Table Card */}
+      {/* Users Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold">
-                <th className="py-3 px-4">সদস্যের তথ্য</th>
-                <th className="py-3 px-4">পদবী ও ভূমিকা (Role)</th>
-                <th className="py-3 px-4">অবস্থা (Status)</th>
+              <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-semibold">
+                <th className="py-3 px-4">নাম ও পরিচিতি</th>
+                <th className="py-3 px-4">ইমেইল</th>
+                <th className="py-3 px-4">দায়িত্ব (রোল)</th>
+                <th className="py-3 px-4">অবস্থা</th>
                 <th className="py-3 px-4 text-right">কার্যক্রম</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-slate-100 text-xs">
               {users.map((usr) => {
-                const badgeStyle = ROLE_BADGE_STYLES[usr.role] || "bg-slate-100 text-slate-700";
-                const isSuperAdmin = usr.role === USER_ROLES.SUPER_ADMIN;
+                const roleBadge = ROLE_BADGE_STYLES[usr.role] || "bg-slate-100 text-slate-700";
+                const isSuperAdmin = usr.email === "admin@aloshbe.com" || usr.id === "usr_superadmin";
 
                 return (
                   <tr key={usr.id} className="hover:bg-slate-50/70 transition-colors">
-                    {/* User profile with initials */}
+                    {/* Name & Bio */}
                     <td className="py-3 px-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-xs shrink-0 shadow-xs">
-                          {usr.name ? usr.name.slice(0, 2) : "ইউ"}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-bold text-slate-900 text-xs sm:text-sm">
-                            {usr.name}
-                          </p>
-                          <p className="text-[11px] text-slate-400 font-mono truncate">
-                            {usr.email}
-                          </p>
-                        </div>
+                      <div className="font-semibold text-slate-900">{usr.name}</div>
+                      <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
+                        {usr.bio || "কোনো বিবরণ নেই"}
                       </div>
                     </td>
 
-                    {/* Role selector dropdown */}
-                    <td className="py-3 px-4">
-                      <select
-                        value={usr.role}
-                        disabled={isSuperAdmin || isPending}
-                        onChange={(e) => handleRoleChange(usr.id, e.target.value)}
-                        className={`text-xs font-semibold rounded-md border px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-slate-900 cursor-pointer disabled:cursor-not-allowed ${badgeStyle}`}
-                      >
-                        {Object.entries(ROLE_LABELS).map(([rKey, rLabel]) => (
-                          <option key={rKey} value={rKey}>
-                            {rLabel}
-                          </option>
-                        ))}
-                      </select>
+                    {/* Email */}
+                    <td className="py-3 px-4 text-slate-600 font-mono text-[11px]">
+                      {usr.email}
                     </td>
 
-                    {/* Status badge */}
-                    <td className="py-3 px-4 whitespace-nowrap">
-                      {usr.status === "active" ? (
-                        <Badge variant="success" className="gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-                          সক্রিয়
+                    {/* Role Selector */}
+                    <td className="py-3 px-4">
+                      {isSuperAdmin ? (
+                        <Badge className={`${roleBadge} text-[10px] py-0.5 px-2 font-semibold`}>
+                          {ROLE_LABELS[usr.role] || usr.role}
                         </Badge>
                       ) : (
-                        <Badge variant="destructive" className="gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+                        <select
+                          value={usr.role}
+                          onChange={(e) => handleRoleChange(usr.id, e.target.value)}
+                          disabled={isPending}
+                          className="h-7 rounded border border-slate-200 bg-white px-2 text-xs text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
+                        >
+                          {Object.entries(ROLE_LABELS).map(([rKey, rLabel]) => (
+                            <option key={rKey} value={rKey}>
+                              {rLabel}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </td>
+
+                    {/* Status Badge */}
+                    <td className="py-3 px-4">
+                      {usr.status === "active" ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                          সক্রিয়
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-600">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
                           নিষ্ক্রিয়
-                        </Badge>
+                        </span>
                       )}
                     </td>
 
@@ -229,7 +249,7 @@ export function UserManager({ initialUsers = [] }) {
         </div>
       </div>
 
-      {/* Invite / Add User Modal */}
+      {/* Invite / Add User Modal with React Hook Form Real-time Validation */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden">
@@ -237,7 +257,7 @@ export function UserManager({ initialUsers = [] }) {
               <div className="flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-slate-700" />
                 <h3 className="text-sm font-bold text-slate-900">
-                  নতুন সদস্য যোগ বা আমন্ত্রণ (Invite-by-Email)
+                  নতুন সদস্য যোগ বা আমন্ত্রণ
                 </h3>
               </div>
               <button
@@ -248,42 +268,43 @@ export function UserManager({ initialUsers = [] }) {
               </button>
             </div>
 
-            <form onSubmit={handleCreateUser} className="p-5 space-y-3.5">
+            <form onSubmit={handleSubmit(onCreateUser)} className="p-5 space-y-3.5">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  সদস্যের পুরো নাম
+                  সদস্যের পুরো নাম <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"
                   placeholder="যেমন: তানভীর আহমেদ"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  className="text-xs h-9"
+                  {...register("name")}
+                  className={`text-xs h-9 ${errors.name ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                 />
+                {errors.name && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{errors.name.message}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  ইমেইল ঠিকানা (আমন্ত্রণ প্রেরণের জন্য)
+                  ইমেইল ঠিকানা <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="email"
-                  placeholder="name@aloshbe.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="text-xs h-9"
+                  placeholder="name@example.com"
+                  {...register("email")}
+                  className={`text-xs h-9 ${errors.email ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                 />
+                {errors.email && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{errors.email.message}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  দায়িত্ব ও পদবী (Role)
+                  দায়িত্ব ও পদবী (Role) <span className="text-red-500">*</span>
                 </label>
                 <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
+                  {...register("role")}
                   className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
                 >
                   {Object.entries(ROLE_LABELS).map(([rKey, rLabel]) => (
@@ -292,19 +313,24 @@ export function UserManager({ initialUsers = [] }) {
                     </option>
                   ))}
                 </select>
+                {errors.role && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{errors.role.message}</p>
+                )}
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  সংক্ষিপ্ত পরিচিতি বা নোট (ঐচ্ছিক)
+                  সংক্ষিপ্ত পরিচিতি বা পদবী নোট (ঐচ্ছিক)
                 </label>
                 <Input
                   type="text"
                   placeholder="নিজস্ব প্রতিবেদক / সিনিয়র রিপোর্টার"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="text-xs h-9"
+                  {...register("bio")}
+                  className={`text-xs h-9 ${errors.bio ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                 />
+                {errors.bio && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{errors.bio.message}</p>
+                )}
               </div>
 
               <div className="pt-2 flex justify-end gap-2">
@@ -322,7 +348,7 @@ export function UserManager({ initialUsers = [] }) {
                   disabled={isPending}
                   className="bg-slate-900 hover:bg-slate-800 text-white"
                 >
-                  আমন্ত্রণ প্রেরণ করুন
+                  {isPending ? "সংরক্ষণ হচ্ছে..." : "যোগ করুন"}
                 </Button>
               </div>
             </form>
@@ -332,4 +358,3 @@ export function UserManager({ initialUsers = [] }) {
     </div>
   );
 }
-

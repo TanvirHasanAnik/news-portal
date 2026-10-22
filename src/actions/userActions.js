@@ -3,80 +3,85 @@
 import { revalidatePath } from "next/cache";
 import { createUser, updateUserRole, updateUserStatus } from "@/repositories/userRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
+import {
+  createUserSchema,
+  updateUserRoleSchema,
+  toggleUserStatusSchema,
+  formatZodError,
+} from "@/schemas";
 
 export async function createUserAction(prevState, formData) {
   try {
-    const name = formData.get("name")?.toString().trim();
-    const email = formData.get("email")?.toString().trim().toLowerCase();
-    const role = formData.get("role")?.toString().trim() || "reporter";
-    const bio = formData.get("bio")?.toString().trim() || "";
+    const rawData = {
+      name: formData.get("name")?.toString() || "",
+      email: formData.get("email")?.toString() || "",
+      role: formData.get("role")?.toString() || "reporter",
+      bio: formData.get("bio")?.toString() || "",
+    };
 
-    if (!name) {
-      return { success: false, message: "ব্যবহারকারীর নাম আবশ্যক।" };
-    }
-    if (!email || !email.includes("@")) {
-      return { success: false, message: "একটি কার্যকর ইমেইল ঠিকানা আবশ্যক।" };
-    }
+    const validated = createUserSchema.parse(rawData);
 
-    const created = await createUser({ name, email, role, status: "active", bio });
+    const created = await createUser({
+      name: validated.name,
+      email: validated.email,
+      role: validated.role,
+      status: "active",
+      bio: validated.bio || "",
+    });
 
     await recordAuditLog({
       action: "create_user",
       targetType: "user",
       targetId: created.id,
-      details: { name, email, role },
+      details: { name: validated.name, email: validated.email, role: validated.role },
     });
 
     revalidatePath("/admin");
 
     return {
       success: true,
-      message: `"${name}" (${email}) ব্যবহারকারী সফলভাবে যুক্ত/আমন্ত্রিত হয়েছে!`,
+      message: `"${validated.name}" (${validated.email}) ব্যবহারকারী সফলভাবে যুক্ত করা হয়েছে!`,
     };
   } catch (error) {
     if (error.message?.includes("UNIQUE constraint failed: users.email")) {
       return { success: false, message: "এই ইমেইল ঠিকানায় ইতিমধ্যে একটি অ্যাকাউন্ট রয়েছে।" };
     }
-    return { success: false, message: `ব্যবহারকারী যোগে ত্রুটি: ${error.message}` };
+    return { success: false, message: formatZodError(error, "ব্যবহারকারী যোগে সমস্যা হয়েছে।") };
   }
 }
 
 export async function updateUserRoleAction(userId, newRole) {
   try {
-    if (!userId || !newRole) {
-      return { success: false, message: "ব্যবহারকারী এবং রোল আবশ্যক।" };
-    }
+    const validated = updateUserRoleSchema.parse({ userId, role: newRole });
 
-    await updateUserRole(userId, newRole);
+    await updateUserRole(validated.userId, validated.role);
 
     await recordAuditLog({
       action: "update_user_role",
       targetType: "user",
-      targetId: userId,
-      details: { newRole },
+      targetId: validated.userId,
+      details: { newRole: validated.role },
     });
 
     revalidatePath("/admin");
 
     return { success: true, message: "ব্যবহারকারীর দায়িত্ব সফলভাবে আপডেট করা হয়েছে।" };
   } catch (error) {
-    return { success: false, message: error.message };
+    return { success: false, message: formatZodError(error, "দায়িত্ব আপডেটে সমস্যা হয়েছে।") };
   }
 }
 
 export async function toggleUserStatusAction(userId, currentStatus) {
   try {
-    if (!userId) {
-      return { success: false, message: "ব্যবহারকারী আইডি আবশ্যক।" };
-    }
+    const validated = toggleUserStatusSchema.parse({ userId, currentStatus });
 
-    const newStatus = currentStatus === "active" ? "disabled" : "active";
-    await updateUserStatus(userId, newStatus);
+    const newStatus = validated.currentStatus === "active" ? "disabled" : "active";
+    await updateUserStatus(validated.userId, newStatus);
 
     await recordAuditLog({
       action: newStatus === "disabled" ? "disable_user" : "enable_user",
       targetType: "user",
-      targetId: userId,
+      targetId: validated.userId,
       details: { newStatus },
     });
 
@@ -88,7 +93,7 @@ export async function toggleUserStatusAction(userId, currentStatus) {
       message: `ব্যবহারকারী সফলভাবে ${newStatus === "active" ? "পুনরায় সক্রিয়" : "সাময়িক নিষ্ক্রিয়"} করা হয়েছে।`,
     };
   } catch (error) {
-    return { success: false, message: error.message };
+    return { success: false, message: formatZodError(error, "স্ট্যাটাস পরিবর্তনে সমস্যা হয়েছে।") };
   }
 }
 
