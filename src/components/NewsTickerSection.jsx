@@ -11,7 +11,10 @@ import {
 } from "lucide-react";
 import { breakingNews, topHeadlines } from "../data/newsData";
 
-export default function NewsTickerSection() {
+export default function NewsTickerSection({ breakingNewsList = [] }) {
+  const activeBreakingNews = (breakingNewsList && breakingNewsList.length > 0)
+    ? breakingNewsList
+    : breakingNews;
   // 1. Breaking News Slider State
   const [currentBreakingIndex, setCurrentBreakingIndex] = useState(0);
   const [isBreakingPlaying, setIsBreakingPlaying] = useState(true);
@@ -19,24 +22,29 @@ export default function NewsTickerSection() {
 
   // Auto-slide breaking news every 4.5 seconds
   useEffect(() => {
-    if (!isBreakingPlaying || isHoveredBreaking || breakingNews.length <= 1) return;
+    if (!isBreakingPlaying || isHoveredBreaking || activeBreakingNews.length <= 1) return;
 
     const timer = setInterval(() => {
-      setCurrentBreakingIndex((prev) => (prev + 1) % breakingNews.length);
+      setCurrentBreakingIndex((prev) => (prev + 1) % activeBreakingNews.length);
     }, 4500);
 
     return () => clearInterval(timer);
-  }, [isBreakingPlaying, isHoveredBreaking]);
+  }, [isBreakingPlaying, isHoveredBreaking, activeBreakingNews.length]);
 
   const handleNextBreaking = () => {
-    setCurrentBreakingIndex((prev) => (prev + 1) % breakingNews.length);
+    if (activeBreakingNews.length <= 1) return;
+    setCurrentBreakingIndex((prev) => (prev + 1) % activeBreakingNews.length);
   };
 
   const handlePrevBreaking = () => {
-    setCurrentBreakingIndex((prev) => (prev - 1 + breakingNews.length) % breakingNews.length);
+    if (activeBreakingNews.length <= 1) return;
+    setCurrentBreakingIndex((prev) => (prev - 1 + activeBreakingNews.length) % activeBreakingNews.length);
   };
 
-  const currentBreaking = breakingNews[currentBreakingIndex] || breakingNews[0];
+  const currentBreaking = activeBreakingNews[currentBreakingIndex] || activeBreakingNews[0] || {
+    headline: "কোনো জরুরি সংবাদ নেই",
+    url: "#",
+  };
 
   // 2. Headline (শিরোনাম) Continuous Sliding Ticker State & Logic
   const [isHeadlineHovered, setIsHeadlineHovered] = useState(false);
@@ -90,7 +98,7 @@ export default function NewsTickerSection() {
             <div className="flex items-center gap-1 text-slate-600 shrink-0 border-l border-slate-300/80 pl-2">
               {/* Pagination index */}
               <span className="text-[11px] text-slate-500 font-mono px-1 hidden sm:inline">
-                {currentBreakingIndex + 1}/{breakingNews.length}
+                {currentBreakingIndex + 1}/{activeBreakingNews.length}
               </span>
 
               <button

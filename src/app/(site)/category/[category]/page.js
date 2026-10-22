@@ -7,6 +7,7 @@ import AdHolder from "@/components/AdHolder";
 import { getCategoryNews, getAllCategorySlugs, categoryAccentMap } from "@/utils/categoryNews";
 import { categories } from "@/data/newsData";
 import { getPublishedArticles, mapDbArticleToFrontend } from "@/repositories/articleRepository";
+import { getActiveHandpickedArticles } from "@/repositories/curationRepository";
 
 export const dynamic = "force-dynamic";
 
@@ -54,8 +55,12 @@ export default async function CategoryPage({ params, searchParams }) {
   // Fetch live published articles from D1 for this category
   let dbArticles = [];
   try {
-    const raw = await getPublishedArticles({ categorySlug: category, limit: 50 });
-    dbArticles = (raw || []).map(mapDbArticleToFrontend);
+    if (category === "handpicked") {
+      dbArticles = await getActiveHandpickedArticles(50);
+    } else {
+      const raw = await getPublishedArticles({ categorySlug: category, limit: 50 });
+      dbArticles = (raw || []).map(mapDbArticleToFrontend);
+    }
   } catch (err) {
     console.error("Error fetching db articles for category page:", err);
   }

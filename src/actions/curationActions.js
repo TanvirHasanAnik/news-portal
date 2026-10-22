@@ -34,6 +34,7 @@ export async function addCuratedNewsAction(prevState, formData) {
 
     revalidatePath("/admin");
     revalidatePath("/");
+    revalidatePath("/category/handpicked");
 
     return {
       success: true,
@@ -50,6 +51,7 @@ export async function removeCuratedNewsAction(id) {
     await removeCuratedNews(id);
     revalidatePath("/admin");
     revalidatePath("/");
+    revalidatePath("/category/handpicked");
     return { success: true, message: "আইটেমটি তালিকা থেকে সরানো হয়েছে।" };
   } catch (error) {
     return { success: false, message: error.message };
@@ -62,6 +64,7 @@ export async function toggleCuratedNewsAction(id, currentActive) {
     await toggleCuratedNews(id, currentActive);
     revalidatePath("/admin");
     revalidatePath("/");
+    revalidatePath("/category/handpicked");
     return { success: true };
   } catch (error) {
     return { success: false, message: error.message };
@@ -76,6 +79,7 @@ export async function reorderCuratedNewsAction(orderedIds) {
     await updateCuratedNewsPriorities(orderedIds);
     revalidatePath("/admin");
     revalidatePath("/");
+    revalidatePath("/category/handpicked");
     return { success: true };
   } catch (error) {
     return { success: false, message: error.message };

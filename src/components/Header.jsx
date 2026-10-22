@@ -25,7 +25,7 @@ import {
 } from "../utils/dateUtils";
 
 
-export default function Header() {
+export default function Header({ breakingNewsList = [] }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -434,7 +434,7 @@ export default function Header() {
       </nav>
 
       {/* 3. News Ticker Section (Breaking News & Headline Tickers) */}
-      <NewsTickerSection />
+      <NewsTickerSection breakingNewsList={breakingNewsList} />
 
       {/* Mobile Drawer Navigation Modal */}
       <MobileDrawer

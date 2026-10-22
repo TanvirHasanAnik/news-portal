@@ -226,6 +226,7 @@ export async function toggleArticleFlagAction(articleId, flagName) {
     const res = await toggleArticleFlag(articleId, flagName);
     revalidatePath("/admin");
     revalidatePath("/");
+    revalidatePath("/category/handpicked");
     return { success: true, active: res[flagName] };
   } catch (error) {
     return { success: false, message: error.message };

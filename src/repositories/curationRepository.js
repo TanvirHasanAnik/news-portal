@@ -1,6 +1,7 @@
 import { getDb } from "@/lib/db";
 import { mapDbArticleToFrontend } from "./articleRepository";
 import { handpickedNewsList } from "@/data/handpickedNewsData";
+import { breakingNews as fallbackBreakingNews } from "@/data/newsData";
 
 /**
  * Curation Repository
@@ -138,13 +139,13 @@ export async function getActiveHandpickedArticles(limit = 4) {
   // 1. Fetch active handpicked items from curated_news join articles
   const { results: curatedRows } = await db
     .prepare(
-      `SELECT c.id as curation_id, c.custom_title, c.priority,
+      `SELECT c.id as curation_id, c.custom_title, c.custom_url, c.priority, c.article_id,
               a.*
        FROM curated_news c
-       JOIN articles a ON c.article_id = a.id
+       LEFT JOIN articles a ON c.article_id = a.id
        WHERE c.type = 'handpicked' 
          AND c.is_active = 1 
-         AND a.status = 'published'
+         AND (a.status = 'published' OR c.article_id IS NULL)
        ORDER BY c.priority DESC, c.created_at DESC
        LIMIT ?`
     )
@@ -152,15 +153,32 @@ export async function getActiveHandpickedArticles(limit = 4) {
     .all();
 
   const curatedArticles = (curatedRows || []).map((row) => {
-    const mapped = mapDbArticleToFrontend(row);
-    if (row.custom_title) {
-      mapped.headline = row.custom_title;
+    if (row.id && row.status) {
+      const mapped = mapDbArticleToFrontend(row);
+      if (row.custom_title) {
+        mapped.headline = row.custom_title;
+      }
+      return {
+        ...mapped,
+        isHandpicked: true,
+        curationId: row.curation_id,
+      };
+    } else {
+      return {
+        id: row.curation_id,
+        dbId: row.curation_id,
+        slug: row.custom_url ? row.custom_url.replace(/^\//, "") : row.curation_id,
+        headline: row.custom_title || "বাছাইকৃত সংবাদ",
+        summary: "",
+        category: "বাছাইকৃত",
+        categorySlug: "handpicked",
+        image: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=800&auto=format&fit=crop",
+        isHandpicked: true,
+        curationId: row.curation_id,
+        author: "সম্পাদকীয় বিভাগ",
+        time: "বাছাইকৃত",
+      };
     }
-    return {
-      ...mapped,
-      isHandpicked: true,
-      curationId: row.curation_id,
-    };
   });
 
   // 2. Also check if articles have is_handpicked = 1 that aren't already included
@@ -199,4 +217,66 @@ export async function getActiveHandpickedArticles(limit = 4) {
   }
 
   return curatedArticles.slice(0, limit);
+}
+
+/**
+ * Returns active breaking news for public header ticker, synced with database
+ */
+export async function getActiveBreakingNews(limit = 10) {
+  const db = await getDb();
+
+  // 1. Fetch active breaking items from curated_news
+  const { results: curatedRows } = await db
+    .prepare(
+      `SELECT c.id, c.custom_title, c.custom_url, c.priority, c.article_id,
+              a.headline as article_headline, a.slug as article_slug
+       FROM curated_news c
+       LEFT JOIN articles a ON c.article_id = a.id
+       WHERE c.type = 'breaking' AND c.is_active = 1
+       ORDER BY c.priority DESC, c.created_at DESC
+       LIMIT ?`
+    )
+    .bind(limit)
+    .all();
+
+  const breakingItems = (curatedRows || []).map((row) => ({
+    id: row.id,
+    headline: row.custom_title || row.article_headline || "জরুরি সংবাদ",
+    url: row.custom_url || (row.article_slug ? `/article/${row.article_slug}` : (row.article_id ? `/article/${row.article_id}` : "#")),
+    articleId: row.article_id,
+  }));
+
+  // 2. Also check published articles where is_breaking = 1 that aren't already included
+  if (breakingItems.length < limit) {
+    const existingArticleIds = new Set(breakingItems.map((b) => b.articleId).filter(Boolean));
+    const needed = limit - breakingItems.length;
+
+    const { results: directRows } = await db
+      .prepare(
+        `SELECT id, headline, slug FROM articles
+         WHERE status = 'published' AND is_breaking = 1
+         ORDER BY created_at DESC
+         LIMIT ?`
+      )
+      .bind(needed + 5)
+      .all();
+
+    (directRows || []).forEach((art) => {
+      if (breakingItems.length < limit && !existingArticleIds.has(art.id)) {
+        existingArticleIds.add(art.id);
+        breakingItems.push({
+          id: `art_${art.id}`,
+          headline: art.headline,
+          url: `/article/${art.slug || art.id}`,
+        });
+      }
+    });
+  }
+
+  // 3. Fallback to static breakingNews if nothing is in DB yet
+  if (breakingItems.length === 0) {
+    return fallbackBreakingNews;
+  }
+
+  return breakingItems.slice(0, limit);
 }
