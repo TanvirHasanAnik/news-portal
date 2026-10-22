@@ -205,6 +205,11 @@ export async function saveCategoriesBatch(categoriesList = []) {
   // 2. Delete categories that were removed in browser
   for (const dbCat of currentDbCats || []) {
     if (!incomingCatIds.has(dbCat.id)) {
+      // Clear foreign key references in articles before deleting
+      await db
+        .prepare("UPDATE articles SET category_id = NULL, subcategory_id = NULL WHERE category_id = ?")
+        .bind(dbCat.id)
+        .run();
       await db.prepare("DELETE FROM subcategories WHERE category_id = ?").bind(dbCat.id).run();
       await db.prepare("DELETE FROM categories WHERE id = ?").bind(dbCat.id).run();
     }
@@ -259,6 +264,7 @@ export async function saveCategoriesBatch(categoriesList = []) {
     // Delete removed subcategories
     for (const subId of currentSubIds) {
       if (!incomingSubIds.has(subId)) {
+        await db.prepare("UPDATE articles SET subcategory_id = NULL WHERE subcategory_id = ?").bind(subId).run();
         await db.prepare("DELETE FROM subcategories WHERE id = ?").bind(subId).run();
       }
     }
@@ -288,11 +294,24 @@ export async function saveCategoriesBatch(categoriesList = []) {
           )
           .bind(sub.name, sub.slug, subSortOrder, subId)
           .run();
+
+        // Keep denormalized article subcategory names in sync
+        await db
+          .prepare("UPDATE articles SET subcategory_name = ? WHERE subcategory_id = ?")
+          .bind(sub.name, subId)
+          .run();
       }
     }
   }
 
-  return { success: true };
+  const affectedSlugs = Array.from(
+    new Set([
+      ...(currentDbCats || []).map((c) => c.slug),
+      ...incomingDynamic.map((c) => c.slug),
+    ])
+  );
+
+  return { success: true, affectedSlugs };
 }
 
 

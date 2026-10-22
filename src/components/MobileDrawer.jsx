@@ -6,10 +6,14 @@ import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import { categories, banglaDate } from "../data/newsData";
 
-export default function MobileDrawer({ isOpen, onClose }) {
+export default function MobileDrawer({ isOpen, onClose, categories: propCategories = [] }) {
   const pathname = usePathname();
 
   if (!isOpen) return null;
+
+  const navCategories = Array.isArray(propCategories) && propCategories.length > 0
+    ? propCategories
+    : categories;
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
@@ -60,7 +64,7 @@ export default function MobileDrawer({ isOpen, onClose }) {
             প্রচ্ছদ (হোম)
           </Link>
 
-          {categories.map((cat) => {
+          {navCategories.map((cat) => {
             const isActive = pathname === `/category/${cat.slug}`;
             return (
               <Link

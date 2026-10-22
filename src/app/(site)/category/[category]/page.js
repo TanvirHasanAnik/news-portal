@@ -8,6 +8,11 @@ import { getCategoryNews, getAllCategorySlugs, categoryAccentMap } from "@/utils
 import { categories } from "@/data/newsData";
 import { getPublishedArticles, mapDbArticleToFrontend } from "@/repositories/articleRepository";
 import { getActiveHandpickedArticles } from "@/repositories/curationRepository";
+import {
+  getCategoryBySlug,
+  getSubcategoriesByCategoryId,
+  getAllCategories,
+} from "@/repositories/categoryRepository";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +21,16 @@ export const dynamic = "force-dynamic";
  * https://nextjs.org/docs/app/getting-started/linking-and-navigating#dynamic-segments-without-generatestaticparams
  */
 export async function generateStaticParams() {
-  const slugs = getAllCategorySlugs();
-  return slugs.map((slug) => ({
+  const staticSlugs = getAllCategorySlugs();
+  const allSlugs = new Set(staticSlugs);
+  try {
+    const dbCats = await getAllCategories();
+    (dbCats || []).forEach((c) => {
+      if (c.slug) allSlugs.add(c.slug);
+    });
+  } catch (_e) {}
+
+  return Array.from(allSlugs).map((slug) => ({
     category: slug,
   }));
 }
@@ -27,15 +40,24 @@ export async function generateStaticParams() {
  */
 export async function generateMetadata({ params }) {
   const { category } = await params;
-  const categoryData = getCategoryNews(category);
+  let categoryName = "";
+  try {
+    const dbCat = await getCategoryBySlug(category);
+    if (dbCat?.name) categoryName = dbCat.name;
+  } catch (_e) {}
 
-  const pageTitle = categoryData.name.endsWith("সংবাদ")
-    ? `${categoryData.name} | আলো আসবে`
-    : `${categoryData.name} সংবাদ | আলো আসবে`;
+  if (!categoryName) {
+    const categoryData = getCategoryNews(category);
+    categoryName = categoryData.name;
+  }
+
+  const pageTitle = categoryName.endsWith("সংবাদ")
+    ? `${categoryName} | আলো আসবে`
+    : `${categoryName} সংবাদ | আলো আসবে`;
 
   return {
     title: pageTitle,
-    description: `${categoryData.name} বিভাগের সর্বশেষ ও তাজা সংবাদ সবার আগে জানুন।`,
+    description: `${categoryName} বিভাগের সর্বশেষ ও তাজা সংবাদ সবার আগে জানুন।`,
   };
 }
 
@@ -50,7 +72,20 @@ export default async function CategoryPage({ params, searchParams }) {
     : null;
 
   const categoryData = getCategoryNews(category);
-  const { name, articles, subcategories, slug } = categoryData;
+  let { name, articles, subcategories, slug } = categoryData;
+
+  // Fetch live category metadata and subcategories from database
+  let dbSubcategories = [];
+  try {
+    const dbCat = await getCategoryBySlug(category);
+    if (dbCat) {
+      if (dbCat.name) name = dbCat.name;
+      const subs = await getSubcategoriesByCategoryId(dbCat.id);
+      dbSubcategories = (subs || []).map((s) => s.name).filter(Boolean);
+    }
+  } catch (err) {
+    console.error("Error fetching db category details:", err);
+  }
 
   // Fetch live published articles from D1 for this category
   let dbArticles = [];
@@ -85,9 +120,11 @@ export default async function CategoryPage({ params, searchParams }) {
       )
     : mergedArticles;
 
-  // Dynamically include subcategories present in live db articles
+  // Dynamically include subcategories present in database and live db articles
   const liveSubcategories = dbArticles.map((a) => a.subcategory).filter(Boolean);
-  const combinedSubcategories = Array.from(new Set([...subcategories, ...liveSubcategories]));
+  const combinedSubcategories = Array.from(
+    new Set([...subcategories, ...dbSubcategories, ...liveSubcategories])
+  );
 
   const totalCount = displayedArticles.length;
 

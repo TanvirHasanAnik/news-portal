@@ -7,6 +7,7 @@ import {
   mapDbArticleToFrontend,
 } from "@/repositories/articleRepository";
 import { getActiveHandpickedArticles } from "@/repositories/curationRepository";
+import { getDynamicCategoriesWithSubcategories } from "@/repositories/categoryRepository";
 
 export const dynamic = "force-dynamic";
 
@@ -14,15 +15,18 @@ export default async function Home() {
   let dbArticles = [];
   let mostReadArticles = [];
   let handpickedArticles = [];
+  let dynamicCats = [];
   try {
-    const [raw, mostRead, handpicked] = await Promise.all([
+    const [raw, mostRead, handpicked, cats] = await Promise.all([
       getPublishedArticles({ limit: 20 }),
       getMostReadArticles(10),
       getActiveHandpickedArticles(4),
+      getDynamicCategoriesWithSubcategories(),
     ]);
     dbArticles = (raw || []).map(mapDbArticleToFrontend);
     mostReadArticles = mostRead || [];
     handpickedArticles = handpicked || [];
+    dynamicCats = cats || [];
   } catch (err) {
     console.error("Error loading db articles for homepage:", err);
   }
@@ -40,7 +44,7 @@ export default async function Home() {
       />
 
       {/* 3. Requirement 3: Categorized news showcase sections */}
-      <CategoryScrollSection dbArticles={dbArticles} />
+      <CategoryScrollSection dbArticles={dbArticles} categories={dynamicCats} />
     </>
   );
 }

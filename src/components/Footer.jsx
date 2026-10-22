@@ -17,7 +17,14 @@ import {
 } from "./SocialIcons";
 import { categories } from "../data/newsData";
 
-export default function Footer() {
+export default function Footer({ categories: propCategories = [] }) {
+  const displayCats =
+    Array.isArray(propCategories) && propCategories.length > 0
+      ? propCategories.filter(
+          (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked"
+        )
+      : categories;
+
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -120,7 +127,7 @@ export default function Footer() {
               প্রধান বিভাগ
             </h4>
             <ul className="space-y-2 text-xs sm:text-sm text-slate-600">
-              {categories.slice(0, 5).map((cat) => (
+              {displayCats.slice(0, 5).map((cat) => (
                 <li key={cat.id}>
                   <Link href={`/category/${cat.slug}`} className="hover:text-red-600 transition-colors">
                     {cat.name}
@@ -136,7 +143,7 @@ export default function Footer() {
               অন্যান্য বিভাগ
             </h4>
             <ul className="space-y-2 text-xs sm:text-sm text-slate-600">
-              {categories.slice(5).map((cat) => (
+              {displayCats.slice(5).map((cat) => (
                 <li key={cat.id}>
                   <Link href={`/category/${cat.slug}`} className="hover:text-red-600 transition-colors">
                     {cat.name}

@@ -27,8 +27,12 @@ export async function createCategoryAction(prevState, formData) {
     const validated = categorySchema.parse(rawData);
 
     await createCategory(validated);
-    revalidatePath("/admin");
+    revalidatePath("/", "layout");
     revalidatePath("/");
+    revalidatePath("/admin");
+    if (validated.slug) {
+      revalidatePath(`/category/${validated.slug}`);
+    }
 
     return { success: true, message: `"${validated.name}" ক্যাটাগরি সফলভাবে তৈরি করা হয়েছে!` };
   } catch (error) {
@@ -42,8 +46,9 @@ export async function deleteCategoryAction(categoryId) {
       return { success: false, message: "ক্যাটাগরি আইডি আবশ্যক।" };
     }
     await deleteCategory(categoryId);
-    revalidatePath("/admin");
+    revalidatePath("/", "layout");
     revalidatePath("/");
+    revalidatePath("/admin");
 
     return { success: true, message: "ক্যাটাগরি সফলভাবে মুছে ফেলা হয়েছে।" };
   } catch (error) {
@@ -63,8 +68,9 @@ export async function createSubcategoryAction(prevState, formData) {
     const validated = subcategorySchema.parse(rawData);
 
     await createSubcategory(validated);
-    revalidatePath("/admin");
+    revalidatePath("/", "layout");
     revalidatePath("/");
+    revalidatePath("/admin");
 
     return { success: true, message: `"${validated.name}" উপ-বিভাগ সফলভাবে যোগ করা হয়েছে!` };
   } catch (error) {
@@ -78,8 +84,9 @@ export async function deleteSubcategoryAction(subcategoryId) {
       return { success: false, message: "উপ-বিভাগ আইডি আবশ্যক।" };
     }
     await deleteSubcategory(subcategoryId);
-    revalidatePath("/admin");
+    revalidatePath("/", "layout");
     revalidatePath("/");
+    revalidatePath("/admin");
 
     return { success: true, message: "উপ-বিভাগ সফলভাবে মুছে ফেলা হয়েছে।" };
   } catch (error) {
@@ -95,7 +102,7 @@ export async function saveCategoriesBatchAction(categories) {
   try {
     const validatedCategories = categoryBatchSchema.parse(categories);
 
-    await saveCategoriesBatch(validatedCategories);
+    const res = await saveCategoriesBatch(validatedCategories);
 
     await recordAuditLog({
       action: "batch_update_categories",
@@ -104,12 +111,15 @@ export async function saveCategoriesBatchAction(categories) {
     });
 
     // On-Demand Incremental Static Regeneration (ISR)
-    revalidatePath("/");
-    revalidatePath("/admin");
-    revalidatePath("/(site)", "layout");
-    for (const cat of validatedCategories) {
-      if (cat.slug) {
-        revalidatePath(`/category/${cat.slug}`);
+    revalidatePath("/", "layout"); // Revalidates layout tree (Header & Footer) across all pages
+    revalidatePath("/"); // Revalidates homepage (CategoryScrollSection)
+    revalidatePath("/admin"); // Revalidates admin categories tab
+    revalidatePath("/category/[category]", "page");
+
+    const slugsToRevalidate = res?.affectedSlugs || validatedCategories.map((c) => c.slug);
+    for (const slug of slugsToRevalidate) {
+      if (slug) {
+        revalidatePath(`/category/${slug}`);
       }
     }
 

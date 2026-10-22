@@ -25,7 +25,7 @@ import {
 } from "../utils/dateUtils";
 
 
-export default function Header({ breakingNewsList = [] }) {
+export default function Header({ breakingNewsList = [], categories: propCategories = [] }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -37,17 +37,33 @@ export default function Header({ breakingNewsList = [] }) {
   });
 
   // Permanent categories (সর্বশেষ & বাছাইকৃত সংবাদ) are always permanent in navigation
-  // and the remaining categories can be dynamic.
-  const permanentNavCategories = permanentCategories || [
-    { id: "latest", name: "সর্বশেষ", slug: "latest" },
-    { id: "handpicked", name: "বাছাইকৃত", slug: "handpicked" },
-  ];
+  // and the remaining categories are dynamically sorted from database.
+  const hasDbCats = Array.isArray(propCategories) && propCategories.length > 0;
 
-  const dynamicNavCategories =
-    dynamicCategories ||
-    categories.filter(
-      (c) => !permanentNavCategories.some((p) => p.slug === c.slug)
-    );
+  const permanentNavCategories = hasDbCats
+    ? propCategories.filter(
+        (c) => c.is_permanent === 1 || c.slug === "latest" || c.slug === "handpicked"
+      )
+    : permanentCategories || [
+        { id: "latest", name: "সর্বশেষ", slug: "latest" },
+        { id: "handpicked", name: "বাছাইকৃত", slug: "handpicked" },
+      ];
+
+  if (!permanentNavCategories.some((c) => c.slug === "latest")) {
+    permanentNavCategories.unshift({ id: "latest", name: "সর্বশেষ", slug: "latest" });
+  }
+  if (!permanentNavCategories.some((c) => c.slug === "handpicked")) {
+    permanentNavCategories.splice(1, 0, { id: "handpicked", name: "বাছাইকৃত", slug: "handpicked" });
+  }
+
+  const dynamicNavCategories = hasDbCats
+    ? propCategories.filter(
+        (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked"
+      )
+    : dynamicCategories ||
+      categories.filter(
+        (c) => !permanentNavCategories.some((p) => p.slug === c.slug)
+      );
 
   const allNavCategories = [
     ...permanentNavCategories,
@@ -440,6 +456,7 @@ export default function Header({ breakingNewsList = [] }) {
       <MobileDrawer
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
+        categories={allNavCategories}
       />
     </>
   );

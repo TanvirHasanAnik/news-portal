@@ -15,9 +15,21 @@ import { categories, categoryNewsData } from "../data/newsData";
  * Bangla font and responsive for both desktop and phone.
  * Rendered as a React Server Component (SSR).
  */
-export default function CategoryScrollSection({ dbArticles = [] }) {
-  // All main categories with news data
-  const displayCategories = categories.filter((c) => categoryNewsData[c.slug]);
+export default function CategoryScrollSection({ dbArticles = [], categories: propCategories = [] }) {
+  // If categories are passed from database, use them; otherwise fallback to newsData
+  const baseCategories =
+    Array.isArray(propCategories) && propCategories.length > 0
+      ? propCategories.filter((c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked")
+      : categories.filter((c) => categoryNewsData && categoryNewsData[c.slug]);
+
+  // Display categories that have either live database articles or fallback static articles
+  const displayCategories = baseCategories.filter((cat) => {
+    const hasStatic = categoryNewsData && categoryNewsData[cat.slug] && categoryNewsData[cat.slug].length > 0;
+    const hasDb = (dbArticles || []).some(
+      (a) => a.categorySlug === cat.slug || a.category === cat.name
+    );
+    return hasStatic || hasDb;
+  });
 
   return (
     <section className="py-8 bg-white">
