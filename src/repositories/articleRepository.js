@@ -229,21 +229,35 @@ export async function findArticleBySlugOrId(identifier) {
  */
 export async function getPublishedArticles({ categorySlug, limit = 20, offset = 0 } = {}) {
   const db = await getDb();
-  if (categorySlug && categorySlug !== "all" && categorySlug !== "latest") {
+
+  // 1. Permanent Category 'handpicked': Query articles marked as handpicked
+  if (categorySlug === "handpicked") {
     const { results } = await db
       .prepare(
-        "SELECT * FROM articles WHERE status = 'published' AND category_slug = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"
+        "SELECT * FROM articles WHERE status = 'published' AND is_handpicked = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?"
       )
-      .bind(categorySlug, limit, offset)
+      .bind(limit, offset)
       .all();
     return results || [];
   }
 
+  // 2. Permanent Category 'latest' or 'all': Query all latest published articles across all categories
+  if (!categorySlug || categorySlug === "all" || categorySlug === "latest") {
+    const { results } = await db
+      .prepare(
+        "SELECT * FROM articles WHERE status = 'published' ORDER BY created_at DESC LIMIT ? OFFSET ?"
+      )
+      .bind(limit, offset)
+      .all();
+    return results || [];
+  }
+
+  // 3. Dynamic Category (e.g. 'national', 'politics', 'sports', etc.)
   const { results } = await db
     .prepare(
-      "SELECT * FROM articles WHERE status = 'published' ORDER BY created_at DESC LIMIT ? OFFSET ?"
+      "SELECT * FROM articles WHERE status = 'published' AND category_slug = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"
     )
-    .bind(limit, offset)
+    .bind(categorySlug, limit, offset)
     .all();
   return results || [];
 }

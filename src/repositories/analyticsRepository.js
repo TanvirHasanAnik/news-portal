@@ -27,8 +27,8 @@ export async function getAnalyticsSummary() {
 }
 
 /**
- * Returns views and article counts for ALL categories
- * Dictated by views count and sorted descending
+ * Returns views and article counts for dynamic content categories
+ * (Permanent categories 'latest' and 'handpicked' are excluded from dynamic category breakdown)
  */
 export async function getCategoryViewsStats() {
   const db = await getDb();
@@ -40,6 +40,7 @@ export async function getCategoryViewsStats() {
               COALESCE(SUM(a.view_count), 0) as total_views 
        FROM categories c 
        LEFT JOIN articles a ON a.category_slug = c.slug 
+       WHERE c.is_permanent = 0 AND c.slug NOT IN ('latest', 'handpicked')
        GROUP BY c.id 
        ORDER BY total_views DESC, c.sort_order ASC`
     )

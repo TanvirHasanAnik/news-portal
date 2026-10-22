@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { FolderTree, Plus, Trash2, X, Tag, ShieldAlert } from "lucide-react";
+import { FolderTree, Plus, Trash2, X, Tag, ShieldAlert, Lock, Sparkles, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -152,6 +152,14 @@ export function CategoryManager({ initialCategories = [] }) {
     });
   };
 
+  // Split categories into permanent system categories and dynamic content categories
+  const permanentCats = categories.filter(
+    (c) => c.is_permanent || c.slug === "latest" || c.slug === "handpicked"
+  );
+  const dynamicCats = categories.filter(
+    (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked"
+  );
+
   return (
     <div className="space-y-6">
       {/* Feedback banner */}
@@ -168,17 +176,69 @@ export function CategoryManager({ initialCategories = [] }) {
         </div>
       )}
 
-      {/* Top action row */}
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-slate-500">
-          মোট ক্যাটাগরি সংখ্যা: {categories.length} টি
+      {/* 1. Permanent System Categories (Never treated as dynamic categories) */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5">
+        <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 mb-3">
+          <div className="flex items-center gap-2">
+            <Lock className="w-4 h-4 text-slate-700" />
+            <h2 className="text-sm font-bold text-slate-900">
+              স্থায়ী সিস্টেম ক্যাটাগরি (Permanent Categories)
+            </h2>
+          </div>
+          <Badge variant="outline" className="text-[10px] bg-white border-slate-300 text-slate-600">
+            অপরিবর্তনীয়
+          </Badge>
+        </div>
+        <p className="text-xs text-slate-500 mb-4">
+          'সর্বশেষ' ও 'বাছাইকৃত' ওয়েবসাইটের স্থায়ী ক্যাটাগরি। এগুলো ডায়নামিক বিষয়ভিত্তিক ক্যাটাগরি নয় এবং এগুলোর অধীনে আলাদা কোনো সাব-ক্যাটাগরি বা মোছার অপশন প্রযোজ্য নয়।
         </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          {permanentCats.map((pCat) => {
+            const isLatest = pCat.slug === "latest";
+            return (
+              <div
+                key={pCat.id}
+                className="bg-white border border-slate-200 rounded-lg p-3.5 shadow-xs flex items-start gap-3"
+              >
+                <div className="p-2 rounded-lg bg-slate-100 text-slate-700 shrink-0 mt-0.5">
+                  {isLatest ? <Clock className="w-4 h-4 text-blue-600" /> : <Sparkles className="w-4 h-4 text-amber-600" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 text-sm">{pCat.name}</span>
+                    <Badge variant="secondary" className="text-[10px] font-mono py-0 px-1.5">
+                      /{pCat.slug}
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    {isLatest
+                      ? "সকল বিভাগের প্রকাশিত সংবাদের স্বয়ংক্রিয় রিয়েলটাইম স্ট্রিম।"
+                      : "সম্পাদকীয় কিউরেশন (Handpicked) ব্যবস্থাপনার মাধ্যমে বাছাইকৃত সংবাদ।"}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2. Dynamic Content Categories Header & Add Button */}
+      <div className="flex items-center justify-between pt-2">
+        <div>
+          <h2 className="text-base font-bold text-slate-900">
+            ডায়নামিক সংবাদ ক্যাটাগরি ({dynamicCats.length})
+          </h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            বিষয়ভিত্তিক সংবাদ বিভাগ ও সংশ্লিষ্ট সাব-ক্যাটাগরি পরিচালনা
+          </p>
+        </div>
         <Button
           onClick={() => setShowAddCategory((prev) => !prev)}
-          className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 gap-1.5 cursor-pointer"
+          className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 gap-1.5 cursor-pointer shadow-xs"
         >
           <Plus className="w-4 h-4" />
-          {showAddCategory ? "ফর্ম বন্ধ করুন" : "নতুন ক্যাটাগরি তৈরি করুন"}
+          {showAddCategory ? "ফর্ম বন্ধ করুন" : "নতুন ক্যাটাগরি তৈরি"}
         </Button>
       </div>
 
@@ -188,7 +248,7 @@ export function CategoryManager({ initialCategories = [] }) {
           onSubmit={handleCreateCategory}
           className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4 animate-in fade-in duration-200"
         >
-          <h3 className="text-sm font-bold text-slate-900">নতুন ক্যাটাগরি ফরম</h3>
+          <h3 className="text-sm font-bold text-slate-900">নতুন ডায়নামিক ক্যাটাগরি ফরম</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -250,9 +310,9 @@ export function CategoryManager({ initialCategories = [] }) {
         </form>
       )}
 
-      {/* Categories Cards List */}
+      {/* Dynamic Categories Cards List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {categories.map((cat) => (
+        {dynamicCats.map((cat) => (
           <div
             key={cat.id}
             className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col justify-between"

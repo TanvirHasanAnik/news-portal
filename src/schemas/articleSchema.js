@@ -186,8 +186,14 @@ export const articleCreateSchema = z.object({
       message: "উপ-বিভাগের নাম সর্বোচ্চ ৪টি শব্দের মধ্যে হতে হবে।",
     }),
 
-  // 5. Category - Mandatory selection
-  categorySlug: z.string().trim().min(1, "অনুগ্রহ করে একটি বিভাগ নির্বাচন করুন।"),
+  // 5. Category - Mandatory selection (Must be dynamic content category, not permanent)
+  categorySlug: z
+    .string()
+    .trim()
+    .min(1, "অনুগ্রহ করে একটি বিভাগ নির্বাচন করুন।")
+    .refine((val) => val !== "latest" && val !== "handpicked", {
+      message: "স্থায়ী ক্যাটাগরি ('সর্বশেষ' বা 'বাছাইকৃত') কোনো আর্টিকেলের মূল বিষয় ক্যাটাগরি হতে পারে না।",
+    }),
 
   // 6. YouTube Video URL - Optional, but if provided must be a valid YouTube video link
   youtubeUrl: z

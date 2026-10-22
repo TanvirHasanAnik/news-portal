@@ -1,5 +1,5 @@
 import React from "react";
-import { getAllCategoriesWithSubcategories } from "@/repositories/categoryRepository";
+import { getDynamicCategoriesWithSubcategories } from "@/repositories/categoryRepository";
 import { getRecentArticles } from "@/repositories/articleRepository";
 import {
   ArticleCreateHeader,
@@ -13,9 +13,9 @@ import {
  * and renders the article creation interface and recent articles list.
  */
 export default async function ArticleCreateModule() {
-  // Fetch only the data required by this specific module
+  // Fetch only dynamic content categories (permanent categories 'latest' and 'handpicked' are excluded)
   const [categoriesWithSubs, recentArticles] = await Promise.all([
-    getAllCategoriesWithSubcategories(),
+    getDynamicCategoriesWithSubcategories(),
     getRecentArticles(5),
   ]);
 

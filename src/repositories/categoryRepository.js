@@ -13,6 +13,40 @@ export async function getAllCategories() {
   return results;
 }
 
+/**
+ * Returns only dynamic content categories (excluding permanent 'latest' and 'handpicked')
+ */
+export async function getDynamicCategories() {
+  const db = await getDb();
+  const { results } = await db
+    .prepare(
+      "SELECT * FROM categories WHERE is_permanent = 0 AND slug NOT IN ('latest', 'handpicked') ORDER BY sort_order ASC, name ASC"
+    )
+    .all();
+  return results || [];
+}
+
+/**
+ * Returns only permanent system categories ('latest' and 'handpicked')
+ */
+export async function getPermanentCategories() {
+  const db = await getDb();
+  const { results } = await db
+    .prepare(
+      "SELECT * FROM categories WHERE is_permanent = 1 OR slug IN ('latest', 'handpicked') ORDER BY sort_order ASC, name ASC"
+    )
+    .all();
+  return results || [];
+}
+
+/**
+ * Returns dynamic content categories with their respective subcategories
+ */
+export async function getDynamicCategoriesWithSubcategories() {
+  const allWithSubs = await getAllCategoriesWithSubcategories();
+  return allWithSubs.filter((c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked");
+}
+
 export async function getAllCategoriesWithSubcategories() {
   const db = await getDb();
   const [categoriesRes, subcategoriesRes] = await Promise.all([
@@ -110,6 +144,17 @@ export async function deleteCategory(id) {
  */
 export async function createSubcategory({ categoryId, name, slug, sortOrder = 0 }) {
   const db = await getDb();
+
+  // Ensure category is not permanent
+  const category = await db
+    .prepare("SELECT is_permanent, slug FROM categories WHERE id = ?")
+    .bind(categoryId)
+    .first();
+
+  if (category?.is_permanent || category?.slug === "latest" || category?.slug === "handpicked") {
+    throw new Error("স্থায়ী ক্যাটাগরির অধীনে সাব-ক্যাটাগরি যুক্ত করা সম্ভব নয়।");
+  }
+
   const id = `sub_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
 
   await db
