@@ -5,6 +5,7 @@ import {
   addCuratedNews,
   removeCuratedNews,
   toggleCuratedNews,
+  updateCuratedNewsPriorities,
 } from "@/repositories/curationRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
 
@@ -59,6 +60,20 @@ export async function toggleCuratedNewsAction(id, currentActive) {
   try {
     if (!id) return { success: false, message: "আইডি আবশ্যক।" };
     await toggleCuratedNews(id, currentActive);
+    revalidatePath("/admin");
+    revalidatePath("/");
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+}
+
+export async function reorderCuratedNewsAction(orderedIds) {
+  try {
+    if (!Array.isArray(orderedIds) || orderedIds.length === 0) {
+      return { success: false, message: "অবৈধ তথ্য" };
+    }
+    await updateCuratedNewsPriorities(orderedIds);
     revalidatePath("/admin");
     revalidatePath("/");
     return { success: true };

@@ -22,13 +22,14 @@ const staticMostReadNews = trendingNews.map((item) => ({
  * - Second column (Width 1): Most read news (সর্বাধিক পঠিত) with own scrollbar
  */
 export default function HandpickedNewsSection({
-  newsList = handpickedNewsList,
+  newsList,
   mostReadList = staticMostReadNews,
   dbArticles = [],
 }) {
   const handpickedDb = dbArticles.filter((a) => a.isHandpicked);
-  const combinedList = [...handpickedDb, ...newsList];
-  const displayNews = combinedList.slice(0, 4);
+  const displayNews = (newsList && newsList.length > 0)
+    ? newsList.slice(0, 4)
+    : [...handpickedDb, ...handpickedNewsList].slice(0, 4);
   const count = displayNews.length;
 
   if (count === 0) return null;
