@@ -1,55 +1,79 @@
-import { FilePlus2 } from "lucide-react";
+import {
+  BarChart3,
+  FilePlus2,
+  FileText,
+  Sparkles,
+  FolderTree,
+  Users,
+  ClipboardList,
+} from "lucide-react";
+
+import AnalyticsModule from "@/modules/admin/analytics";
 import ArticleCreateModule from "@/modules/admin/article-create";
+import ArticleListModule from "@/modules/admin/article-list";
+import CurationModule from "@/modules/admin/curation";
+import CategoriesModule from "@/modules/admin/categories";
+import UsersModule from "@/modules/admin/users";
+import RequestsModule from "@/modules/admin/requests";
+import { canUserAccessModule } from "@/lib/auth";
 
 /**
  * Admin Panel Single-Purpose Modules Registry
  *
- * Each tab in the admin panel corresponds to an independent single-purpose module.
- * Only ACTIVE modules registered in this array will be visible in the navigation and accessible in the UI.
- *
- * TO ADD A NEW TAB LATER:
- * 1. Create your module folder under `src/modules/admin/<module-name>/index.jsx`
- * 2. Import the component and add an entry below:
- *    {
- *      id: "article-list",
- *      label: "সকল আর্টিকেল",
- *      icon: FileText,
- *      component: ArticleListModule,
- *    }
+ * Each tab corresponds to an independent server-driven module.
+ * Future roles/auth easily filter this list using `canUserAccessModule(user, mod.id)`.
  */
 export const adminModules = [
+  {
+    id: "analytics",
+    label: "অ্যানালিটিক্স ড্যাশবোর্ড",
+    icon: BarChart3,
+    component: AnalyticsModule,
+  },
   {
     id: "create-article",
     label: "আর্টিকেল তৈরি",
     icon: FilePlus2,
     component: ArticleCreateModule,
   },
-  // Future single-purpose modules can be registered here:
-  // {
-  //   id: "article-list",
-  //   label: "সকল আর্টিকেল ও অনুমোদন",
-  //   icon: FileText,
-  //   component: ArticleListModule,
-  // },
-  // {
-  //   id: "categories",
-  //   label: "ক্যাটাগরি ও সাব-ক্যাটাগরি",
-  //   icon: FolderTree,
-  //   component: CategoryManagementModule,
-  // },
-  // {
-  //   id: "users",
-  //   label: "ব্যবহারকারী ব্যবস্থাপনা",
-  //   icon: Users,
-  //   component: UserManagementModule,
-  // },
+  {
+    id: "article-list",
+    label: "সকল আর্টিকেল ও অনুমোদন",
+    icon: FileText,
+    component: ArticleListModule,
+  },
+  {
+    id: "curation",
+    label: "বাছাইকৃত ও জরুরি সংবাদ",
+    icon: Sparkles,
+    component: CurationModule,
+  },
+  {
+    id: "categories",
+    label: "ক্যাটাগরি ও সাব-ক্যাটাগরি",
+    icon: FolderTree,
+    component: CategoriesModule,
+  },
+  {
+    id: "users",
+    label: "ব্যবহারকারী ব্যবস্থাপনা",
+    icon: Users,
+    component: UsersModule,
+  },
+  {
+    id: "requests",
+    label: "অ্যাডমিন আবেদনসমূহ",
+    icon: ClipboardList,
+    component: RequestsModule,
+  },
 ];
 
 /**
- * Returns all currently registered active admin modules
+ * Returns all currently registered active admin modules, optionally filtered by user role
  */
-export function getAdminModules() {
-  return adminModules;
+export function getAdminModules(user = null) {
+  if (!user) return adminModules;
+  return adminModules.filter((mod) => canUserAccessModule(user, mod.id));
 }
 
 /**
@@ -60,9 +84,8 @@ export function getAdminModuleById(id) {
 }
 
 /**
- * Returns the default fallback module (first active module)
+ * Returns the default fallback module
  */
 export function getDefaultAdminModule() {
   return adminModules[0] || null;
 }
-

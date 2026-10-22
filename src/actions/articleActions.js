@@ -1,7 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createArticle } from "@/repositories/articleRepository";
+import {
+  createArticle,
+  updateArticleStatus,
+  toggleArticleFlag,
+  deleteArticle,
+} from "@/repositories/articleRepository";
 import { getCategoryBySlug, getAllCategoriesWithSubcategories } from "@/repositories/categoryRepository";
 import { articleCreateSchema } from "@/schemas/articleSchema";
 
@@ -183,3 +188,64 @@ export async function createArticleAction(prevState, formData) {
     };
   }
 }
+
+/**
+ * Server Action: Update article status (published, draft, pending_approval, archived)
+ */
+export async function updateArticleStatusAction(articleId, newStatus) {
+  try {
+    if (!articleId || !newStatus) {
+      return { success: false, message: "আর্টিকেল আইডি এবং স্ট্যাটাস আবশ্যক।" };
+    }
+
+    await updateArticleStatus(articleId, newStatus);
+    revalidatePath("/admin");
+    revalidatePath("/");
+
+    const statusLabels = {
+      published: "প্রকাশিত",
+      draft: "খসড়া",
+      pending_approval: "অনুমোদনের অপেক্ষায়",
+      archived: "আর্কাইভকৃত",
+    };
+
+    return {
+      success: true,
+      message: `আর্টিকেলের অবস্থা সফলভাবে "${statusLabels[newStatus] || newStatus}" করা হয়েছে।`,
+    };
+  } catch (error) {
+    return { success: false, message: `স্ট্যাটাস পরিবর্তন ব্যর্থ: ${error.message}` };
+  }
+}
+
+/**
+ * Server Action: Toggle article flag (is_breaking, is_lead, is_handpicked)
+ */
+export async function toggleArticleFlagAction(articleId, flagName) {
+  try {
+    const res = await toggleArticleFlag(articleId, flagName);
+    revalidatePath("/admin");
+    revalidatePath("/");
+    return { success: true, active: res[flagName] };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Server Action: Delete an article
+ */
+export async function deleteArticleAction(articleId) {
+  try {
+    if (!articleId) {
+      return { success: false, message: "আর্টিকেল আইডি আবশ্যক।" };
+    }
+    await deleteArticle(articleId);
+    revalidatePath("/admin");
+    revalidatePath("/");
+    return { success: true, message: "আর্টিকেলটি সফলভাবে মুছে ফেলা হয়েছে।" };
+  } catch (error) {
+    return { success: false, message: `মুছে ফেলা সম্ভব হয়নি: ${error.message}` };
+  }
+}
+

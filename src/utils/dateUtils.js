@@ -81,3 +81,35 @@ export function getHijriDate(d = new Date()) {
     return '৪ জমাদিউল আউয়াল ১৪৪৮ হিজরি';
   }
 }
+
+/**
+ * Formats a timestamp into a human-readable Bengali relative time
+ */
+export function formatTimeAgo(timestamp) {
+  if (!timestamp) return 'কিছুক্ষণ আগে';
+  try {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diffSeconds = Math.max(0, Math.floor((now - date) / 1000));
+
+    if (diffSeconds < 60) {
+      return 'এইমাত্র';
+    }
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    if (diffMinutes < 60) {
+      return `${toBengaliDigits(diffMinutes)} মিনিট আগে`;
+    }
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) {
+      return `${toBengaliDigits(diffHours)} ঘণ্টা আগে`;
+    }
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays < 7) {
+      return `${toBengaliDigits(diffDays)} দিন আগে`;
+    }
+
+    return getEnglishDateBangla(date);
+  } catch (_e) {
+    return 'কিছুক্ষণ আগে';
+  }
+}

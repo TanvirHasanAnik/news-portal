@@ -343,3 +343,109 @@ export async function deleteArticle(id) {
   return await db.prepare("DELETE FROM articles WHERE id = ?").bind(id).run();
 }
 
+/**
+ * Updates an article's publishing status (e.g. published, draft, pending_approval, archived)
+ */
+export async function updateArticleStatus(id, status, editorId = "usr_superadmin") {
+  const db = await getDb();
+  const publishedAt = status === "published" ? new Date().toISOString() : null;
+
+  const result = await db
+    .prepare(
+      `UPDATE articles 
+       SET status = ?, 
+           published_at = COALESCE(published_at, ?), 
+           updated_at = CURRENT_TIMESTAMP 
+       WHERE id = ?`
+    )
+    .bind(status, publishedAt, id)
+    .run();
+
+  // Log to audit log
+  try {
+    await db.prepare(
+      `INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(
+      `log_${Date.now()}`,
+      editorId,
+      "update_status",
+      "article",
+      id,
+      JSON.stringify({ status })
+    ).run();
+  } catch (_e) {}
+
+  return result;
+}
+
+/**
+ * Toggles a boolean flag on an article (is_breaking, is_lead, is_handpicked)
+ */
+export async function toggleArticleFlag(id, flagName) {
+  const db = await getDb();
+  const allowedFlags = ["is_breaking", "is_lead", "is_handpicked"];
+  if (!allowedFlags.includes(flagName)) {
+    throw new Error(`Invalid flag: ${flagName}`);
+  }
+
+  const article = await getArticleById(id);
+  if (!article) throw new Error("Article not found");
+
+  const currentVal = article[flagName] ? 1 : 0;
+  const newVal = currentVal === 1 ? 0 : 1;
+
+  await db
+    .prepare(`UPDATE articles SET ${flagName} = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
+    .bind(newVal, id)
+    .run();
+
+  return { [flagName]: newVal === 1 };
+}
+
+/**
+ * Fetch revisions / content history for a given article
+ */
+export async function getArticleRevisions(articleId) {
+  const db = await getDb();
+  const { results } = await db
+    .prepare(
+      `SELECT r.*, u.name as editor_name 
+       FROM article_revisions r 
+       LEFT JOIN users u ON r.editor_id = u.id 
+       WHERE r.article_id = ? 
+       ORDER BY r.created_at DESC`
+    )
+    .bind(articleId)
+    .all();
+  return results || [];
+}
+
+/**
+ * Return counts of articles grouped by their status
+ */
+export async function getArticleStatusCounts() {
+  const db = await getDb();
+  const { results } = await db
+    .prepare("SELECT status, COUNT(*) as count FROM articles GROUP BY status")
+    .all();
+
+  const counts = {
+    all: 0,
+    published: 0,
+    draft: 0,
+    pending_approval: 0,
+    archived: 0,
+  };
+
+  (results || []).forEach((row) => {
+    if (counts[row.status] !== undefined) {
+      counts[row.status] = row.count;
+    }
+    counts.all += row.count;
+  });
+
+  return counts;
+}
+
+

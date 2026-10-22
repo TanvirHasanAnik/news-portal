@@ -59,3 +59,20 @@ Editor tabs:
 Reporter tabs:
 1. Article creation tab
 2. Personal profile tab
+
+------------------------------
+
+Technical choices:
+1. SQLite
+2. Cloudflare adapter, wrangler
+3. JWT tokenization
+4. common standard nodejs module workarounds – example: jose for crypto
+5. Next.js Edge Middleware
+6. On-Demand Incremental Static Regeneration (ISR). Only for admin operations that impact public frontend
+
+Architecture: Server Driven Component Architecture
+Data Flow: Database / CMS - Data Access Layer (Repositories) - Server Components - Client.
+Repository: Direct database read write (query) functions
+Server components: takes the repository function’s data and render the ui
+Server actions: Server Actions catch user input then pass to repository to update db
+
