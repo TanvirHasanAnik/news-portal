@@ -131,6 +131,68 @@ export async function updateCuratedNewsPriorities(orderedIds = []) {
 }
 
 /**
+ * Saves a full batch of curated items for a type (handpicked or breaking).
+ * Updates priority based on array order, persists active states,
+ * and synchronizes article flags.
+ */
+export async function saveCuratedNewsBatch(type, items = []) {
+  if (!type) throw new Error("কিউরেশন ধরন আবশ্যক।");
+  const db = await getDb();
+
+  // 1. Get existing curated article IDs for this type
+  const { results: existingRows } = await db
+    .prepare("SELECT article_id FROM curated_news WHERE type = ? AND article_id IS NOT NULL")
+    .bind(type)
+    .all();
+  const previousArticleIds = new Set((existingRows || []).map((r) => r.article_id).filter(Boolean));
+
+  // 2. Clear current curated_news entries for this type
+  await db.prepare("DELETE FROM curated_news WHERE type = ?").bind(type).run();
+
+  // 3. Insert the new batch of items in order with priority = (items.length - i) * 10
+  const activeArticleIds = new Set();
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const id = item.id && !String(item.id).startsWith("temp_")
+      ? String(item.id)
+      : `cur_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+    const priority = (items.length - i) * 10;
+    const isActive = item.is_active === 0 ? 0 : 1;
+    const articleId = item.article_id || null;
+    const customTitle = item.custom_title || null;
+    const customUrl = item.custom_url || null;
+
+    await db
+      .prepare(
+        `INSERT INTO curated_news (id, type, article_id, custom_title, custom_url, priority, is_active, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
+      )
+      .bind(id, type, articleId, customTitle, customUrl, priority, isActive)
+      .run();
+
+    if (articleId && isActive === 1) {
+      activeArticleIds.add(articleId);
+    }
+  }
+
+  // 4. Synchronize article table flags (is_handpicked or is_breaking)
+  const allAffected = new Set([...previousArticleIds, ...activeArticleIds]);
+  const flagColumn = type === "handpicked" ? "is_handpicked" : (type === "breaking" ? "is_breaking" : null);
+
+  if (flagColumn && allAffected.size > 0) {
+    for (const artId of allAffected) {
+      const flagVal = activeArticleIds.has(artId) ? 1 : 0;
+      await db
+        .prepare(`UPDATE articles SET ${flagColumn} = ? WHERE id = ?`)
+        .bind(flagVal, artId)
+        .run();
+    }
+  }
+
+  return { success: true, count: items.length };
+}
+
+/**
  * Returns active handpicked news for public homepage & handpicked category showcase
  */
 export async function getActiveHandpickedArticles(limit = 4) {

@@ -6,6 +6,7 @@ import {
   removeCuratedNews,
   toggleCuratedNews,
   updateCuratedNewsPriorities,
+  saveCuratedNewsBatch,
 } from "@/repositories/curationRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
 
@@ -83,6 +84,38 @@ export async function reorderCuratedNewsAction(orderedIds) {
     return { success: true };
   } catch (error) {
     return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Server Action: Saves the batch of curated items to database
+ * and triggers On-Demand Incremental Static Regeneration (ISR).
+ */
+export async function saveCuratedBatchAction(type, items) {
+  try {
+    if (!type || !Array.isArray(items)) {
+      return { success: false, message: "অবৈধ তথ্য পাঠানো হয়েছে।" };
+    }
+
+    await saveCuratedNewsBatch(type, items);
+
+    await recordAuditLog({
+      action: "batch_update_curation",
+      targetType: "curated_news",
+      details: { type, count: items.length },
+    });
+
+    // Trigger On-Demand Incremental Static Regeneration (ISR)
+    revalidatePath("/");
+    revalidatePath("/admin");
+    revalidatePath("/category/handpicked");
+
+    return {
+      success: true,
+      message: `পরিবর্তনগুলো সফলভাবে ডেটাবেসে সংরক্ষিত ও লাইভ ওয়েবসাইটে আপডেট (ISR) হয়েছে!`,
+    };
+  } catch (error) {
+    return { success: false, message: `সংরক্ষণ ব্যর্থ হয়েছে: ${error.message}` };
   }
 }
 
