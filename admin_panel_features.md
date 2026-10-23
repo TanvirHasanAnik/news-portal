@@ -63,7 +63,7 @@ Reporter tabs:
 ------------------------------
 
 Technical choices:
-1. SQLite
+1. Raw MySQL (`mysql2/promise`) / TiDB (utf8mb4, zero ORM)
 2. Cloudflare adapter, wrangler
 3. JWT tokenization
 4. common standard nodejs module workarounds – example: jose for crypto

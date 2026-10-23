@@ -1,11 +1,11 @@
 -- Default Users
-INSERT OR IGNORE INTO users (id, name, email, role, status, bio)
+INSERT IGNORE INTO users (id, name, email, role, status, bio)
 VALUES 
   ('usr_superadmin', 'প্রধান সম্পাদক', 'admin@aloshbe.com', 'super_admin', 'active', 'প্রধান সম্পাদক ও সিস্টেম সুপার অ্যাডমিন'),
   ('usr_reporter', 'নিজস্ব প্রতিবেদক', 'reporter@aloshbe.com', 'reporter', 'active', 'আলো আসবে সংবাদ পরিবার');
 
 -- Default Categories
-INSERT OR IGNORE INTO categories (id, name, slug, is_permanent, sort_order)
+INSERT IGNORE INTO categories (id, name, slug, is_permanent, sort_order)
 VALUES
   ('cat_latest', 'সর্বশেষ', 'latest', 1, 1),
   ('cat_handpicked', 'বাছাইকৃত', 'handpicked', 1, 2),
@@ -21,7 +21,7 @@ VALUES
   ('cat_opinion', 'মতামত', 'opinion', 0, 12);
 
 -- Default Subcategories
-INSERT OR IGNORE INTO subcategories (id, category_id, name, slug, sort_order)
+INSERT IGNORE INTO subcategories (id, category_id, name, slug, sort_order)
 VALUES
   ('cat_national_s_1', 'cat_national', 'রাজধানী', 'sub_national_1', 1),
   ('cat_national_s_2', 'cat_national', 'সারাদেশ', 'sub_national_2', 2),
@@ -82,4 +82,3 @@ VALUES
   ('cat_opinion_s_2', 'cat_opinion', 'কলাম', 'sub_opinion_2', 2),
   ('cat_opinion_s_3', 'cat_opinion', 'মুক্তমত', 'sub_opinion_3', 3),
   ('cat_opinion_s_4', 'cat_opinion', 'বিশ্লেষণ', 'sub_opinion_4', 4);
-

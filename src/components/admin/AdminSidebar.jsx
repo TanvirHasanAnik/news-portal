@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Globe, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import { getAdminModules, getDefaultAdminModule } from "@/config/adminModules";
+import { getAdminNavItems, getDefaultAdminNavItem } from "@/config/adminNav";
 
 /**
  * Shared sidebar content used in both desktop sidebar and mobile drawer
@@ -101,9 +101,9 @@ function SidebarContent({ activeModules, currentTab, onItemClick }) {
 
 export default function AdminSidebar({ mobileOpen = false, onCloseMobile }) {
   const searchParams = useSearchParams();
-  const defaultModule = getDefaultAdminModule();
+  const defaultModule = getDefaultAdminNavItem();
   const currentTab = searchParams.get("tab") || defaultModule?.id || "create-article";
-  const activeModules = getAdminModules();
+  const activeModules = getAdminNavItems();
 
   // Close mobile drawer on Escape key
   useEffect(() => {

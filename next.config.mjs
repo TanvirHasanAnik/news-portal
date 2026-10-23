@@ -6,7 +6,7 @@ initOpenNextCloudflareForDev();
 const nextConfig = {
   /* config options here */
   reactCompiler: true,
-  serverExternalPackages: ["node:sqlite"],
+
   turbopack: {
     rules: {
       "*.css": {

@@ -1,15 +1,15 @@
-import { getDb } from "@/lib/db";
+import { getDb, query, queryOne, withTransaction } from "@/lib/db";
 import { mapDbArticleToFrontend } from "./articleRepository";
 import { handpickedNewsList } from "@/data/handpickedNewsData";
 import { breakingNews as fallbackBreakingNews } from "@/data/newsData";
 
 /**
  * Curation Repository
- * Manages handpicked and breaking news collections in curated_news table
+ * Raw MySQL (mysql2/promise) data layer for Cloudflare Workers (workerd) & TiDB.
+ * Manages handpicked and breaking news collections in curated_news table.
  */
 
 export async function getCuratedNews(type) {
-  const db = await getDb();
   let sql = `
     SELECT c.*, a.headline as article_headline, a.slug as article_slug, a.category_name, a.image as article_image
     FROM curated_news c
@@ -24,104 +24,104 @@ export async function getCuratedNews(type) {
 
   sql += " ORDER BY c.priority DESC, c.created_at DESC";
 
-  const { results } = await db.prepare(sql).bind(...params).all();
-  return results || [];
+  const rows = await query(sql, params);
+  return rows || [];
 }
 
 export async function addCuratedNews({ type, articleId, customTitle = "", customUrl = "", priority }) {
-  const db = await getDb();
-
-  // Prevent duplicate article from being curated in the same type
-  if (articleId) {
-    const existing = await db
-      .prepare("SELECT id FROM curated_news WHERE type = ? AND article_id = ?")
-      .bind(type, articleId)
-      .first();
-    if (existing) {
-      throw new Error(`এই সংবাদটি ইতিমধ্যে তালিকায় বিদ্যমান।`);
+  return await withTransaction(async (tx) => {
+    // Prevent duplicate article from being curated in the same type
+    if (articleId) {
+      const existing = await tx.queryOne(
+        "SELECT id FROM curated_news WHERE type = ? AND article_id = ?",
+        [type, articleId]
+      );
+      if (existing) {
+        throw new Error("এই সংবাদটি ইতিমধ্যে তালিকায় বিদ্যমান।");
+      }
     }
-  }
 
-  const id = `cur_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+    const id = `cur_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
 
-  // If no priority specified, place it at the very top (highest priority + 10)
-  let resolvedPriority = Number(priority);
-  if (isNaN(resolvedPriority) || resolvedPriority === 0) {
-    const maxRow = await db
-      .prepare("SELECT COALESCE(MAX(priority), 0) as max_p FROM curated_news WHERE type = ?")
-      .bind(type)
-      .first();
-    resolvedPriority = (maxRow?.max_p || 0) + 10;
-  }
+    // If no priority specified, place it at the very top (highest priority + 10)
+    let resolvedPriority = Number(priority);
+    if (isNaN(resolvedPriority) || resolvedPriority === 0) {
+      const maxRow = await tx.queryOne(
+        "SELECT COALESCE(MAX(priority), 0) as max_p FROM curated_news WHERE type = ?",
+        [type]
+      );
+      resolvedPriority = (maxRow?.max_p || 0) + 10;
+    }
 
-  await db
-    .prepare(
+    await tx.query(
       `INSERT INTO curated_news (id, type, article_id, custom_title, custom_url, priority, is_active, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
-    )
-    .bind(id, type, articleId || null, customTitle || null, customUrl || null, resolvedPriority)
-    .run();
+       VALUES (?, ?, ?, ?, ?, ?, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+      [id, type, articleId || null, customTitle || null, customUrl || null, resolvedPriority]
+    );
 
-  // Keep articles table flags in sync
-  if (articleId) {
-    if (type === "handpicked") {
-      await db.prepare("UPDATE articles SET is_handpicked = 1 WHERE id = ?").bind(articleId).run();
-    } else if (type === "breaking") {
-      await db.prepare("UPDATE articles SET is_breaking = 1 WHERE id = ?").bind(articleId).run();
+    // Keep articles table flags in sync
+    if (articleId) {
+      if (type === "handpicked") {
+        await tx.query("UPDATE articles SET is_handpicked = 1 WHERE id = ?", [articleId]);
+      } else if (type === "breaking") {
+        await tx.query("UPDATE articles SET is_breaking = 1 WHERE id = ?", [articleId]);
+      }
     }
-  }
 
-  return { id, type, articleId };
+    return { id, type, articleId };
+  });
 }
 
 export async function removeCuratedNews(id) {
-  const db = await getDb();
-  const existing = await db.prepare("SELECT * FROM curated_news WHERE id = ?").bind(id).first();
+  return await withTransaction(async (tx) => {
+    const existing = await tx.queryOne("SELECT * FROM curated_news WHERE id = ?", [id]);
+    await tx.query("DELETE FROM curated_news WHERE id = ?", [id]);
 
-  await db.prepare("DELETE FROM curated_news WHERE id = ?").bind(id).run();
-
-  // If this was an article reference, check if it's still in another active curated entry
-  if (existing?.article_id) {
-    if (existing.type === "handpicked") {
-      const remaining = await db
-        .prepare("SELECT COUNT(*) as count FROM curated_news WHERE article_id = ? AND type = 'handpicked'")
-        .bind(existing.article_id)
-        .first();
-      if (!remaining || remaining.count === 0) {
-        await db.prepare("UPDATE articles SET is_handpicked = 0 WHERE id = ?").bind(existing.article_id).run();
-      }
-    } else if (existing.type === "breaking") {
-      const remaining = await db
-        .prepare("SELECT COUNT(*) as count FROM curated_news WHERE article_id = ? AND type = 'breaking'")
-        .bind(existing.article_id)
-        .first();
-      if (!remaining || remaining.count === 0) {
-        await db.prepare("UPDATE articles SET is_breaking = 0 WHERE id = ?").bind(existing.article_id).run();
+    // If this was an article reference, check if it's still in another active curated entry
+    if (existing?.article_id) {
+      if (existing.type === "handpicked") {
+        const remaining = await tx.queryOne(
+          "SELECT COUNT(*) as count FROM curated_news WHERE article_id = ? AND type = 'handpicked'",
+          [existing.article_id]
+        );
+        if (!remaining || Number(remaining.count) === 0) {
+          await tx.query("UPDATE articles SET is_handpicked = 0 WHERE id = ?", [existing.article_id]);
+        }
+      } else if (existing.type === "breaking") {
+        const remaining = await tx.queryOne(
+          "SELECT COUNT(*) as count FROM curated_news WHERE article_id = ? AND type = 'breaking'",
+          [existing.article_id]
+        );
+        if (!remaining || Number(remaining.count) === 0) {
+          await tx.query("UPDATE articles SET is_breaking = 0 WHERE id = ?", [existing.article_id]);
+        }
       }
     }
-  }
 
-  return { id };
+    return { id };
+  });
 }
 
 export async function toggleCuratedNews(id, currentActive) {
-  const db = await getDb();
   const newActive = currentActive ? 0 : 1;
-  await db
-    .prepare("UPDATE curated_news SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-    .bind(newActive, id)
-    .run();
 
-  const item = await db.prepare("SELECT * FROM curated_news WHERE id = ?").bind(id).first();
-  if (item?.article_id) {
-    if (item.type === "handpicked") {
-      await db.prepare("UPDATE articles SET is_handpicked = ? WHERE id = ?").bind(newActive, item.article_id).run();
-    } else if (item.type === "breaking") {
-      await db.prepare("UPDATE articles SET is_breaking = ? WHERE id = ?").bind(newActive, item.article_id).run();
+  return await withTransaction(async (tx) => {
+    await tx.query(
+      "UPDATE curated_news SET is_active = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [newActive, id]
+    );
+
+    const item = await tx.queryOne("SELECT * FROM curated_news WHERE id = ?", [id]);
+    if (item?.article_id) {
+      if (item.type === "handpicked") {
+        await tx.query("UPDATE articles SET is_handpicked = ? WHERE id = ?", [newActive, item.article_id]);
+      } else if (item.type === "breaking") {
+        await tx.query("UPDATE articles SET is_breaking = ? WHERE id = ?", [newActive, item.article_id]);
+      }
     }
-  }
 
-  return { id, is_active: newActive };
+    return { id, is_active: newActive };
+  });
 }
 
 /**
@@ -129,107 +129,105 @@ export async function toggleCuratedNews(id, currentActive) {
  */
 export async function updateCuratedNewsPriorities(orderedIds = []) {
   if (!Array.isArray(orderedIds) || orderedIds.length === 0) return;
-  const db = await getDb();
 
-  for (let i = 0; i < orderedIds.length; i++) {
-    const id = orderedIds[i];
-    // Index 0 gets highest priority
-    const priority = (orderedIds.length - i) * 10;
-    await db
-      .prepare("UPDATE curated_news SET priority = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?")
-      .bind(priority, id)
-      .run();
-  }
+  return await withTransaction(async (tx) => {
+    for (let i = 0; i < orderedIds.length; i++) {
+      const id = orderedIds[i];
+      const priority = (orderedIds.length - i) * 10;
+      await tx.query(
+        "UPDATE curated_news SET priority = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+        [priority, id]
+      );
+    }
+  });
 }
 
 /**
  * Saves a full batch of curated items for a type (handpicked or breaking).
  * Updates priority based on array order, persists active states,
- * and synchronizes article flags.
+ * and synchronizes article flags within a single atomic transaction.
  */
 export async function saveCuratedNewsBatch(type, items = []) {
   if (!type) throw new Error("কিউরেশন ধরন আবশ্যক।");
-  const db = await getDb();
 
-  // 1. Get existing curated article IDs for this type
-  const { results: existingRows } = await db
-    .prepare("SELECT article_id FROM curated_news WHERE type = ? AND article_id IS NOT NULL")
-    .bind(type)
-    .all();
-  const previousArticleIds = new Set((existingRows || []).map((r) => r.article_id).filter(Boolean));
+  return await withTransaction(async (tx) => {
+    // 1. Get existing curated article IDs for this type
+    const existingRows = await tx.query(
+      "SELECT article_id FROM curated_news WHERE type = ? AND article_id IS NOT NULL",
+      [type]
+    );
+    const previousArticleIds = new Set((existingRows || []).map((r) => r.article_id).filter(Boolean));
 
-  // 2. Clear current curated_news entries for this type
-  await db.prepare("DELETE FROM curated_news WHERE type = ?").bind(type).run();
+    // 2. Clear current curated_news entries for this type
+    await tx.query("DELETE FROM curated_news WHERE type = ?", [type]);
 
-  // 3. Insert the new batch of items in order with priority = (items.length - i) * 10
-  const activeArticleIds = new Set();
-  const insertedArticleIds = new Set();
-  for (let i = 0; i < items.length; i++) {
-    const item = items[i];
-    const articleId = item.article_id || null;
-    if (articleId) {
-      if (insertedArticleIds.has(articleId)) continue;
-      insertedArticleIds.add(articleId);
-    }
-    const id = item.id && !String(item.id).startsWith("temp_")
-      ? String(item.id)
-      : `cur_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
-    const priority = (items.length - i) * 10;
-    const isActive = item.is_active === 0 ? 0 : 1;
-    const customTitle = item.custom_title || null;
-    const customUrl = item.custom_url || null;
+    // 3. Insert the new batch of items in order with priority = (items.length - i) * 10
+    const activeArticleIds = new Set();
+    const insertedArticleIds = new Set();
 
-    await db
-      .prepare(
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const articleId = item.article_id || null;
+      if (articleId) {
+        if (insertedArticleIds.has(articleId)) continue;
+        insertedArticleIds.add(articleId);
+      }
+      const id = item.id && !String(item.id).startsWith("temp_")
+        ? String(item.id)
+        : `cur_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+      const priority = (items.length - i) * 10;
+      const isActive = item.is_active === 0 ? 0 : 1;
+      const customTitle = item.custom_title || null;
+      const customUrl = item.custom_url || null;
+
+      await tx.query(
         `INSERT INTO curated_news (id, type, article_id, custom_title, custom_url, priority, is_active, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`
-      )
-      .bind(id, type, articleId, customTitle, customUrl, priority, isActive)
-      .run();
+         VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        [id, type, articleId, customTitle, customUrl, priority, isActive]
+      );
 
-    if (articleId && isActive === 1) {
-      activeArticleIds.add(articleId);
+      if (articleId && isActive === 1) {
+        activeArticleIds.add(articleId);
+      }
     }
-  }
 
-  // 4. Synchronize article table flags (is_handpicked or is_breaking)
-  const allAffected = new Set([...previousArticleIds, ...activeArticleIds]);
-  const flagColumn = type === "handpicked" ? "is_handpicked" : (type === "breaking" ? "is_breaking" : null);
+    // 4. Synchronize article table flags (is_handpicked or is_breaking)
+    const allAffected = new Set([...previousArticleIds, ...activeArticleIds]);
+    const flagColumn = type === "handpicked" ? "is_handpicked" : (type === "breaking" ? "is_breaking" : null);
 
-  if (flagColumn && allAffected.size > 0) {
-    for (const artId of allAffected) {
-      const flagVal = activeArticleIds.has(artId) ? 1 : 0;
-      await db
-        .prepare(`UPDATE articles SET ${flagColumn} = ? WHERE id = ?`)
-        .bind(flagVal, artId)
-        .run();
+    if (flagColumn && allAffected.size > 0) {
+      for (const artId of allAffected) {
+        const flagVal = activeArticleIds.has(artId) ? 1 : 0;
+        await tx.query(
+          `UPDATE articles SET ${flagColumn} = ? WHERE id = ?`,
+          [flagVal, artId]
+        );
+      }
     }
-  }
 
-  return { success: true, count: items.length };
+    return { success: true, count: items.length };
+  });
 }
 
 /**
  * Returns active handpicked news for public homepage & handpicked category showcase
  */
 export async function getActiveHandpickedArticles(limit = 4) {
-  const db = await getDb();
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 4), 50);
 
   // 1. Fetch active handpicked items from curated_news join articles
-  const { results: curatedRows } = await db
-    .prepare(
-      `SELECT c.id as curation_id, c.custom_title, c.custom_url, c.priority, c.article_id,
-              a.*
-       FROM curated_news c
-       LEFT JOIN articles a ON c.article_id = a.id
-       WHERE c.type = 'handpicked' 
-         AND c.is_active = 1 
-         AND (a.status = 'published' OR c.article_id IS NULL)
-       ORDER BY c.priority DESC, c.created_at DESC
-       LIMIT ?`
-    )
-    .bind(limit)
-    .all();
+  const curatedRows = await query(
+    `SELECT c.id as curation_id, c.custom_title, c.custom_url, c.priority, c.article_id,
+            a.*
+     FROM curated_news c
+     LEFT JOIN articles a ON c.article_id = a.id
+     WHERE c.type = 'handpicked' 
+       AND c.is_active = 1 
+       AND (a.status = 'published' OR c.article_id IS NULL)
+     ORDER BY c.priority DESC, c.created_at DESC
+     LIMIT ?`,
+    [safeLimit]
+  );
 
   const curatedArticles = (curatedRows || []).map((row) => {
     if (row.id && row.status) {
@@ -261,22 +259,20 @@ export async function getActiveHandpickedArticles(limit = 4) {
   });
 
   // 2. Also check if articles have is_handpicked = 1 that aren't already included
-  if (curatedArticles.length < limit) {
-    const needed = limit - curatedArticles.length;
+  if (curatedArticles.length < safeLimit) {
+    const needed = safeLimit - curatedArticles.length;
     const existingIds = new Set(curatedArticles.map((a) => a.dbId || a.id));
 
-    const { results: directRows } = await db
-      .prepare(
-        `SELECT * FROM articles 
-         WHERE status = 'published' AND is_handpicked = 1 
-         ORDER BY created_at DESC 
-         LIMIT ?`
-      )
-      .bind(needed + 5)
-      .all();
+    const directRows = await query(
+      `SELECT * FROM articles 
+       WHERE status = 'published' AND is_handpicked = 1 
+       ORDER BY created_at DESC 
+       LIMIT ?`,
+      [needed + 5]
+    );
 
     (directRows || []).forEach((row) => {
-      if (curatedArticles.length < limit && !existingIds.has(row.id)) {
+      if (curatedArticles.length < safeLimit && !existingIds.has(row.id)) {
         existingIds.add(row.id);
         const mapped = mapDbArticleToFrontend(row);
         curatedArticles.push({ ...mapped, isHandpicked: true });
@@ -286,37 +282,35 @@ export async function getActiveHandpickedArticles(limit = 4) {
 
   // 3. Fallback: if database has fewer than limit handpicked articles,
   // supplement from static handpickedNewsList so the homepage grid layout doesn't break
-  if (curatedArticles.length < limit) {
+  if (curatedArticles.length < safeLimit) {
     const existingTitles = new Set(curatedArticles.map((a) => a.headline));
-    const needed = limit - curatedArticles.length;
+    const needed = safeLimit - curatedArticles.length;
     const fallback = handpickedNewsList
       .filter((item) => !existingTitles.has(item.headline))
       .slice(0, needed);
     curatedArticles.push(...fallback);
   }
 
-  return curatedArticles.slice(0, limit);
+  return curatedArticles.slice(0, safeLimit);
 }
 
 /**
  * Returns active breaking news for public header ticker, synced with database
  */
 export async function getActiveBreakingNews(limit = 10) {
-  const db = await getDb();
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 10), 50);
 
   // 1. Fetch active breaking items from curated_news
-  const { results: curatedRows } = await db
-    .prepare(
-      `SELECT c.id, c.custom_title, c.custom_url, c.priority, c.article_id,
-              a.headline as article_headline, a.slug as article_slug
-       FROM curated_news c
-       LEFT JOIN articles a ON c.article_id = a.id
-       WHERE c.type = 'breaking' AND c.is_active = 1
-       ORDER BY c.priority DESC, c.created_at DESC
-       LIMIT ?`
-    )
-    .bind(limit)
-    .all();
+  const curatedRows = await query(
+    `SELECT c.id, c.custom_title, c.custom_url, c.priority, c.article_id,
+            a.headline as article_headline, a.slug as article_slug
+     FROM curated_news c
+     LEFT JOIN articles a ON c.article_id = a.id
+     WHERE c.type = 'breaking' AND c.is_active = 1
+     ORDER BY c.priority DESC, c.created_at DESC
+     LIMIT ?`,
+    [safeLimit]
+  );
 
   const breakingItems = (curatedRows || []).map((row) => ({
     id: row.id,
@@ -326,22 +320,20 @@ export async function getActiveBreakingNews(limit = 10) {
   }));
 
   // 2. Also check published articles where is_breaking = 1 that aren't already included
-  if (breakingItems.length < limit) {
+  if (breakingItems.length < safeLimit) {
     const existingArticleIds = new Set(breakingItems.map((b) => b.articleId).filter(Boolean));
-    const needed = limit - breakingItems.length;
+    const needed = safeLimit - breakingItems.length;
 
-    const { results: directRows } = await db
-      .prepare(
-        `SELECT id, headline, slug FROM articles
-         WHERE status = 'published' AND is_breaking = 1
-         ORDER BY created_at DESC
-         LIMIT ?`
-      )
-      .bind(needed + 5)
-      .all();
+    const directRows = await query(
+      `SELECT id, headline, slug FROM articles
+       WHERE status = 'published' AND is_breaking = 1
+       ORDER BY created_at DESC 
+       LIMIT ?`,
+      [needed + 5]
+    );
 
     (directRows || []).forEach((art) => {
-      if (breakingItems.length < limit && !existingArticleIds.has(art.id)) {
+      if (breakingItems.length < safeLimit && !existingArticleIds.has(art.id)) {
         existingArticleIds.add(art.id);
         breakingItems.push({
           id: `art_${art.id}`,
@@ -357,5 +349,5 @@ export async function getActiveBreakingNews(limit = 10) {
     return fallbackBreakingNews;
   }
 
-  return breakingItems.slice(0, limit);
+  return breakingItems.slice(0, safeLimit);
 }

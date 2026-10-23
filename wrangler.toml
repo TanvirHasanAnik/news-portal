@@ -7,6 +7,14 @@ compatibility_flags = ["nodejs_compat"]
 directory = ".open-next/assets"
 binding = "ASSETS"
 
+# MySQL / TiDB Environment Variables
+[vars]
+DB_HOST = "127.0.0.1"
+DB_PORT = "3307"
+DB_USER = "root"
+DB_PASSWORD = "123456"
+DB_NAME = "newsportal_db"
+
 # Cloudflare D1 Database binding
 # For local dev / preview via wrangler, any database_id works.
 # For remote production, create with: npx wrangler d1 create news-portal-db

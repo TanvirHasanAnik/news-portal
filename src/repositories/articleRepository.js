@@ -1,279 +1,32 @@
-import { getDb } from "@/lib/db";
+import { getDb, query, queryOne, withTransaction } from "@/lib/db";
 
 /**
  * Article Repository
- * Direct Cloudflare D1 / SQLite database queries using raw D1 statements.
+ * Raw MySQL (mysql2/promise) data layer designed for Cloudflare Workers (workerd) & TiDB.
+ *
+ * Guardrails:
+ * 1. Zero SQL Injection: Strict parameterization for all dynamic arguments.
+ * 2. UTF-8 (utf8mb4) & Timezone (UTC) compliance.
+ * 3. Prepared Statement Safety: No unparameterized concatenations.
+ * 4. TiDB RU optimization: Compound indexed lookups, covered scans, and structured pagination.
+ * 5. Robust Transactions: Multi-step mutations execute within atomic transaction blocks.
  */
 
-export async function createArticle(data) {
-  const db = await getDb();
-  const id = data.id || `art_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const slug = data.slug || `${Date.now()}`;
-  const publishedAt = data.status === "published" ? new Date().toISOString() : null;
-
-  const insertSql = `
-    INSERT INTO articles (
-      id, headline, slug, summary, content,
-      category_id, category_name, category_slug,
-      subcategory_id, subcategory_name,
-      images, image, youtube_url,
-      author_id, author_name, location, read_time,
-      status, is_breaking, is_lead, is_handpicked,
-      view_count, published_at, created_at, updated_at
-    ) VALUES (
-      ?, ?, ?, ?, ?,
-      ?, ?, ?,
-      ?, ?,
-      ?, ?, ?,
-      ?, ?, ?, ?,
-      ?, ?, ?, ?,
-      0, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-    )
-  `;
-
-  // Parse images: ensure array format and maximum 3 images
-  let imagesJson = null;
-  let primaryImage = data.image || null;
-
-  if (Array.isArray(data.images)) {
-    const sliced = data.images.slice(0, 3);
-    imagesJson = JSON.stringify(sliced);
-    primaryImage = primaryImage || sliced[0] || null;
-  } else if (typeof data.images === "string" && data.images.trim()) {
-    try {
-      const parsed = JSON.parse(data.images);
-      if (Array.isArray(parsed)) {
-        const sliced = parsed.slice(0, 3);
-        imagesJson = JSON.stringify(sliced);
-        primaryImage = primaryImage || sliced[0] || null;
-      } else {
-        imagesJson = JSON.stringify([data.images]);
-        primaryImage = primaryImage || data.images;
-      }
-    } catch {
-      imagesJson = JSON.stringify([data.images]);
-      primaryImage = primaryImage || data.images;
-    }
-  } else if (primaryImage) {
-    imagesJson = JSON.stringify([primaryImage]);
-  }
-
-  const bindParams = [
-    id,
-    data.headline,
-    slug,
-    data.summary || "",
-    data.content || "",
-    data.categoryId || null,
-    data.categoryName || "",
-    data.categorySlug || "",
-    data.subcategoryId || null,
-    data.subcategoryName || null,
-    imagesJson,
-    primaryImage,
-    data.youtubeUrl || null,
-    data.authorId || "usr_reporter",
-    data.authorName || "নিজস্ব প্রতিবেদক",
-    data.location || "ঢাকা",
-    data.readTime || "৩ মিনিট পাঠ",
-    data.status || "published",
-    data.isBreaking ? 1 : 0,
-    data.isLead ? 1 : 0,
-    data.isHandpicked ? 1 : 0,
-    publishedAt,
-  ];
-
-  try {
-    await db.prepare(insertSql).bind(...bindParams).run();
-  } catch (err) {
-    if (err?.message?.includes("no column named images")) {
-      // Self-heal: automatically add the missing 'images' column to Cloudflare D1
-      try {
-        await db.prepare("ALTER TABLE articles ADD COLUMN images TEXT").run();
-        await db.prepare(insertSql).bind(...bindParams).run();
-      } catch (_retryErr) {
-        // Fallback: insert without 'images' column, saving primary image into 'image'
-        const fallbackSql = `
-          INSERT INTO articles (
-            id, headline, slug, summary, content,
-            category_id, category_name, category_slug,
-            subcategory_id, subcategory_name,
-            image, youtube_url,
-            author_id, author_name, location, read_time,
-            status, is_breaking, is_lead, is_handpicked,
-            view_count, published_at, created_at, updated_at
-          ) VALUES (
-            ?, ?, ?, ?, ?,
-            ?, ?, ?,
-            ?, ?,
-            ?, ?,
-            ?, ?, ?, ?,
-            ?, ?, ?, ?,
-            0, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
-          )
-        `;
-        await db.prepare(fallbackSql).bind(
-          id,
-          data.headline,
-          slug,
-          data.summary || "",
-          data.content || "",
-          data.categoryId || null,
-          data.categoryName || "",
-          data.categorySlug || "",
-          data.subcategoryId || null,
-          data.subcategoryName || null,
-          primaryImage,
-          data.youtubeUrl || null,
-          data.authorId || "usr_reporter",
-          data.authorName || "নিজস্ব প্রতিবেদক",
-          data.location || "ঢাকা",
-          data.readTime || "৩ মিনিট পাঠ",
-          data.status || "published",
-          data.isBreaking ? 1 : 0,
-          data.isLead ? 1 : 0,
-          data.isHandpicked ? 1 : 0,
-          publishedAt
-        ).run();
-      }
-    } else {
-      throw err;
-    }
-  }
-
-  // Create initial revision entry in article_revisions
-  try {
-    await db.prepare(`
-      INSERT INTO article_revisions (id, article_id, editor_id, headline, summary, content, change_summary)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).bind(
-      `rev_${Date.now()}`,
-      id,
-      data.authorId || "usr_reporter",
-      data.headline,
-      data.summary || "",
-      data.content || "",
-      "Initial publication / creation"
-    ).run();
-  } catch (_e) {
-    // Non-critical revision logging
-  }
-
-  // Record audit log
-  try {
-    await db.prepare(`
-      INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).bind(
-      `log_${Date.now()}`,
-      data.authorId || "usr_reporter",
-      "create_article",
-      "article",
-      id,
-      JSON.stringify({ headline: data.headline, status: data.status, category: data.categoryName })
-    ).run();
-  } catch (_e) {
-    // Non-critical audit logging
-  }
-
-  return { id, slug };
-}
-
-export async function getArticleById(id) {
-  const db = await getDb();
-  return await db.prepare("SELECT * FROM articles WHERE id = ?").bind(id).first();
-}
-
-export async function getArticleBySlug(slug) {
-  const db = await getDb();
-  return await db.prepare("SELECT * FROM articles WHERE slug = ?").bind(slug).first();
-}
-
 /**
- * Robust article lookup supporting both raw and URL-decoded slugs and IDs
- */
-export async function findArticleBySlugOrId(identifier) {
-  if (!identifier) return null;
-  const db = await getDb();
-  const raw = String(identifier).trim();
-  let decoded = raw;
-  try {
-    decoded = decodeURIComponent(raw);
-  } catch {
-    decoded = raw;
-  }
-
-  // 1. Try slug by decoded and raw
-  let row = await db.prepare("SELECT * FROM articles WHERE slug = ?").bind(decoded).first();
-  if (row) return row;
-
-  if (decoded !== raw) {
-    row = await db.prepare("SELECT * FROM articles WHERE slug = ?").bind(raw).first();
-    if (row) return row;
-  }
-
-  // 2. Try id by raw and decoded
-  row = await db.prepare("SELECT * FROM articles WHERE id = ?").bind(raw).first();
-  if (row) return row;
-
-  if (decoded !== raw) {
-    row = await db.prepare("SELECT * FROM articles WHERE id = ?").bind(decoded).first();
-    if (row) return row;
-  }
-
-  return null;
-}
-
-/**
- * Fetch published articles ordered newest first
- */
-export async function getPublishedArticles({ categorySlug, limit = 20, offset = 0 } = {}) {
-  const db = await getDb();
-
-  // 1. Permanent Category 'handpicked': Query articles marked as handpicked
-  if (categorySlug === "handpicked") {
-    const { results } = await db
-      .prepare(
-        "SELECT * FROM articles WHERE status = 'published' AND is_handpicked = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?"
-      )
-      .bind(limit, offset)
-      .all();
-    return results || [];
-  }
-
-  // 2. Permanent Category 'latest' or 'all': Query all latest published articles across all categories
-  if (!categorySlug || categorySlug === "all" || categorySlug === "latest") {
-    const { results } = await db
-      .prepare(
-        "SELECT * FROM articles WHERE status = 'published' ORDER BY created_at DESC LIMIT ? OFFSET ?"
-      )
-      .bind(limit, offset)
-      .all();
-    return results || [];
-  }
-
-  // 3. Dynamic Category (e.g. 'national', 'politics', 'sports', etc.)
-  const { results } = await db
-    .prepare(
-      "SELECT * FROM articles WHERE status = 'published' AND category_slug = ? ORDER BY created_at DESC LIMIT ? OFFSET ?"
-    )
-    .bind(categorySlug, limit, offset)
-    .all();
-  return results || [];
-}
-
-/**
- * Normalizes SQLite timestamp to valid ISO string for consistent sorting and parsing
+ * Normalizes SQL timestamp/date to valid UTC ISO string for consistent parsing and frontend rendering
  */
 function normalizeTimestamp(ts) {
   if (!ts) return new Date().toISOString();
-  if (typeof ts !== "string") return new Date(ts).toISOString();
-  if (ts.includes("T")) return ts;
-  return ts.replace(" ", "T") + "Z";
+  if (ts instanceof Date) return ts.toISOString();
+  const str = String(ts).trim();
+  if (str.includes("T")) {
+    return str.endsWith("Z") ? str : `${str}Z`;
+  }
+  return str.replace(" ", "T") + "Z";
 }
 
 /**
- * Maps a database row from SQLite / D1 to the standard frontend article schema
+ * Maps a database row from MySQL/TiDB to the standard frontend article schema
  */
 export function mapDbArticleToFrontend(dbRow) {
   if (!dbRow) return null;
@@ -320,7 +73,7 @@ export function mapDbArticleToFrontend(dbRow) {
     location: dbRow.location || "ঢাকা",
     time: isoTime,
     publishedAt: isoTime,
-    createdAt: dbRow.created_at,
+    createdAt: normalizeTimestamp(dbRow.created_at),
     hasCustomImage: Boolean(primaryImage),
     status: dbRow.status || "published",
     isLead: Boolean(dbRow.is_lead),
@@ -329,77 +82,275 @@ export function mapDbArticleToFrontend(dbRow) {
   };
 }
 
+/**
+ * Creates an article with atomic revision history and audit logging inside a transaction
+ */
+export async function createArticle(data) {
+  const id = data.id || `art_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const slug = data.slug || `${Date.now()}`;
+  const isPublished = data.status === "published";
+  const publishedAt = isPublished ? new Date() : null;
+
+  // Parse images: ensure array format and maximum 3 images
+  let imagesJson = null;
+  let primaryImage = data.image || null;
+
+  if (Array.isArray(data.images)) {
+    const sliced = data.images.slice(0, 3);
+    imagesJson = JSON.stringify(sliced);
+    primaryImage = primaryImage || sliced[0] || null;
+  } else if (typeof data.images === "string" && data.images.trim()) {
+    try {
+      const parsed = JSON.parse(data.images);
+      if (Array.isArray(parsed)) {
+        const sliced = parsed.slice(0, 3);
+        imagesJson = JSON.stringify(sliced);
+        primaryImage = primaryImage || sliced[0] || null;
+      } else {
+        imagesJson = JSON.stringify([data.images]);
+        primaryImage = primaryImage || data.images;
+      }
+    } catch {
+      imagesJson = JSON.stringify([data.images]);
+      primaryImage = primaryImage || data.images;
+    }
+  } else if (primaryImage) {
+    imagesJson = JSON.stringify([primaryImage]);
+  }
+
+  const insertSql = `
+    INSERT INTO articles (
+      id, headline, slug, summary, content,
+      category_id, category_name, category_slug,
+      subcategory_id, subcategory_name,
+      images, image, youtube_url,
+      author_id, author_name, location, read_time,
+      status, is_breaking, is_lead, is_handpicked,
+      view_count, published_at, created_at, updated_at
+    ) VALUES (
+      ?, ?, ?, ?, ?,
+      ?, ?, ?,
+      ?, ?,
+      ?, ?, ?,
+      ?, ?, ?, ?,
+      ?, ?, ?, ?,
+      0, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    )
+  `;
+
+  const bindParams = [
+    id,
+    data.headline,
+    slug,
+    data.summary || "",
+    data.content || "",
+    data.categoryId || null,
+    data.categoryName || "",
+    data.categorySlug || "",
+    data.subcategoryId || null,
+    data.subcategoryName || null,
+    imagesJson,
+    primaryImage,
+    data.youtubeUrl || null,
+    data.authorId || "usr_reporter",
+    data.authorName || "নিজস্ব প্রতিবেদক",
+    data.location || "ঢাকা",
+    data.readTime || "৩ মিনিট পাঠ",
+    data.status || "published",
+    data.isBreaking ? 1 : 0,
+    data.isLead ? 1 : 0,
+    data.isHandpicked ? 1 : 0,
+    publishedAt,
+  ];
+
+  await withTransaction(async (tx) => {
+    // 1. Insert article
+    await tx.query(insertSql, bindParams);
+
+    // 2. Insert revision log
+    await tx.query(
+      `INSERT INTO article_revisions (id, article_id, editor_id, headline, summary, content, change_summary, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [
+        `rev_${Date.now()}`,
+        id,
+        data.authorId || "usr_reporter",
+        data.headline,
+        data.summary || "",
+        data.content || "",
+        "Initial publication / creation",
+      ]
+    );
+
+    // 3. Record audit log
+    await tx.query(
+      `INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [
+        `log_${Date.now()}`,
+        data.authorId || "usr_reporter",
+        "create_article",
+        "article",
+        id,
+        JSON.stringify({ headline: data.headline, status: data.status, category: data.categoryName }),
+      ]
+    );
+  });
+
+  return { id, slug };
+}
+
+export async function getArticleById(id) {
+  return await queryOne("SELECT * FROM articles WHERE id = ?", [id]);
+}
+
+export async function getArticleBySlug(slug) {
+  return await queryOne("SELECT * FROM articles WHERE slug = ?", [slug]);
+}
+
+/**
+ * Robust article lookup supporting both raw and URL-decoded slugs and IDs
+ */
+export async function findArticleBySlugOrId(identifier) {
+  if (!identifier) return null;
+  const raw = String(identifier).trim();
+  let decoded = raw;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    decoded = raw;
+  }
+
+  // 1. Try slug by decoded and raw
+  let row = await queryOne("SELECT * FROM articles WHERE slug = ?", [decoded]);
+  if (row) return row;
+
+  if (decoded !== raw) {
+    row = await queryOne("SELECT * FROM articles WHERE slug = ?", [raw]);
+    if (row) return row;
+  }
+
+  // 2. Try id by raw and decoded
+  row = await queryOne("SELECT * FROM articles WHERE id = ?", [raw]);
+  if (row) return row;
+
+  if (decoded !== raw) {
+    row = await queryOne("SELECT * FROM articles WHERE id = ?", [decoded]);
+    if (row) return row;
+  }
+
+  return null;
+}
+
+/**
+ * Fetch published articles ordered newest first with parameterized pagination.
+ * Reduces TiDB Request Units (RU) by utilizing covered composite indexes (status, category_slug, created_at).
+ */
+export async function getPublishedArticles({ categorySlug, limit = 20, offset = 0 } = {}) {
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 100);
+  const safeOffset = Math.max(0, Number(offset) || 0);
+
+  // 1. Permanent Category 'handpicked': Query articles marked as handpicked
+  if (categorySlug === "handpicked") {
+    const rows = await query(
+      "SELECT * FROM articles WHERE status = 'published' AND is_handpicked = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
+      [safeLimit, safeOffset]
+    );
+    return rows || [];
+  }
+
+  // 2. Permanent Category 'latest' or 'all': Query all latest published articles across all categories
+  if (!categorySlug || categorySlug === "all" || categorySlug === "latest") {
+    const rows = await query(
+      "SELECT * FROM articles WHERE status = 'published' ORDER BY created_at DESC LIMIT ? OFFSET ?",
+      [safeLimit, safeOffset]
+    );
+    return rows || [];
+  }
+
+  // 3. Dynamic Category (e.g. 'national', 'politics', 'sports', etc.)
+  const rows = await query(
+    "SELECT * FROM articles WHERE status = 'published' AND category_slug = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+    [categorySlug, safeLimit, safeOffset]
+  );
+  return rows || [];
+}
+
 export async function getRecentArticles(limit = 10) {
-  const db = await getDb();
-  const { results } = await db
-    .prepare("SELECT * FROM articles ORDER BY created_at DESC LIMIT ?")
-    .bind(limit)
-    .all();
-  return results || [];
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 10), 100);
+  const rows = await query(
+    "SELECT * FROM articles ORDER BY created_at DESC LIMIT ?",
+    [safeLimit]
+  );
+  return rows || [];
 }
 
 export async function getAllArticles({ status, limit = 20, offset = 0 } = {}) {
-  const db = await getDb();
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 100);
+  const safeOffset = Math.max(0, Number(offset) || 0);
+
   if (status) {
-    const { results } = await db
-      .prepare("SELECT * FROM articles WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?")
-      .bind(status, limit, offset)
-      .all();
-    return results || [];
+    const rows = await query(
+      "SELECT * FROM articles WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+      [status, safeLimit, safeOffset]
+    );
+    return rows || [];
   }
-  const { results } = await db
-    .prepare("SELECT * FROM articles ORDER BY created_at DESC LIMIT ? OFFSET ?")
-    .bind(limit, offset)
-    .all();
-  return results || [];
+
+  const rows = await query(
+    "SELECT * FROM articles ORDER BY created_at DESC LIMIT ? OFFSET ?",
+    [safeLimit, safeOffset]
+  );
+  return rows || [];
 }
 
 export async function deleteArticle(id) {
-  const db = await getDb();
-  return await db.prepare("DELETE FROM articles WHERE id = ?").bind(id).run();
+  return await withTransaction(async (tx) => {
+    // Cascade-delete dependent revisions and curated references
+    await tx.query("DELETE FROM article_revisions WHERE article_id = ?", [id]);
+    await tx.query("DELETE FROM curated_news WHERE article_id = ?", [id]);
+    await tx.query("DELETE FROM analytics_page_views WHERE article_id = ?", [id]);
+    return await tx.query("DELETE FROM articles WHERE id = ?", [id]);
+  });
 }
 
 /**
  * Updates an article's publishing status (e.g. published, draft, pending_approval, archived)
  */
 export async function updateArticleStatus(id, status, editorId = "usr_superadmin") {
-  const db = await getDb();
-  const publishedAt = status === "published" ? new Date().toISOString() : null;
+  const publishedAt = status === "published" ? new Date() : null;
 
-  const result = await db
-    .prepare(
+  return await withTransaction(async (tx) => {
+    const result = await tx.query(
       `UPDATE articles 
        SET status = ?, 
            published_at = COALESCE(published_at, ?), 
            updated_at = CURRENT_TIMESTAMP 
-       WHERE id = ?`
-    )
-    .bind(status, publishedAt, id)
-    .run();
+       WHERE id = ?`,
+      [status, publishedAt, id]
+    );
 
-  // Log to audit log
-  try {
-    await db.prepare(
-      `INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(
-      `log_${Date.now()}`,
-      editorId,
-      "update_status",
-      "article",
-      id,
-      JSON.stringify({ status })
-    ).run();
-  } catch (_e) {}
+    await tx.query(
+      `INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [
+        `log_${Date.now()}`,
+        editorId,
+        "update_status",
+        "article",
+        id,
+        JSON.stringify({ status }),
+      ]
+    );
 
-  return result;
+    return result;
+  });
 }
 
 /**
  * Toggles a boolean flag on an article (is_breaking, is_lead, is_handpicked)
  */
 export async function toggleArticleFlag(id, flagName) {
-  const db = await getDb();
   const allowedFlags = ["is_breaking", "is_lead", "is_handpicked"];
   if (!allowedFlags.includes(flagName)) {
     throw new Error(`Invalid flag: ${flagName}`);
@@ -411,10 +362,10 @@ export async function toggleArticleFlag(id, flagName) {
   const currentVal = article[flagName] ? 1 : 0;
   const newVal = currentVal === 1 ? 0 : 1;
 
-  await db
-    .prepare(`UPDATE articles SET ${flagName} = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
-    .bind(newVal, id)
-    .run();
+  await query(
+    `UPDATE articles SET ${flagName} = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+    [newVal, id]
+  );
 
   return { [flagName]: newVal === 1 };
 }
@@ -423,28 +374,24 @@ export async function toggleArticleFlag(id, flagName) {
  * Fetch revisions / content history for a given article
  */
 export async function getArticleRevisions(articleId) {
-  const db = await getDb();
-  const { results } = await db
-    .prepare(
-      `SELECT r.*, u.name as editor_name 
-       FROM article_revisions r 
-       LEFT JOIN users u ON r.editor_id = u.id 
-       WHERE r.article_id = ? 
-       ORDER BY r.created_at DESC`
-    )
-    .bind(articleId)
-    .all();
-  return results || [];
+  const rows = await query(
+    `SELECT r.*, u.name as editor_name 
+     FROM article_revisions r 
+     LEFT JOIN users u ON r.editor_id = u.id 
+     WHERE r.article_id = ? 
+     ORDER BY r.created_at DESC`,
+    [articleId]
+  );
+  return rows || [];
 }
 
 /**
  * Return counts of articles grouped by their status
  */
 export async function getArticleStatusCounts() {
-  const db = await getDb();
-  const { results } = await db
-    .prepare("SELECT status, COUNT(*) as count FROM articles GROUP BY status")
-    .all();
+  const rows = await query(
+    "SELECT status, COUNT(*) as count FROM articles GROUP BY status"
+  );
 
   const counts = {
     all: 0,
@@ -454,11 +401,12 @@ export async function getArticleStatusCounts() {
     archived: 0,
   };
 
-  (results || []).forEach((row) => {
+  (rows || []).forEach((row) => {
+    const num = Number(row.count) || 0;
     if (counts[row.status] !== undefined) {
-      counts[row.status] = row.count;
+      counts[row.status] = num;
     }
-    counts.all += row.count;
+    counts.all += num;
   });
 
   return counts;
@@ -469,66 +417,66 @@ export async function getArticleStatusCounts() {
  *
  * 1. Individual News 7-Day Validity:
  *    - Each news article is considered fresh/valid for 7 days from its published date:
- *      datetime(published_at, '+7 days') >= datetime('now').
- *    - Active 7-day news are prioritized and ranked primarily by their views during that 7-day window.
+ *      COALESCE(a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY).
+ *    - Active 7-day news are prioritized and ranked primarily by views during that 7-day window.
  *
  * 2. Latest News as Fillers:
- *    - If there are fewer than `limit` articles within their 7-day validity (or if all news are older),
- *      the database's latest published news (even if out of 7-day validity) are kept as fillers,
- *      sorted from latest to oldest (created_at DESC) up to `limit` items.
+ *    - If there are fewer than `limit` articles within 7-day validity, latest published news
+ *      are retained as fillers, sorted newest to oldest up to `limit` items.
  *
  * 3. Authentic Database Only:
- *    - Strictly queries from the database (no synthetic mock fillers).
- *    - Reused in both Admin TopArticlesTable and public frontend MostReadSection.
+ *    - Replaces SQLite datetime() with standard MySQL DATE_SUB(NOW(), INTERVAL 7 DAY).
+ *    - Uses MySQL scalar GREATEST() for row-level maximum between direct views and logged views.
  */
 export async function getMostReadArticles(limit = 10) {
-  const db = await getDb();
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 10), 50);
   let dbRows = [];
 
   try {
-    const query = `
+    const sql = `
       SELECT a.*,
              CASE 
-               WHEN datetime(COALESCE(a.published_at, a.created_at), '+7 days') >= datetime('now') THEN 1 
+               WHEN COALESCE(a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 
                ELSE 0 
              END as is_within_validity_week,
              (
                SELECT COUNT(*)
                FROM analytics_page_views v
                WHERE v.article_id = a.id
-                 AND v.created_at <= datetime(COALESCE(a.published_at, a.created_at), '+7 days')
+                 AND v.created_at <= DATE_ADD(COALESCE(a.published_at, a.created_at), INTERVAL 7 DAY)
              ) as individual_logged_views
       FROM articles a
       WHERE a.status = 'published'
       ORDER BY 
         is_within_validity_week DESC,
         CASE 
-          WHEN datetime(COALESCE(a.published_at, a.created_at), '+7 days') >= datetime('now') THEN 
-            MAX(COALESCE(a.view_count, 0), (
-              SELECT COUNT(*) 
-              FROM analytics_page_views v 
-              WHERE v.article_id = a.id 
-                AND v.created_at <= datetime(COALESCE(a.published_at, a.created_at), '+7 days')
-            ))
+          WHEN COALESCE(a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 
+            GREATEST(
+              COALESCE(a.view_count, 0),
+              (
+                SELECT COUNT(*) 
+                FROM analytics_page_views v 
+                WHERE v.article_id = a.id 
+                  AND v.created_at <= DATE_ADD(COALESCE(a.published_at, a.created_at), INTERVAL 7 DAY)
+              )
+            )
           ELSE 0 
         END DESC,
         a.created_at DESC
       LIMIT ?
     `;
-    const res = await db.prepare(query).bind(limit).all();
-    dbRows = res.results || [];
+
+    dbRows = await query(sql, [safeLimit]);
   } catch (err) {
     console.error("getMostReadArticles query error:", err);
   }
 
-  // Map database articles to frontend format
-  return dbRows.map((row) => {
+  return (dbRows || []).map((row) => {
     const mapped = mapDbArticleToFrontend(row);
     const isWithinWeek = row.is_within_validity_week === 1;
     const loggedWeekViews = Number(row.individual_logged_views) || 0;
     const directViews = Number(row.view_count) || 0;
 
-    // For articles within 7-day validity, use their 7-day views; for out-of-validity fillers, use logged 7-day views or direct views
     const weekViews = isWithinWeek ? Math.max(directViews, loggedWeekViews) : loggedWeekViews;
 
     return {
@@ -540,7 +488,3 @@ export async function getMostReadArticles(limit = 10) {
     };
   });
 }
-
-
-
-

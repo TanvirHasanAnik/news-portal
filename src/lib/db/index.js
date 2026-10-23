@@ -1,160 +1,302 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-
-let localDbInstance = null;
+import mysql from "mysql2/promise";
 
 /**
- * Creates an in-process D1-compatible wrapper around Node's built-in SQLite (DatabaseSync).
- * Used when running locally in Next.js development (next dev).
- * In production or wrangler preview, getCloudflareContext().env.DB is used instead.
+ * Universal MySQL Data Layer for Next.js App Router, Cloudflare Workers (workerd) & TiDB.
+ *
+ * Edge & Worker Architecture:
+ * 1. Cloudflare Workers (`workerd`) isolate freeze:
+ *    - Cloudflare freezes V8 isolates between requests. Persistent connection pools keep idle TCP
+ *      sockets and timer handles open, causing workerd to detect a hung request and terminate with
+ *      `net::ERR_INCOMPLETE_CHUNKED_ENCODING` (The Workers runtime canceled this request because it hung).
+ *    - To prevent this, in worker runtimes each operation acquires a clean connection with a strict
+ *      timeout (`connectTimeout: 5000`) and immediately releases (`conn.end()`) in a `finally` block.
+ * 2. Node.js runtime (`next dev`):
+ *    - Retains high-performance connection pooling via `mysql.createPool()`.
+ * 3. Configuration fallback:
+ *    - Seamlessly extracts environment variables from Cloudflare context (`cfContext.env`)
+ *      and standard `process.env`, defaulting `DB_HOST` to `127.0.0.1` and `DB_PORT` to `3307`.
+ * 4. V8 Isolate Safety:
+ *    - `disableEval: true` avoids dynamic code evaluation in workerd.
+ * 5. Strict Unicode & Timezone:
+ *    - `charset: 'utf8mb4'` and `timezone: 'Z'`.
  */
-async function createLocalD1Adapter() {
-  if (localDbInstance) return localDbInstance;
 
-  // Check if we are running in a Node.js host environment
-  if (typeof process === "undefined" || !process.versions?.node) {
-    throw new Error(
-      "Cloudflare D1 database binding 'DB' was not found in environment context. " +
-      "Ensure [[d1_databases]] binding = 'DB' is configured in wrangler.toml."
-    );
+let globalNodePool = null;
+
+export function isWorkerRuntime() {
+  return (
+    typeof WebSocketPair !== "undefined" ||
+    (typeof navigator !== "undefined" && navigator.userAgent?.includes("Cloudflare"))
+  );
+}
+
+export async function getDbConfig() {
+  let cfEnv = {};
+  try {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const ctx = await getCloudflareContext({ async: true });
+    if (ctx?.env) {
+      cfEnv = ctx.env;
+    }
+  } catch (_e) {
+    // Cloudflare context unavailable in pure Node.js
   }
 
-  // Dynamically load node built-ins so Cloudflare Worker bundler does not include them statically
-  const { DatabaseSync } = await import("node:sqlite");
-  const fs = await import("node:fs");
-  const path = await import("node:path");
+  const host =
+    cfEnv.DB_HOST ||
+    cfEnv.MYSQL_HOST ||
+    process.env.DB_HOST ||
+    process.env.MYSQL_HOST ||
+    "127.0.0.1";
 
-  const dataDir = path.join(process.cwd(), ".data");
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+  const port = Number(
+    cfEnv.DB_PORT ||
+    cfEnv.MYSQL_PORT ||
+    process.env.DB_PORT ||
+    process.env.MYSQL_PORT ||
+    3307
+  );
+
+  const user =
+    cfEnv.DB_USER ||
+    cfEnv.MYSQL_USER ||
+    process.env.DB_USER ||
+    process.env.MYSQL_USER ||
+    "root";
+
+  const password =
+    cfEnv.DB_PASSWORD !== undefined
+      ? cfEnv.DB_PASSWORD
+      : cfEnv.MYSQL_PASSWORD !== undefined
+      ? cfEnv.MYSQL_PASSWORD
+      : process.env.DB_PASSWORD !== undefined
+      ? process.env.DB_PASSWORD
+      : process.env.MYSQL_PASSWORD !== undefined
+      ? process.env.MYSQL_PASSWORD
+      : "123456";
+
+  const database =
+    cfEnv.DB_NAME ||
+    cfEnv.MYSQL_DATABASE ||
+    process.env.DB_NAME ||
+    process.env.MYSQL_DATABASE ||
+    "newsportal_db";
+
+  return {
+    host,
+    port,
+    user,
+    password,
+    database,
+    charset: "utf8mb4",
+    timezone: "Z",
+    disableEval: true,
+    dateStrings: true,
+    decimalNumbers: true,
+    connectTimeout: 5000,
+  };
+}
+
+/**
+ * Returns a connection handle tailored for the current execution runtime.
+ * Automatically handles cleanup: ends socket in Worker, releases to pool in Node.
+ */
+export async function getConnectionHandle() {
+  const config = await getDbConfig();
+
+  if (isWorkerRuntime()) {
+    const conn = await mysql.createConnection(config);
+    return {
+      connection: conn,
+      query: (sql, params) => conn.query(sql, params),
+      release: async () => {
+        try {
+          await conn.end();
+        } catch (_e) {}
+      },
+    };
   }
 
-  const dbPath = path.join(dataDir, "news_portal_d1.sqlite");
-  const sqlite = new DatabaseSync(dbPath);
+  // Node.js development runtime
+  if (!globalNodePool) {
+    globalNodePool = mysql.createPool({
+      ...config,
+      waitForConnections: true,
+      connectionLimit: 10,
+      queueLimit: 0,
+    });
+  }
 
-  // Initialize Schema if needed
-  initializeLocalSchema(sqlite, fs, path);
+  const conn = await globalNodePool.getConnection();
+  return {
+    connection: conn,
+    query: (sql, params) => conn.query(sql, params),
+    release: () => {
+      try {
+        conn.release();
+      } catch (_e) {}
+    },
+  };
+}
 
-  // Wrapper mimicking Cloudflare D1 Database object
-  localDbInstance = {
-    isLocal: true,
+/**
+ * Executes a clean parameterized query with guaranteed connection cleanup
+ */
+export async function query(sql, params = []) {
+  const handle = await getConnectionHandle();
+  try {
+    const [rows] = await handle.query(sql, params);
+    return rows;
+  } finally {
+    await handle.release();
+  }
+}
+
+/**
+ * Parameterized single-row query runner
+ */
+export async function queryOne(sql, params = []) {
+  const rows = await query(sql, params);
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return null;
+  }
+  return rows[0];
+}
+
+/**
+ * Robust Transaction Management:
+ * Executes callback within an explicit transaction with guaranteed cleanup.
+ */
+export async function withTransaction(callback) {
+  const handle = await getConnectionHandle();
+  const conn = handle.connection;
+
+  try {
+    await conn.beginTransaction();
+
+    const tx = {
+      connection: conn,
+      query: async (sql, params = []) => {
+        const [rows] = await conn.query(sql, params);
+        return rows;
+      },
+      queryOne: async (sql, params = []) => {
+        const [rows] = await conn.query(sql, params);
+        if (!rows || !Array.isArray(rows) || rows.length === 0) {
+          return null;
+        }
+        return rows[0];
+      },
+      execute: async (sql, params = []) => {
+        const [result] = await conn.query(sql, params);
+        return result;
+      },
+    };
+
+    const result = await callback(tx);
+    await conn.commit();
+    return result;
+  } catch (error) {
+    try {
+      await conn.rollback();
+    } catch (_rollbackErr) {}
+    throw error;
+  } finally {
+    await handle.release();
+  }
+}
+
+/**
+ * Database schema initialization (runs only in local Node.js environment)
+ */
+export async function initializeSchema() {
+  if (isWorkerRuntime()) return;
+
+  try {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+
+    const schemaPath = path.join(process.cwd(), "src", "lib", "db", "schema.sql");
+    if (fs.existsSync(schemaPath)) {
+      const schemaSql = fs.readFileSync(schemaPath, "utf-8");
+      await query(schemaSql);
+    }
+
+    const checkUsers = await queryOne("SELECT COUNT(*) as count FROM users");
+    if (!checkUsers || Number(checkUsers.count) === 0) {
+      const seedPath = path.join(process.cwd(), "src", "lib", "db", "seed.sql");
+      if (fs.existsSync(seedPath)) {
+        const seedSql = fs.readFileSync(seedPath, "utf-8");
+        await query(seedSql);
+      }
+    }
+  } catch (err) {
+    console.warn("Database initialization notice:", err?.message || err);
+  }
+}
+
+/**
+ * Universal Database Adapter for Next.js App Router and Cloudflare Worker / OpenNext.
+ */
+export async function getDb() {
+  return {
+    query,
+    queryOne,
+    withTransaction,
     prepare(sql) {
+      let boundParams = [];
       return {
-        _bound: [],
         bind(...params) {
-          const newStmt = localDbInstance.prepare(sql);
-          newStmt._bound = params;
-          return newStmt;
+          boundParams = params;
+          return this;
         },
         async all() {
-          const stmt = sqlite.prepare(sql);
-          const rows = stmt.all(...this._bound);
+          const rows = await query(sql, boundParams);
           return {
             success: true,
-            results: rows ? rows.map((r) => ({ ...r })) : [],
+            results: Array.isArray(rows) ? rows : [],
             meta: { duration: 0 },
           };
         },
         async first(colName) {
-          const stmt = sqlite.prepare(sql);
-          const row = stmt.get(...this._bound);
+          const row = await queryOne(sql, boundParams);
           if (!row) return null;
-          const plain = { ...row };
-          if (colName) return plain[colName];
-          return plain;
+          if (colName) return row[colName];
+          return row;
         },
         async run() {
-          const stmt = sqlite.prepare(sql);
-          const info = stmt.run(...this._bound);
+          const result = await query(sql, boundParams);
           return {
             success: true,
             meta: {
-              changes: info.changes,
-              last_row_id: Number(info.lastInsertRowid),
+              changes: result?.affectedRows ?? 0,
+              last_row_id: Number(result?.insertId ?? 0),
             },
           };
         },
       };
     },
     async batch(statements) {
-      sqlite.exec("BEGIN TRANSACTION;");
-      const results = [];
-      try {
+      return await withTransaction(async (tx) => {
+        const results = [];
         for (const stmt of statements) {
           const res = await stmt.run();
           results.push(res);
         }
-        sqlite.exec("COMMIT;");
         return results;
-      } catch (err) {
-        sqlite.exec("ROLLBACK;");
-        throw err;
-      }
+      });
     },
     async exec(rawSql) {
-      sqlite.exec(rawSql);
-      return { count: 0, duration: 0 };
+      const result = await query(rawSql);
+      return { count: result?.affectedRows ?? 0, duration: 0 };
     },
   };
-
-  return localDbInstance;
 }
 
-/**
- * Initializes tables and seeds default categories/users if database is newly created.
- */
-function initializeLocalSchema(sqlite, fs, path) {
-  const schemaPath = path.join(process.cwd(), "src", "lib", "db", "schema.sql");
-  if (fs.existsSync(schemaPath)) {
-    const schemaSql = fs.readFileSync(schemaPath, "utf-8");
-    sqlite.exec(schemaSql);
-  }
-
-  // Ensure 'images' column exists in articles table for existing database
-  try {
-    const tableInfo = sqlite.prepare("PRAGMA table_info(articles)").all();
-    const hasImagesCol = tableInfo.some((col) => col.name === "images");
-    if (!hasImagesCol) {
-      sqlite.exec("ALTER TABLE articles ADD COLUMN images TEXT;");
-    }
-  } catch (_e) {}
-
-  // Ensure 'password' column exists in users table for existing database
-  try {
-    const userTableInfo = sqlite.prepare("PRAGMA table_info(users)").all();
-    const hasPasswordCol = userTableInfo.some((col) => col.name === "password");
-    if (!hasPasswordCol) {
-      sqlite.exec("ALTER TABLE users ADD COLUMN password TEXT;");
-    }
-  } catch (_e) {}
-
-  // Check if categories are seeded
-  const checkCat = sqlite.prepare("SELECT COUNT(*) as count FROM categories").get();
-  if (!checkCat || checkCat.count === 0) {
-    const seedPath = path.join(process.cwd(), "src", "lib", "db", "seed.sql");
-    if (fs.existsSync(seedPath)) {
-      const seedSql = fs.readFileSync(seedPath, "utf-8");
-      sqlite.exec(seedSql);
-    }
-  }
-}
-
-/**
- * Returns the Cloudflare D1 binding instance if running on Cloudflare/Wrangler,
- * or the SQLite D1 adapter if running in local Node dev mode.
- *
- * All consumers call:
- *   const db = await getDb();
- *   const { results } = await db.prepare("SELECT ...").bind(...).all();
- */
-export async function getDb() {
-  try {
-    const cfContext = await getCloudflareContext({ async: true });
-    if (cfContext?.env?.DB) {
-      return cfContext.env.DB;
-    }
-  } catch (_e) {
-    // Cloudflare context is not active; fallback to local SQLite
-  }
-
-  return await createLocalD1Adapter();
-}
+export default {
+  getDb,
+  query,
+  queryOne,
+  withTransaction,
+  initializeSchema,
+};
