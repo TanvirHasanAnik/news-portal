@@ -38,7 +38,7 @@ exclusive Tabs:
 #Super admin exclusive tabs:
 1. User tab
 	1. List of users
-	2. Add new user button with a following form (Invite-by-Email workflow)
+	2. Add new user button with a following form (initially email and password will be set by super admin. Later that user's account password and name can be changed)
 	3. Change roles of existing users
 	4. Disable users (can be enabled later)
 2. Category & Subcategory management tab
