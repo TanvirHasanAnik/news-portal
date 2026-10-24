@@ -33,32 +33,21 @@ Reporter
 4. Most visited pages
 5. Audit logs of administrative actions
 
-Tabs
+exclusive Tabs:
 *Super admin & admin includes all the tabs the editors and reporters contains
-Super admin exclusive tabs:
+#Super admin exclusive tabs:
 1. User tab
 	1. List of users
-	2. Add new user button with a following form (Initially email & password is chosen by super admin can be changed by user later)
+	2. Add new user button with a following form (Invite-by-Email workflow)
 	3. Change roles of existing users
 	4. Disable users (can be enabled later)
 2. Category & Subcategory management tab
 	1. CRUD Categories and subcategories
 3. List of All requests from admin
 
-Admin Exclusive tabs:
-1. Same of user tab from super admin just instead of executing it would be a request sent to super admin.
-
-Editor in chief exclusive tabs:
-1. Handpicked News tab
-2. Breaking news tab
-Editor tabs:
-1. Article creation tab
-2. Article List tab includes – approval, edit, archive
-3. Content History / Revision Control
-
-Reporter tabs:
-1. Article creation tab
-2. Personal profile tab
+#Admin Exclusive tabs:
+1. Can see user list but can’t edit
+2. Additional request tab for requesting changes to super admin
 
 ------------------------------
 
