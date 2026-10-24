@@ -369,6 +369,7 @@ export default function ArticleMediaFields({
             <Input
               id="youtubeUrl"
               placeholder="যেমন: https://www.youtube.com/watch?v=dQw4w9WgXcQ অথবা https://youtu.be/..."
+              value={youtubeUrl}
               {...register("youtubeUrl")}
               className={`transition-colors ${
                 errors?.youtubeUrl

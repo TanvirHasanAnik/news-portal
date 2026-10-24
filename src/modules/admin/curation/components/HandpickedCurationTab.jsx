@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { AlertModal } from "@/components/ui/AlertModal";
 import { saveCuratedBatchAction } from "@/actions/curationActions";
@@ -35,8 +34,10 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
 
   // Initialize React Hook Form with real-time validation via Zod
   const {
-    register,
     handleSubmit,
+    setValue,
+    watch,
+    clearErrors,
     reset,
     formState: { errors },
   } = useForm({
@@ -47,14 +48,16 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
     },
   });
 
+  const articleId = watch("articleId") || "";
+
   // Local-only addition to browser state on valid form submit
   const onAddItem = (data) => {
-    const selectedArt = articles.find((a) => a.id === data.articleId);
+    const selectedArt = articles.find((a) => String(a.id) === String(data.articleId));
     if (!selectedArt) return;
 
     // Check if article is already in the handpicked list
     const isAlreadyAdded = items.some(
-      (item) => item.article_id && item.article_id === data.articleId
+      (item) => item.article_id && String(item.article_id) === String(data.articleId)
     );
     if (isAlreadyAdded) {
       setAlertConfig({
@@ -77,6 +80,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
     setItems((prev) => [newItem, ...prev]);
     setIsDirty(true);
     reset({ articleId: "" });
+    clearErrors("articleId");
   };
 
   // Re-confirmation before toggling active/inactive
@@ -99,7 +103,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
   // Re-confirmation before removing item from list
   const requestRemove = (id, headline) => {
     setConfirmConfig({
-      message: `আপনি কি নিশ্চিতভাবে "${headline || "এই সংবাদটি"}" বাছাইকৃত তালিকা থেকে বাদ দিতে চান?`,
+      message: `আপনি কি নিশ্চিতভাবে "${headline || "এই সংবাদটি"}" বাছাই তালিকা থেকে বাদ দিতে চান?`,
       confirmVariant: "destructive",
       onConfirm: () => {
         setItems((prev) => prev.filter((item) => item.id !== id));
@@ -145,7 +149,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
     });
   };
 
-  // Re-confirmation before saving batch changes to database
+  // Re-confirmation before saving batch changes to database & trigger on-demand ISR
   const requestSave = () => {
     setConfirmConfig({
       message: "আপনি কি নিশ্চিতভাবে বাছাইকৃত সংবাদের সকল পরিবর্তন সংরক্ষণ করতে চান?",
@@ -182,7 +186,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
             </span>
           )}
           <span className="text-xs text-slate-500 hidden md:inline">
-            মোট আইটেম: {items.length}
+            মোট বাছাইকৃত আইটেম: {items.length}
           </span>
         </div>
 
@@ -274,20 +278,30 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
         <div className="flex flex-col sm:flex-row gap-3 items-end">
           {/* Article selection dropdown */}
           <div className="flex-1 w-full">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label htmlFor="handpicked-article-select" className="block text-xs font-semibold text-slate-700 mb-1">
               প্রকাশিত সংবাদ নির্বাচন করুন <span className="text-red-500">*</span>
             </label>
             <select
-              {...register("articleId")}
+              id="handpicked-article-select"
+              value={articleId}
+              onChange={(e) => {
+                const val = e.target.value;
+                setValue("articleId", val, { shouldValidate: true, shouldDirty: true });
+                if (val) {
+                  clearErrors("articleId");
+                }
+              }}
               className={`w-full h-9 rounded-md border bg-white px-3 py-1.5 text-xs text-slate-800 transition-colors focus:outline-none focus:border-slate-400 ${
                 errors.articleId ? "border-red-400" : "border-slate-300"
               }`}
             >
               <option value="">-- সংবাদ নির্বাচন করুন --</option>
               {articles.map((art) => {
-                const isAdded = items.some((item) => item.article_id === art.id);
+                const isAdded = items.some(
+                  (item) => item.article_id && String(item.article_id) === String(art.id)
+                );
                 return (
-                  <option key={art.id} value={art.id}>
+                  <option key={art.id} value={art.id} disabled={isAdded}>
                     [{art.category_name || "সাধারণ"}] {art.headline} {isAdded ? " (ইতিমধ্যে যুক্ত)" : ""}
                   </option>
                 );

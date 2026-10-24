@@ -238,6 +238,7 @@ export default function ArticleCreateForm({ categories = [] }) {
               register={register}
               errors={errors}
               categorySlug={categorySlug}
+              subcategoryName={watch("subcategoryName") || ""}
               setCategorySlug={(slug) => setValue("categorySlug", slug, { shouldValidate: true })}
               setSubcategoryName={(sub) => setValue("subcategoryName", sub, { shouldValidate: true })}
               categories={categories}

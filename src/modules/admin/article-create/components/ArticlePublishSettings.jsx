@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 export default function ArticlePublishSettings({
   categorySlug,
   setCategorySlug,
-  subcategoryName,
+  subcategoryName = "",
   setSubcategoryName,
   categories = [],
   availableSubcategories = [],
@@ -31,6 +31,7 @@ export default function ArticlePublishSettings({
           {register ? (
             <select
               id="category"
+              value={categorySlug}
               {...register("categorySlug", {
                 onChange: () => {
                   if (setSubcategoryName) setSubcategoryName("");
@@ -88,6 +89,7 @@ export default function ArticlePublishSettings({
           {register ? (
             <select
               id="subcategory"
+              value={subcategoryName}
               {...register("subcategoryName")}
               className={`flex h-10 w-full rounded-md border bg-white px-3 py-2 text-sm outline-none focus:outline-none focus:ring-0 cursor-pointer disabled:opacity-50 disabled:bg-slate-50 disabled:cursor-not-allowed transition-colors ${
                 errors?.subcategoryName

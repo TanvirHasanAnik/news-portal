@@ -102,12 +102,12 @@ export const breakingFormSchema = z
     const artId = (data.articleId || "").trim();
     const title = (data.customTitle || "").trim();
 
-    // 1. If both article and title are absent, show mandatory message
+    // 1. If both article and title are absent, show mandatory message on articleId
     if (!artId && !title) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "অনুগ্রহ করে একটি প্রকাশিত সংবাদ নির্বাচন করুন অথবা জরুরি শিরোনাম লিখুন।",
-        path: ["customTitle"],
+        path: ["articleId"],
       });
       return;
     }
@@ -152,4 +152,3 @@ export const breakingFormSchema = z
       }
     }
   });
-

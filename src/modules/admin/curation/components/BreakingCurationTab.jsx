@@ -35,10 +35,11 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
 
   // Initialize React Hook Form with real-time validation via Zod
   const {
-    register,
     handleSubmit,
     setValue,
+    watch,
     trigger,
+    clearErrors,
     reset,
     formState: { errors },
   } = useForm({
@@ -50,15 +51,18 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
     },
   });
 
+  const articleId = watch("articleId") || "";
+  const customTitle = watch("customTitle") || "";
+
   // Local-only addition to browser state on valid form submit
   const onAddItem = (data) => {
-    const selectedArt = articles.find((a) => a.id === data.articleId);
+    const selectedArt = articles.find((a) => String(a.id) === String(data.articleId));
     const customTitleTrimmed = (data.customTitle || "").trim();
 
     // Check if article is already in the breaking news list
     if (data.articleId) {
       const isAlreadyAdded = items.some(
-        (item) => item.article_id && item.article_id === data.articleId
+        (item) => item.article_id && String(item.article_id) === String(data.articleId)
       );
       if (isAlreadyAdded) {
         setAlertConfig({
@@ -82,6 +86,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
     setItems((prev) => [newItem, ...prev]);
     setIsDirty(true);
     reset({ articleId: "", customTitle: "" });
+    clearErrors(["articleId", "customTitle"]);
   };
 
   // Re-confirmation before toggling active/inactive
@@ -279,14 +284,20 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
           {/* Article selection dropdown */}
           <div className="sm:col-span-6">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label htmlFor="breaking-article-select" className="block text-xs font-semibold text-slate-700 mb-1">
               প্রকাশিত সংবাদ নির্বাচন করুন
             </label>
             <select
-              {...register("articleId")}
+              id="breaking-article-select"
+              value={articleId}
               onChange={(e) => {
-                register("articleId").onChange(e);
-                trigger("customTitle");
+                const val = e.target.value;
+                setValue("articleId", val, { shouldValidate: true, shouldDirty: true });
+                if (val) {
+                  clearErrors(["articleId", "customTitle"]);
+                } else {
+                  trigger(["articleId", "customTitle"]);
+                }
               }}
               className={`w-full h-9 rounded-md border bg-white px-3 py-1.5 text-xs text-slate-800 transition-colors focus:outline-none focus:border-slate-400 ${
                 errors.articleId ? "border-red-400" : "border-slate-300"
@@ -294,9 +305,11 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
             >
               <option value="">-- সংবাদ নির্বাচন করুন (ঐচ্ছিক) --</option>
               {articles.map((art) => {
-                const isAdded = items.some((item) => item.article_id === art.id);
+                const isAdded = items.some(
+                  (item) => item.article_id && String(item.article_id) === String(art.id)
+                );
                 return (
-                  <option key={art.id} value={art.id}>
+                  <option key={art.id} value={art.id} disabled={isAdded}>
                     [{art.category_name}] {art.headline} {isAdded ? " (ইতিমধ্যে যুক্ত)" : ""}
                   </option>
                 );
@@ -309,16 +322,21 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
 
           {/* Custom title override with real-time error display */}
           <div className="sm:col-span-6">
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
+            <label htmlFor="breaking-custom-title" className="block text-xs font-semibold text-slate-700 mb-1">
               জরুরি শিরোনাম / টিকার টেক্সট (ঐচ্ছিক)
             </label>
             <Input
+              id="breaking-custom-title"
               type="text"
               placeholder="খালি রাখলে নির্বাচিত সংবাদের মূল শিরোনাম প্রদর্শিত হবে..."
-              {...register("customTitle")}
+              value={customTitle}
               onChange={(e) => {
-                register("customTitle").onChange(e);
-                trigger("customTitle");
+                const val = e.target.value;
+                setValue("customTitle", val, { shouldValidate: true, shouldDirty: true });
+                if (val.trim()) {
+                  clearErrors("articleId");
+                }
+                trigger(["customTitle", "articleId"]);
               }}
               className={`text-xs h-9 ${
                 errors.customTitle ? "border-red-400 focus-visible:ring-red-400" : "border-slate-300 focus-visible:ring-slate-400"

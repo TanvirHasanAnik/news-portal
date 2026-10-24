@@ -2,8 +2,8 @@
 
 import React from "react";
 import { Controller } from "react-hook-form";
-import { FileText, AlertCircle } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { FileText, AlertCircle, X } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -36,11 +36,45 @@ export default function ArticleContentFields({
       <CardContent className="space-y-5">
         {/* 1. Headline Field (Mandatory - Pure Bangla Only) */}
         <div className="space-y-1.5">
-          <Label htmlFor="headline" className="text-sm font-semibold text-slate-800">
-            সংবাদের শিরোনাম <span className="text-red-500">*</span>
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="headline" className="text-sm font-semibold text-slate-800">
+              সংবাদের শিরোনাম <span className="text-red-500">*</span>
+            </Label>
+          </div>
 
-          {register ? (
+          {control ? (
+            <Controller
+              name="headline"
+              control={control}
+              render={({ field }) => (
+                <div className="relative">
+                  <Input
+                    id="headline"
+                    placeholder="মূল শিরোনাম এখানে লিখুন"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                    className={`font-serif-bangla text-lg font-medium transition-colors ${
+                      field.value ? "pr-8" : ""
+                    } ${
+                      errors?.headline ? "border-red-500 focus:border-red-600 ring-1 ring-red-500/20" : ""
+                    }`}
+                  />
+                  {field.value ? (
+                    <button
+                      type="button"
+                      onClick={() => field.onChange("")}
+                      title="শিরোনাম খালি করুন"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  ) : null}
+                </div>
+              )}
+            />
+          ) : register ? (
             <Input
               id="headline"
               placeholder="মূল শিরোনাম এখানে লিখুন"
@@ -66,21 +100,56 @@ export default function ArticleContentFields({
             </p>
           ) : (
             <p className="text-[11px] text-slate-400">
-              শুধুমাত্র বাংলা বর্ণমালায় ৩ থেকে ১৮ শব্দের শিরোনাম লিখুন। 
+              শুধুমাত্র বাংলা বর্ণমালায় ৩ থেকে ১৮ শব্দের শিরোনাম লিখুন।
             </p>
           )}
         </div>
 
         {/* 2. Summary / Lead Field (Optional) */}
         <div className="space-y-1.5">
-          <div className="flex items-center gap-1.5">
-            <Label htmlFor="summary" className="text-sm font-semibold text-slate-800">
-              সংক্ষিপ্ত ভূমিকা / সারাংশ
-            </Label>
-            <span className="text-xs text-slate-400">(ঐচ্ছিক)</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="summary" className="text-sm font-semibold text-slate-800">
+                সংক্ষিপ্ত ভূমিকা / সারাংশ
+              </Label>
+              <span className="text-xs text-slate-400">(ঐচ্ছিক)</span>
+            </div>
           </div>
 
-          {register ? (
+          {control ? (
+            <Controller
+              name="summary"
+              control={control}
+              render={({ field }) => (
+                <div className="relative">
+                  <Textarea
+                    id="summary"
+                    rows={2}
+                    placeholder="সংবাদের মূল বার্তা বা হাইলাইট এখানে সংক্ষেপে তুলে ধরুন"
+                    value={field.value || ""}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                    className={`font-serif-bangla text-sm transition-colors ${
+                      field.value ? "pr-8" : ""
+                    } ${
+                      errors?.summary ? "border-red-500 focus:border-red-600 ring-1 ring-red-500/20" : ""
+                    }`}
+                  />
+                  {field.value ? (
+                    <button
+                      type="button"
+                      onClick={() => field.onChange("")}
+                      title="সারাংশ খালি করুন"
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  ) : null}
+                </div>
+              )}
+            />
+          ) : register ? (
             <Textarea
               id="summary"
               rows={2}
