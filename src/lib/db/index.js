@@ -22,6 +22,8 @@ import mysql from "mysql2/promise";
  */
 
 let globalNodePool = null;
+let isDbBootstrapped = false;
+let bootstrapPromise = null;
 
 export function isWorkerRuntime() {
   return (
@@ -140,15 +142,48 @@ export async function getConnectionHandle() {
 }
 
 /**
- * Executes a clean parameterized query with guaranteed connection cleanup
+ * Ensures all database tables and seed records are auto-initialized on first use
+ */
+export async function ensureDbInitialized() {
+  if (isDbBootstrapped) return;
+  if (bootstrapPromise) return await bootstrapPromise;
+
+  bootstrapPromise = (async () => {
+    try {
+      const { bootstrapDatabase } = await import("./bootstrap.js");
+      await bootstrapDatabase();
+      isDbBootstrapped = true;
+    } catch (err) {
+      console.warn("[Auto-Init DB Warning]:", err?.message || err);
+    } finally {
+      bootstrapPromise = null;
+    }
+  })();
+
+  return await bootstrapPromise;
+}
+
+/**
+ * Executes a clean parameterized query with guaranteed connection cleanup and auto-initialization
  */
 export async function query(sql, params = []) {
+  if (
+    !isDbBootstrapped &&
+    !sql.startsWith("CREATE TABLE") &&
+    !sql.startsWith("INSERT IGNORE INTO") &&
+    !sql.startsWith("SHOW TABLES")
+  ) {
+    await ensureDbInitialized();
+  }
+
   const handle = await getConnectionHandle();
   try {
     const [rows] = await handle.query(sql, params);
     return rows;
   } finally {
-    await handle.release();
+    if (typeof handle.release === "function") {
+      await handle.release();
+    }
   }
 }
 
@@ -202,36 +237,9 @@ export async function withTransaction(callback) {
     } catch (_rollbackErr) {}
     throw error;
   } finally {
-    await handle.release();
-  }
-}
-
-/**
- * Database schema initialization (runs only in local Node.js environment)
- */
-export async function initializeSchema() {
-  if (isWorkerRuntime()) return;
-
-  try {
-    const fs = await import("node:fs");
-    const path = await import("node:path");
-
-    const schemaPath = path.join(process.cwd(), "src", "lib", "db", "schema.sql");
-    if (fs.existsSync(schemaPath)) {
-      const schemaSql = fs.readFileSync(schemaPath, "utf-8");
-      await query(schemaSql);
+    if (typeof handle.release === "function") {
+      await handle.release();
     }
-
-    const checkUsers = await queryOne("SELECT COUNT(*) as count FROM users");
-    if (!checkUsers || Number(checkUsers.count) === 0) {
-      const seedPath = path.join(process.cwd(), "src", "lib", "db", "seed.sql");
-      if (fs.existsSync(seedPath)) {
-        const seedSql = fs.readFileSync(seedPath, "utf-8");
-        await query(seedSql);
-      }
-    }
-  } catch (err) {
-    console.warn("Database initialization notice:", err?.message || err);
   }
 }
 
@@ -298,5 +306,5 @@ export default {
   query,
   queryOne,
   withTransaction,
-  initializeSchema,
+  ensureDbInitialized,
 };

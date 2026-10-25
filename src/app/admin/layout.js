@@ -1,12 +1,16 @@
 import React, { Suspense } from "react";
 import AdminShell from "@/components/admin/AdminShell";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { getCurrentUser } from "@/lib/auth/server";
 
 export const metadata = {
   title: "অ্যাডমিন প্যানেল | আলো আসবে",
   description: "সংবাদ পোর্টাল অ্যাডমিন ও কনটেন্ট ম্যানেজমেন্ট সিস্টেম",
 };
 
-export default function AdminLayout({ children }) {
+export default async function AdminLayout({ children }) {
+  const user = await getCurrentUser();
+
   return (
     <Suspense
       fallback={
@@ -18,7 +22,9 @@ export default function AdminLayout({ children }) {
         </div>
       }
     >
-      <AdminShell>{children}</AdminShell>
+      <AuthProvider initialUser={user}>
+        <AdminShell>{children}</AdminShell>
+      </AuthProvider>
     </Suspense>
   );
 }

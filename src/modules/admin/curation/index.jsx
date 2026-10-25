@@ -5,10 +5,19 @@ import { CurationHeader } from "./components/CurationHeader";
 import { CurationTabsManager } from "./components/CurationTabsManager";
 
 export default async function CurationModule() {
-  const [curatedItems, publishedArticles] = await Promise.all([
-    getCuratedNews(),
-    getPublishedArticles({ limit: 40 }),
-  ]);
+  let curatedItems = [];
+  let publishedArticles = [];
+
+  try {
+    const [cItems, pArticles] = await Promise.all([
+      getCuratedNews(),
+      getPublishedArticles({ limit: 40 }),
+    ]);
+    curatedItems = cItems || [];
+    publishedArticles = pArticles || [];
+  } catch (err) {
+    console.error("[CurationModule error]:", err);
+  }
 
   return (
     <div className="space-y-6">
@@ -20,4 +29,3 @@ export default async function CurationModule() {
     </div>
   );
 }
-

@@ -1,7 +1,7 @@
--- Default Users
+-- Default Staff Users
+-- Super Admin and Admin accounts are securely bootstrapped by the system runtime from environment variables (.dev.vars / wrangler secret)
 INSERT IGNORE INTO users (id, name, email, role, status, bio)
 VALUES 
-  ('usr_superadmin', 'প্রধান সম্পাদক', 'admin@aloshbe.com', 'super_admin', 'active', 'প্রধান সম্পাদক ও সিস্টেম সুপার অ্যাডমিন'),
   ('usr_reporter', 'নিজস্ব প্রতিবেদক', 'reporter@aloshbe.com', 'reporter', 'active', 'আলো আসবে সংবাদ পরিবার');
 
 -- Default Categories

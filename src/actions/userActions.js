@@ -1,7 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createUser, updateUserRole, updateUserStatus } from "@/repositories/userRepository";
+import {
+  createUser,
+  updateUserRole,
+  updateUserStatus,
+  getUserById,
+} from "@/repositories/userRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
 import {
   createUserSchema,
@@ -9,9 +14,19 @@ import {
   toggleUserStatusSchema,
   formatZodError,
 } from "@/schemas";
+import { hasPermission, isSingleUserRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth/server";
 
 export async function createUserAction(prevState, formData) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || !hasPermission(currentUser.role, "users:create")) {
+      return {
+        success: false,
+        message: "অননুমোদিত: আপনার নতুন ব্যবহারকারী যোগ করার অনুমতি নেই।",
+      };
+    }
+
     const rawData = {
       name: formData.get("name")?.toString() || "",
       email: formData.get("email")?.toString() || "",
@@ -21,6 +36,14 @@ export async function createUserAction(prevState, formData) {
     };
 
     const validated = createUserSchema.parse(rawData);
+
+    // Enforce single-user rule for super admin and admin
+    if (isSingleUserRole(validated.role)) {
+      return {
+        success: false,
+        message: "সুপার অ্যাডমিন এবং অ্যাডমিন একক দায়িত্ব; নতুন অ্যাডমিন তৈরি করা সম্ভব নয়।",
+      };
+    }
 
     const created = await createUser({
       name: validated.name,
@@ -32,6 +55,7 @@ export async function createUserAction(prevState, formData) {
     });
 
     await recordAuditLog({
+      userId: currentUser.id,
       action: "create_user",
       targetType: "user",
       targetId: created.id,
@@ -45,7 +69,7 @@ export async function createUserAction(prevState, formData) {
       message: `"${validated.name}" (${validated.email}) ব্যবহারকারী সফলভাবে যুক্ত করা হয়েছে!`,
     };
   } catch (error) {
-    if (error.message?.includes("UNIQUE constraint failed: users.email")) {
+    if (error.message?.includes("UNIQUE constraint failed: users.email") || error.message?.includes("uq_users_email")) {
       return { success: false, message: "এই ইমেইল ঠিকানায় ইতিমধ্যে একটি অ্যাকাউন্ট রয়েছে।" };
     }
     return { success: false, message: formatZodError(error, "ব্যবহারকারী যোগে সমস্যা হয়েছে।") };
@@ -54,11 +78,37 @@ export async function createUserAction(prevState, formData) {
 
 export async function updateUserRoleAction(userId, newRole) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || !hasPermission(currentUser.role, "users:edit_role")) {
+      return {
+        success: false,
+        message: "অননুমোদিত: ব্যবহারকারীর দায়িত্ব পরিবর্তনের অনুমতি নেই।",
+      };
+    }
+
     const validated = updateUserRoleSchema.parse({ userId, role: newRole });
+
+    // Enforce single-user rule: cannot promote anyone to super admin or admin
+    if (isSingleUserRole(validated.role)) {
+      return {
+        success: false,
+        message: "কোনো ব্যবহারকারীকে সুপার অ্যাডমিন বা অ্যাডমিন পদে উন্নীত করা যাবে না।",
+      };
+    }
+
+    const targetUser = await getUserById(validated.userId);
+    // Enforce single-user rule: cannot change existing super admin or admin roles
+    if (targetUser && isSingleUserRole(targetUser.role)) {
+      return {
+        success: false,
+        message: "স্থায়ী সুপার অ্যাডমিন বা অ্যাডমিনের দায়িত্ব পরিবর্তন করা যাবে না।",
+      };
+    }
 
     await updateUserRole(validated.userId, validated.role);
 
     await recordAuditLog({
+      userId: currentUser.id,
       action: "update_user_role",
       targetType: "user",
       targetId: validated.userId,
@@ -75,12 +125,30 @@ export async function updateUserRoleAction(userId, newRole) {
 
 export async function toggleUserStatusAction(userId, currentStatus) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || !hasPermission(currentUser.role, "users:disable")) {
+      return {
+        success: false,
+        message: "অননুমোদিত: ব্যবহারকারীর স্ট্যাটাস পরিবর্তনের অনুমতি নেই।",
+      };
+    }
+
     const validated = toggleUserStatusSchema.parse({ userId, currentStatus });
+
+    const targetUser = await getUserById(validated.userId);
+    // Enforce single-user rule: cannot disable super admin or admin
+    if (targetUser && isSingleUserRole(targetUser.role)) {
+      return {
+        success: false,
+        message: "সুপার অ্যাডমিন বা অ্যাডমিনের অ্যাকাউন্ট নিষ্ক্রিয় করা সম্ভব নয়।",
+      };
+    }
 
     const newStatus = validated.currentStatus === "active" ? "disabled" : "active";
     await updateUserStatus(validated.userId, newStatus);
 
     await recordAuditLog({
+      userId: currentUser.id,
       action: newStatus === "disabled" ? "disable_user" : "enable_user",
       targetType: "user",
       targetId: validated.userId,
@@ -98,4 +166,3 @@ export async function toggleUserStatusAction(userId, currentStatus) {
     return { success: false, message: formatZodError(error, "স্ট্যাটাস পরিবর্তনে সমস্যা হয়েছে।") };
   }
 }
-

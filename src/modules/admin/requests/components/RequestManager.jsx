@@ -21,11 +21,23 @@ import {
   createAdminRequestAction,
   updateAdminRequestStatusAction,
 } from "@/actions/requestActions";
-import { ROLE_LABELS, USER_ROLES } from "@/lib/auth";
+import { ROLE_LABELS, USER_ROLES, ASSIGNABLE_ROLE_LABELS, isSingleUserRole } from "@/lib/auth";
+import { usePermissions } from "@/contexts/AuthContext";
 import { formatTimeAgo } from "@/utils/dateUtils";
 import { createAdminRequestSchema } from "@/schemas/requestSchema";
 
-export function RequestManager({ initialRequests = [], users = [] }) {
+export function RequestManager({
+  initialRequests = [],
+  users = [],
+  canReview: propCanReview,
+  canCreate: propCanCreate,
+}) {
+  const { can } = usePermissions();
+
+  // Policy-based RBAC permission checks (overridable via props)
+  const canReviewRequests = propCanReview !== undefined ? propCanReview : can("requests:review");
+  const canCreateRequest = propCanCreate !== undefined ? propCanCreate : can("requests:create");
+
   const [requests, setRequests] = useState(initialRequests);
   const [activeStatus, setActiveStatus] = useState("all");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -179,16 +191,18 @@ export function RequestManager({ initialRequests = [], users = [] }) {
           </button>
         </div>
 
-        <Button
-          onClick={() => {
-            reset();
-            setShowCreateModal(true);
-          }}
-          className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-9 gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" />
-          নতুন আবেদন জমা দিন
-        </Button>
+        {canCreateRequest && (
+          <Button
+            onClick={() => {
+              reset();
+              setShowCreateModal(true);
+            }}
+            className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-9 gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            নতুন আবেদন জমা দিন
+          </Button>
+        )}
       </div>
 
       {/* Requests List */}
@@ -273,26 +287,33 @@ export function RequestManager({ initialRequests = [], users = [] }) {
                 {/* Status & Review Buttons */}
                 <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
                   {req.status === "pending" ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateStatus(req.id, "approved")}
-                        disabled={isPending}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
-                      >
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        অনুমোদন
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateStatus(req.id, "rejected")}
-                        disabled={isPending}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold cursor-pointer"
-                      >
-                        <XCircle className="w-3.5 h-3.5" />
-                        প্রত্যাখ্যান
-                      </button>
-                    </>
+                    canReviewRequests ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateStatus(req.id, "approved")}
+                          disabled={isPending}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          অনুমোদন
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateStatus(req.id, "rejected")}
+                          disabled={isPending}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold cursor-pointer"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          প্রত্যাখ্যান
+                        </button>
+                      </>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200">
+                        <Clock className="w-3 h-3" />
+                        সুপার অ্যাডমিনের সিদ্ধান্তের অপেক্ষায়
+                      </span>
+                    )
                   ) : req.status === "approved" ? (
                     <Badge variant="success" className="gap-1">
                       <CheckCircle className="w-3 h-3" />
@@ -312,7 +333,7 @@ export function RequestManager({ initialRequests = [], users = [] }) {
       </div>
 
       {/* New Request Modal with React Hook Form Real-time Validation */}
-      {showCreateModal && (
+      {showCreateModal && canCreateRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
@@ -387,7 +408,7 @@ export function RequestManager({ initialRequests = [], users = [] }) {
                       {...register("requestedRole")}
                       className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
                     >
-                      {Object.entries(ROLE_LABELS).map(([k, l]) => (
+                      {Object.entries(ASSIGNABLE_ROLE_LABELS).map(([k, l]) => (
                         <option key={k} value={k}>
                           {l}
                         </option>
@@ -407,11 +428,13 @@ export function RequestManager({ initialRequests = [], users = [] }) {
                     className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
                   >
                     <option value="">-- সদস্য নির্বাচন করুন --</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name} ({u.email}) [{ROLE_LABELS[u.role] || u.role}]
-                      </option>
-                    ))}
+                    {users
+                      .filter((u) => !isSingleUserRole(u.role))
+                      .map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} ({u.email}) [{ROLE_LABELS[u.role] || u.role}]
+                        </option>
+                      ))}
                   </select>
                 </div>
               )}
@@ -425,7 +448,7 @@ export function RequestManager({ initialRequests = [], users = [] }) {
                     {...register("requestedRole")}
                     className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
                   >
-                    {Object.entries(ROLE_LABELS).map(([k, l]) => (
+                    {Object.entries(ASSIGNABLE_ROLE_LABELS).map(([k, l]) => (
                       <option key={k} value={k}>
                         {l}
                       </option>

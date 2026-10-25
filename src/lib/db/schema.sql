@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
   password VARCHAR(255) NULL,
   role VARCHAR(32) NOT NULL DEFAULT 'reporter',
   status VARCHAR(32) NOT NULL DEFAULT 'active',
+  must_change_password TINYINT(1) NOT NULL DEFAULT 0,
   avatar TEXT NULL,
   bio TEXT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

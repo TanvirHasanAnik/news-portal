@@ -4,7 +4,12 @@ import { UserHeader } from "./components/UserHeader";
 import { UserManager } from "./components/UserManager";
 
 export default async function UsersModule() {
-  const users = await getAllUsers();
+  let users = [];
+  try {
+    users = (await getAllUsers()) || [];
+  } catch (err) {
+    console.error("[UsersModule error]:", err);
+  }
 
   return (
     <div className="space-y-6">
@@ -13,4 +18,3 @@ export default async function UsersModule() {
     </div>
   );
 }
-

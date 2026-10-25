@@ -5,15 +5,26 @@ import {
   createAdminRequest,
   updateAdminRequestStatus,
 } from "@/repositories/requestRepository";
+import { getUserById } from "@/repositories/userRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
 import {
   createAdminRequestSchema,
   updateAdminRequestStatusSchema,
   formatZodError,
 } from "@/schemas";
+import { hasPermission, isSingleUserRole } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth/server";
 
 export async function createAdminRequestAction(prevState, formData) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || !hasPermission(currentUser.role, "requests:create")) {
+      return {
+        success: false,
+        message: "অননুমোদিত: আপনার আবেদন জমা দেওয়ার অনুমতি নেই।",
+      };
+    }
+
     const rawData = {
       requestType: formData.get("requestType")?.toString().trim(),
       targetUserId: formData.get("targetUserId")?.toString().trim() || null,
@@ -25,6 +36,24 @@ export async function createAdminRequestAction(prevState, formData) {
 
     const validated = createAdminRequestSchema.parse(rawData);
 
+    // Enforce single-user rule: cannot request creation of or promotion to super admin or admin
+    if (validated.requestedRole && isSingleUserRole(validated.requestedRole)) {
+      return {
+        success: false,
+        message: "সুপার অ্যাডমিন বা অ্যাডমিন একক দায়িত্ব; এই পদবীর জন্য আবেদন করা সম্ভব নয়।",
+      };
+    }
+
+    if (validated.targetUserId) {
+      const targetUser = await getUserById(validated.targetUserId);
+      if (targetUser && isSingleUserRole(targetUser.role)) {
+        return {
+          success: false,
+          message: "স্থায়ী সুপার অ্যাডমিন বা অ্যাডমিন অ্যাকাউন্টের বিরুদ্ধে আবেদন করা যাবে না।",
+        };
+      }
+    }
+
     const payload = {
       note: validated.note,
       newRole: validated.requestedRole,
@@ -33,13 +62,14 @@ export async function createAdminRequestAction(prevState, formData) {
     };
 
     await createAdminRequest({
-      requesterId: "usr_reporter", // When auth is hooked, replaced by logged-in user id
+      requesterId: currentUser.id,
       requestType: validated.requestType,
       targetUserId: validated.targetUserId,
       payload,
     });
 
     await recordAuditLog({
+      userId: currentUser.id,
       action: "submit_admin_request",
       targetType: "admin_request",
       details: { requestType: validated.requestType, targetUserId: validated.targetUserId },
@@ -58,6 +88,14 @@ export async function createAdminRequestAction(prevState, formData) {
 
 export async function updateAdminRequestStatusAction(requestId, newStatus, reviewerNote = "") {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || !hasPermission(currentUser.role, "requests:review")) {
+      return {
+        success: false,
+        message: "অননুমোদিত: শুধুমাত্র সুপার অ্যাডমিন আবেদন অনুমোদন বা প্রত্যাখ্যান করতে পারবেন।",
+      };
+    }
+
     const validated = updateAdminRequestStatusSchema.parse({
       requestId,
       newStatus,
@@ -66,11 +104,12 @@ export async function updateAdminRequestStatusAction(requestId, newStatus, revie
 
     await updateAdminRequestStatus(validated.requestId, {
       status: validated.newStatus,
-      reviewedBy: "usr_superadmin",
+      reviewedBy: currentUser.id,
       reviewerNote: validated.reviewerNote,
     });
 
     await recordAuditLog({
+      userId: currentUser.id,
       action: validated.newStatus === "approved" ? "approve_request" : "reject_request",
       targetType: "admin_request",
       targetId: validated.requestId,
@@ -87,4 +126,3 @@ export async function updateAdminRequestStatusAction(requestId, newStatus, revie
     return { success: false, message: formatZodError(error, "স্ট্যাটাস আপডেটে সমস্যা হয়েছে।") };
   }
 }
-

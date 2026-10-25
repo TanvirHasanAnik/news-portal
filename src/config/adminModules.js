@@ -27,7 +27,7 @@ export const adminModules = adminNavItems.map((item) => ({
 }));
 
 export function getAdminModules(user = null) {
-  if (!user) return adminModules;
+  if (!user) return [];
   return adminModules.filter((mod) => canUserAccessModule(user, mod.id));
 }
 
@@ -35,8 +35,9 @@ export function getAdminModuleById(id) {
   return adminModules.find((mod) => mod.id === id) || null;
 }
 
-export function getDefaultAdminModule() {
-  return adminModules[0] || null;
+export function getDefaultAdminModule(user = null) {
+  const accessible = getAdminModules(user);
+  return accessible[0] || null;
 }
 
 export { adminNavItems, getDefaultAdminNavItem };

@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { safeString, safeEmail, hasScriptInjection } from "./baseSchema.js";
-import { USER_ROLES } from "../lib/auth/index.js";
-
-const validRoles = Object.values(USER_ROLES);
+import { ASSIGNABLE_ROLE_IDS } from "../config/roles.js";
 
 export const createUserSchema = z.object({
   name: safeString({
@@ -23,16 +21,20 @@ export const createUserSchema = z.object({
     .refine((val) => !hasScriptInjection(val), {
       message: "পাসওয়ার্ডে অননুমোদিত কোড বা স্ক্রিপ্ট ব্যবহার করা যাবে না।",
     }),
-  role: z.enum(validRoles, {
-    errorMap: () => ({ message: "একটি বৈধ দায়িত্ব বা রোল নির্বাচন করুন।" }),
+  role: z.enum(ASSIGNABLE_ROLE_IDS, {
+    errorMap: () => ({
+      message: "একটি বৈধ পদবী নির্বাচন করুন।",
+    }),
   }),
   bio: z.string().optional().default(""),
 });
 
 export const updateUserRoleSchema = z.object({
   userId: z.string().trim().min(1, { message: "ব্যবহারকারী আইডি আবশ্যক।" }),
-  role: z.enum(validRoles, {
-    errorMap: () => ({ message: "একটি বৈধ দায়িত্ব বা রোল নির্বাচন করুন।" }),
+  role: z.enum(ASSIGNABLE_ROLE_IDS, {
+    errorMap: () => ({
+      message: "একটি বৈধ পদবী নির্বাচন করুন।",
+    }),
   }),
 });
 
@@ -42,4 +44,3 @@ export const toggleUserStatusSchema = z.object({
     errorMap: () => ({ message: "অবৈধ ব্যবহারকারী স্ট্যাটাস।" }),
   }),
 });
-

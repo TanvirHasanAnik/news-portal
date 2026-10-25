@@ -1,11 +1,18 @@
 "use client";
 
 import React, { useState } from "react";
+import { usePathname } from "next/navigation";
 import AdminHeader from "./AdminHeader";
 import AdminSidebar from "./AdminSidebar";
 
 export default function AdminShell({ children }) {
+  const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // If on login route, render standalone page without admin chrome
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100/70 flex flex-col font-sans subpixel-antialiased">
@@ -27,4 +34,3 @@ export default function AdminShell({ children }) {
     </div>
   );
 }
-

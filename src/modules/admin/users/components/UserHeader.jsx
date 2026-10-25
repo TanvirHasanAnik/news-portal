@@ -14,7 +14,7 @@ export function UserHeader({ userCount = 0 }) {
           </h1>
         </div>
         <p className="text-sm text-slate-500 mt-1">
-          সম্পাদকীয় দলের সদস্য তালিকা, নতুন সদস্য আমন্ত্রণ (Invite-by-Email), পদবী ও প্রবেশাধিকার নিয়ন্ত্রণ।
+          সম্পাদকীয় দলের সদস্য তালিকা, নতুন সদস্য তৈরি, পদবী ও প্রবেশাধিকার নিয়ন্ত্রণ।
         </p>
       </div>
 
@@ -24,4 +24,3 @@ export function UserHeader({ userCount = 0 }) {
     </div>
   );
 }
-

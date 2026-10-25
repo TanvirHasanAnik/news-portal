@@ -1,8 +1,6 @@
 import { z } from "zod";
 import { safeString, safeEmail } from "./baseSchema.js";
-import { USER_ROLES } from "../lib/auth/index.js";
-
-const validRoles = Object.values(USER_ROLES);
+import { ASSIGNABLE_ROLE_IDS } from "../config/roles.js";
 
 export const createAdminRequestSchema = z.object({
   requestType: z.enum(
@@ -28,8 +26,10 @@ export const createAdminRequestSchema = z.object({
     .optional()
     .nullable(),
   requestedRole: z
-    .enum(validRoles, {
-      errorMap: () => ({ message: "একটি বৈধ দায়িত্ব বা রোল নির্বাচন করুন।" }),
+    .enum(ASSIGNABLE_ROLE_IDS, {
+      errorMap: () => ({
+        message: "একটি বৈধ পদবী নির্বাচন করুন।",
+      }),
     })
     .optional()
     .nullable(),
@@ -56,4 +56,3 @@ export const updateAdminRequestStatusSchema = z.object({
     .optional()
     .default(""),
 });
-

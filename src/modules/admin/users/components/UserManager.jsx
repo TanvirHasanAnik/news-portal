@@ -1,9 +1,16 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { UserPlus, Shield, UserX, UserCheck, X, Mail, CheckCircle2 } from "lucide-react";
+import {
+  UserPlus,
+  UserX,
+  UserCheck,
+  X,
+  Send,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,10 +20,29 @@ import {
   updateUserRoleAction,
   toggleUserStatusAction,
 } from "@/actions/userActions";
-import { ROLE_LABELS, ROLE_BADGE_STYLES, USER_ROLES } from "@/lib/auth";
+import {
+  ROLE_LABELS,
+  ROLE_BADGE_STYLES,
+  USER_ROLES,
+  ASSIGNABLE_ROLE_LABELS,
+  isSingleUserRole,
+} from "@/lib/auth";
+import { usePermissions } from "@/contexts/AuthContext";
 import { createUserSchema } from "@/schemas/userSchema";
 
-export function UserManager({ initialUsers = [] }) {
+export function UserManager({
+  initialUsers = [],
+  canCreate: propCanCreate,
+  canEditRole: propCanEditRole,
+  canDisable: propCanDisable,
+}) {
+  const { can } = usePermissions();
+
+  // Policy-based RBAC permission checks (overridable via props)
+  const canCreateUser = propCanCreate !== undefined ? propCanCreate : can("users:create");
+  const canChangeRole = propCanEditRole !== undefined ? propCanEditRole : can("users:edit_role");
+  const canToggleUser = propCanDisable !== undefined ? propCanDisable : can("users:disable");
+
   const [users, setUsers] = useState(initialUsers);
   const [showAddModal, setShowAddModal] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState(null);
@@ -41,6 +67,11 @@ export function UserManager({ initialUsers = [] }) {
   });
 
   const onCreateUser = (data) => {
+    if (isSingleUserRole(data.role)) {
+      setFeedback({ type: "error", message: "এই পদে নতুন ব্যবহারকারী যোগ করা সম্ভব নয়।" });
+      return;
+    }
+
     startTransition(async () => {
       const formData = new FormData();
       formData.append("name", data.name.trim());
@@ -75,6 +106,7 @@ export function UserManager({ initialUsers = [] }) {
 
   // Re-confirmation modal on role selection
   const onRoleSelectChange = (usr, newRole) => {
+    if (isSingleUserRole(usr.role) || isSingleUserRole(newRole)) return;
     if (newRole === usr.role) return;
     const oldRoleLabel = ROLE_LABELS[usr.role] || usr.role;
     const newRoleLabel = ROLE_LABELS[newRole] || newRole;
@@ -99,7 +131,8 @@ export function UserManager({ initialUsers = [] }) {
     });
   };
 
-  const handleToggleStatus = (userId, currentStatus, userName) => {
+  const handleToggleStatus = (userId, currentStatus, userName, userRole) => {
+    if (isSingleUserRole(userRole)) return;
     const actionLabel = currentStatus === "active" ? "নিষ্ক্রিয়" : "পুনরায় সক্রিয়";
     setConfirmConfig({
       message: `আপনি কি নিশ্চিতভাবে "${userName}" কে ${actionLabel} করতে চান?`,
@@ -145,20 +178,32 @@ export function UserManager({ initialUsers = [] }) {
             নিবন্ধিত সদস্য তালিকা ({users.length})
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            প্রতিবেদক, বার্তা সম্পাদক ও অন্যান্য সদস্যদের দায়িত্ব নির্ধারণ করুন
+            {canCreateUser
+              ? "প্রতিবেদক, বার্তা সম্পাদক ও অন্যান্য সদস্যদের দায়িত্ব নির্ধারণ করুন"
+              : "নিবন্ধিত সকল সদস্যদের তালিকা দেখুন (পরিবর্তনের জন্য আবেদন ট্যাব ব্যবহার করুন)"}
           </p>
         </div>
 
-        <Button
-          onClick={() => {
-            reset({ name: "", email: "", password: "", role: USER_ROLES.REPORTER });
-            setShowAddModal(true);
-          }}
-          className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-9 gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
-        >
-          <UserPlus className="w-4 h-4" />
-          নতুন সদস্য যোগ করুন
-        </Button>
+        {canCreateUser ? (
+          <Button
+            onClick={() => {
+              reset({ name: "", email: "", password: "", role: USER_ROLES.REPORTER });
+              setShowAddModal(true);
+            }}
+            className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-9 gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
+          >
+            <UserPlus className="w-4 h-4" />
+            নতুন সদস্য যোগ করুন
+          </Button>
+        ) : (
+          <Link
+            href="/admin?tab=requests"
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs self-start sm:self-auto transition-colors"
+          >
+            <Send className="w-3.5 h-3.5" />
+            নতুন সদস্যের আবেদন করুন
+          </Link>
+        )}
       </div>
 
       {/* Users Table */}
@@ -177,7 +222,7 @@ export function UserManager({ initialUsers = [] }) {
             <tbody className="divide-y divide-slate-100 text-xs">
               {users.map((usr) => {
                 const roleBadge = ROLE_BADGE_STYLES[usr.role] || "bg-slate-100 text-slate-700";
-                const isSuperAdmin = usr.email === "admin@aloshbe.com" || usr.id === "usr_superadmin";
+                const isSingleUser = isSingleUserRole(usr.role);
 
                 return (
                   <tr key={usr.id} className="hover:bg-slate-50/70 transition-colors">
@@ -194,9 +239,9 @@ export function UserManager({ initialUsers = [] }) {
                       {usr.email}
                     </td>
 
-                    {/* Role Selector */}
+                    {/* Role Selector or Badge (Single user roles are permanent badges) */}
                     <td className="py-3 px-4">
-                      {isSuperAdmin ? (
+                      {isSingleUser || !canChangeRole ? (
                         <Badge className={`${roleBadge} text-[10px] py-0.5 px-2 font-semibold`}>
                           {ROLE_LABELS[usr.role] || usr.role}
                         </Badge>
@@ -207,7 +252,7 @@ export function UserManager({ initialUsers = [] }) {
                           disabled={isPending}
                           className="h-7 rounded border border-slate-200 bg-white px-2 text-xs text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-slate-900 cursor-pointer"
                         >
-                          {Object.entries(ROLE_LABELS).map(([rKey, rLabel]) => (
+                          {Object.entries(ASSIGNABLE_ROLE_LABELS).map(([rKey, rLabel]) => (
                             <option key={rKey} value={rKey}>
                               {rLabel}
                             </option>
@@ -231,12 +276,14 @@ export function UserManager({ initialUsers = [] }) {
                       )}
                     </td>
 
-                    {/* Actions: Enable / Disable */}
+                    {/* Actions */}
                     <td className="py-3 px-4 text-right whitespace-nowrap">
-                      {!isSuperAdmin ? (
+                      {isSingleUser ? (
+                        <span className="text-slate-400 font-mono text-xs">—</span>
+                      ) : canToggleUser ? (
                         <button
                           type="button"
-                          onClick={() => handleToggleStatus(usr.id, usr.status, usr.name)}
+                          onClick={() => handleToggleStatus(usr.id, usr.status, usr.name, usr.role)}
                           disabled={isPending}
                           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold cursor-pointer transition-colors ${
                             usr.status === "active"
@@ -257,7 +304,13 @@ export function UserManager({ initialUsers = [] }) {
                           )}
                         </button>
                       ) : (
-                        <span className="text-[11px] text-slate-400 font-medium">স্থায়ী অ্যাডমিন</span>
+                        <Link
+                          href="/admin?tab=requests"
+                          className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded border border-slate-200 transition-colors"
+                        >
+                          <Send className="w-3 h-3" />
+                          আবেদন করুন
+                        </Link>
                       )}
                     </td>
                   </tr>
@@ -268,8 +321,8 @@ export function UserManager({ initialUsers = [] }) {
         </div>
       </div>
 
-      {/* Add User Modal with React Hook Form Real-time Validation */}
-      {showAddModal && (
+      {/* Add User Modal: Only lists assignable staff roles */}
+      {showAddModal && canCreateUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden">
             <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
@@ -331,9 +384,6 @@ export function UserManager({ initialUsers = [] }) {
                 {errors.password && (
                   <p className="text-[11px] text-red-500 font-medium mt-1">{errors.password.message}</p>
                 )}
-                <p className="text-[10px] text-slate-400 mt-1">
-                  সুপার অ্যাডমিন কর্তৃক নির্ধারিত; ব্যবহারকারী পরবর্তীতে এটি পরিবর্তন করতে পারবেন।
-                </p>
               </div>
 
               <div>
@@ -344,7 +394,7 @@ export function UserManager({ initialUsers = [] }) {
                   {...register("role")}
                   className="w-full h-9 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900"
                 >
-                  {Object.entries(ROLE_LABELS).map(([rKey, rLabel]) => (
+                  {Object.entries(ASSIGNABLE_ROLE_LABELS).map(([rKey, rLabel]) => (
                     <option key={rKey} value={rKey}>
                       {rLabel}
                     </option>

@@ -12,12 +12,25 @@ import { TopArticlesTable } from "./components/TopArticlesTable";
 import { AuditLogsTable } from "./components/AuditLogsTable";
 
 export default async function AnalyticsModule() {
-  const [summary, categoryStats, topArticles, auditLogs] = await Promise.all([
-    getAnalyticsSummary(),
-    getCategoryViewsStats(),
-    getTopArticles(10),
-    getRecentAuditLogs(8),
-  ]);
+  let summary = { totalViews: 0, todayViews: 0, totalArticles: 0, totalUsers: 0 };
+  let categoryStats = [];
+  let topArticles = [];
+  let auditLogs = [];
+
+  try {
+    const [s, c, t, a] = await Promise.all([
+      getAnalyticsSummary(),
+      getCategoryViewsStats(),
+      getTopArticles(10),
+      getRecentAuditLogs(8),
+    ]);
+    summary = s || summary;
+    categoryStats = c || [];
+    topArticles = t || [];
+    auditLogs = a || [];
+  } catch (err) {
+    console.error("[AnalyticsModule error]:", err);
+  }
 
   return (
     <div className="space-y-6">
@@ -38,4 +51,3 @@ export default async function AnalyticsModule() {
     </div>
   );
 }
-

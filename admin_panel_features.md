@@ -58,6 +58,7 @@ Technical choices:
 4. common standard nodejs module workarounds – example: jose for crypto
 5. Next.js Edge Middleware
 6. On-Demand Incremental Static Regeneration (ISR). Only for admin operations that impact public frontend
+7. Auth state must be anchored in HTTP-only cookies. Use Next.js Middleware to intercept routes and check token validity before the page renders.
 
 Architecture: Server Driven Component Architecture
 Data Flow: Database / CMS - Data Access Layer (Repositories) - Server Components - Client.

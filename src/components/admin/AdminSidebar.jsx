@@ -1,30 +1,55 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { Badge } from "@/components/ui/badge";
+import { adminNavItems, getDefaultAdminNavItem } from "@/config/adminNav";
+import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
+import { Globe, LogOut, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Globe, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { getAdminNavItems, getDefaultAdminNavItem } from "@/config/adminNav";
+import { useEffect } from "react";
 
 /**
  * Shared sidebar content used in both desktop sidebar and mobile drawer
  */
-function SidebarContent({ activeModules, currentTab, onItemClick }) {
+function SidebarContent({ activeModules, currentTab, onItemClick, user, roleNameBn, onLogout }) {
+  const initialChar = user?.name ? user.name.trim().charAt(0) : "সু";
+
   return (
     <>
       <div className="space-y-6">
         {/* User Role Profile Card */}
         <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-sm shadow-sm shrink-0">
-              সু
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-full bg-slate-900 text-white font-bold flex items-center justify-center text-sm shadow-sm shrink-0">
+                {initialChar}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-slate-900 truncate">
+                  {user?.name || "ব্যবহারকারী"}
+                </p>
+                <p className="text-xs text-slate-500 font-medium truncate">
+                  {roleNameBn || "অ্যাডমিন"}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-slate-900 truncate">সুপার অ্যাডমিন</p>
-              <p className="text-xs text-slate-500 truncate">admin@aloshbe.com</p>
-            </div>
+
+            <button
+              type="button"
+              onClick={onLogout}
+              title="লগআউট করুন"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer shrink-0"
+              aria-label="লগআউট"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="mt-2 pt-2 border-t border-slate-200/60">
+            <p className="text-[11px] text-slate-400 font-mono truncate">
+              {user?.email || "admin@aloshbe.com"}
+            </p>
           </div>
         </div>
 
@@ -82,6 +107,15 @@ function SidebarContent({ activeModules, currentTab, onItemClick }) {
 
       {/* Footer Navigation */}
       <div className="pt-4 border-t border-slate-200 space-y-2 mt-auto">
+        <button
+          type="button"
+          onClick={onLogout}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer text-left"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>লগআউট</span>
+        </button>
+
         <Link
           href="/"
           target="_blank"
@@ -101,9 +135,12 @@ function SidebarContent({ activeModules, currentTab, onItemClick }) {
 
 export default function AdminSidebar({ mobileOpen = false, onCloseMobile }) {
   const searchParams = useSearchParams();
-  const defaultModule = getDefaultAdminNavItem();
-  const currentTab = searchParams.get("tab") || defaultModule?.id || "create-article";
-  const activeModules = getAdminNavItems();
+  const { user, roleNameBn, canAccessTab, logout } = useAuth();
+
+  // Filter modules strictly based on policy-based permissions
+  const activeModules = adminNavItems.filter((item) => canAccessTab(item.id));
+  const fallbackModule = activeModules[0] || getDefaultAdminNavItem();
+  const currentTab = searchParams.get("tab") || fallbackModule?.id || "create-article";
 
   // Close mobile drawer on Escape key
   useEffect(() => {
@@ -121,7 +158,13 @@ export default function AdminSidebar({ mobileOpen = false, onCloseMobile }) {
     <>
       {/* 1. Desktop Persistent Sticky Sidebar (Visible on md+ screens) */}
       <aside className="hidden md:flex md:w-72 shrink-0 border-r border-slate-200 bg-white md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:overflow-y-auto flex-col justify-between p-4 self-start">
-        <SidebarContent activeModules={activeModules} currentTab={currentTab} />
+        <SidebarContent
+          activeModules={activeModules}
+          currentTab={currentTab}
+          user={user}
+          roleNameBn={roleNameBn}
+          onLogout={logout}
+        />
       </aside>
 
       {/* 2. Mobile Slide-in Drawer Toggle (Visible on <md screens when opened) */}
@@ -135,7 +178,7 @@ export default function AdminSidebar({ mobileOpen = false, onCloseMobile }) {
 
           {/* Slide-in Drawer */}
           <div className="fixed inset-y-0 left-0 w-full max-w-xs sm:max-w-sm bg-white shadow-2xl flex flex-col z-10 overflow-hidden animate-in slide-in-from-left duration-200">
-            {/* Drawer Header with Logo & Close Button (Matching Public MobileDrawer style) */}
+            {/* Drawer Header */}
             <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
               <div>
                 <Link
@@ -170,6 +213,9 @@ export default function AdminSidebar({ mobileOpen = false, onCloseMobile }) {
                 activeModules={activeModules}
                 currentTab={currentTab}
                 onItemClick={onCloseMobile}
+                user={user}
+                roleNameBn={roleNameBn}
+                onLogout={logout}
               />
             </div>
           </div>

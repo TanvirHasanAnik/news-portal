@@ -4,7 +4,13 @@ import { CategoryHeader } from "./components/CategoryHeader";
 import { CategoryManager } from "./components/CategoryManager";
 
 export default async function CategoriesModule() {
-  const categoriesWithSubs = await getAllCategoriesWithSubcategories();
+  let categoriesWithSubs = [];
+
+  try {
+    categoriesWithSubs = (await getAllCategoriesWithSubcategories()) || [];
+  } catch (err) {
+    console.error("[CategoriesModule error]:", err);
+  }
 
   return (
     <div className="space-y-6">
@@ -13,4 +19,3 @@ export default async function CategoriesModule() {
     </div>
   );
 }
-

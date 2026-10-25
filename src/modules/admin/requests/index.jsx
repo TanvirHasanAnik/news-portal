@@ -5,10 +5,19 @@ import { RequestHeader } from "./components/RequestHeader";
 import { RequestManager } from "./components/RequestManager";
 
 export default async function RequestsModule() {
-  const [requests, users] = await Promise.all([
-    getAllAdminRequests(),
-    getAllUsers(),
-  ]);
+  let requests = [];
+  let users = [];
+
+  try {
+    const [reqs, usrs] = await Promise.all([
+      getAllAdminRequests(),
+      getAllUsers(),
+    ]);
+    requests = reqs || [];
+    users = usrs || [];
+  } catch (err) {
+    console.error("[RequestsModule error]:", err);
+  }
 
   const pendingCount = requests.filter((r) => r.status === "pending").length;
 
@@ -19,4 +28,3 @@ export default async function RequestsModule() {
     </div>
   );
 }
-
