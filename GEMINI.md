@@ -8,7 +8,8 @@ Crucial rule: Never display internal feature names, technical acronyms or prompt
 - On-Demand Incremental Static Regeneration (ISR). Only for admin operations that impact public frontend
 
 ## 2. Tech Stack Standards
-- Use Next.js 16, Tailwind CSS, and Cloudflare D1/Workers with R2 storage.
+- Use Next.js 16, Tailwind CSS, and tidB mysql with R2 storage.
+- Currently working in wrangler simulation environment with open next adapter
 - Keep code clean, modern, and production-ready in JavaScript as requested.
 - Architecture: Server Driven Component Architecture
 Data Flow: Database / CMS <-> Data Access Layer (Repositories) <-> Server Components <-> Client.
