@@ -51,7 +51,7 @@ exclusive Tabs:
 
 ------------------------------
 
-Technical choices:
+# Technical choices:
 1. Raw MySQL (`mysql2/promise`) / TiDB (utf8mb4, zero ORM)
 2. Cloudflare adapter, wrangler
 3. JWT tokenization
@@ -60,9 +60,14 @@ Technical choices:
 6. On-Demand Incremental Static Regeneration (ISR). Only for admin operations that impact public frontend
 7. Auth state must be anchored in HTTP-only cookies. Use Next.js Middleware to intercept routes and check token validity before the page renders.
 
-Architecture: Server Driven Component Architecture
+# Architecture: Server Driven Component Architecture
 Data Flow: Database / CMS - Data Access Layer (Repositories) - Server Components - Client.
 Repository: Direct database read write (query) functions
 Server components: takes the repository function’s data and render the ui
 Server actions: Server Actions catch user input then pass to repository to update db
 
+# User Credential management
+User identity will be dictated by unique username.
+Super admin & admin: Default fallback password is saved in environment path.
+Admins can change their password. If they forget the password they can switch back to the fallback default password.
+Users created by admin: They can change their own password but changing the password would require admin's help.
