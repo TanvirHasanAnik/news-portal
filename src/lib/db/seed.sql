@@ -1,8 +1,8 @@
 -- Default Staff Users
 -- Super Admin and Admin accounts are securely bootstrapped by the system runtime from environment variables (.dev.vars / wrangler secret)
-INSERT IGNORE INTO users (id, name, email, role, status, bio)
+INSERT IGNORE INTO users (id, username, full_name, name, email, phone, role, status, bio)
 VALUES 
-  ('usr_reporter', 'নিজস্ব প্রতিবেদক', 'reporter@aloshbe.com', 'reporter', 'active', 'আলো আসবে সংবাদ পরিবার');
+  ('usr_reporter', 'reporter', 'নিজস্ব প্রতিবেদক', 'নিজস্ব প্রতিবেদক', 'reporter@aloshbe.com', '', 'reporter', 'active', 'আলো আসবে সংবাদ পরিবার');
 
 -- Default Categories
 INSERT IGNORE INTO categories (id, name, slug, is_permanent, sort_order)

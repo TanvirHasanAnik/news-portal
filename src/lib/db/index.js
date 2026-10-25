@@ -150,8 +150,17 @@ export async function ensureDbInitialized() {
 
   bootstrapPromise = (async () => {
     try {
+      let cfEnv = {};
+      try {
+        const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+        const ctx = await getCloudflareContext({ async: true });
+        if (ctx?.env) {
+          cfEnv = ctx.env;
+        }
+      } catch (_e) {}
+
       const { bootstrapDatabase } = await import("./bootstrap.js");
-      await bootstrapDatabase();
+      await bootstrapDatabase(cfEnv);
       isDbBootstrapped = true;
     } catch (err) {
       console.warn("[Auto-Init DB Warning]:", err?.message || err);

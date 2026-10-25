@@ -55,7 +55,7 @@ export default async function AdminPage({ searchParams }) {
 
   return (
     <div className="w-full">
-      <ActiveModuleComponent />
+      <ActiveModuleComponent currentUser={user} />
     </div>
   );
 }

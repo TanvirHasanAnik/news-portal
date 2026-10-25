@@ -6,6 +6,7 @@ import {
   FolderTree,
   Users,
   ClipboardList,
+  UserCircle,
 } from "lucide-react";
 import { canUserAccessModule } from "@/lib/auth";
 
@@ -49,6 +50,11 @@ export const adminNavItems = [
     label: "অ্যাডমিন আবেদনসমূহ",
     icon: ClipboardList,
   },
+  {
+    id: "profile",
+    label: "প্রোফাইল সেটিংস",
+    icon: UserCircle,
+  },
 ];
 
 export function getAdminNavItems(user = null) {
@@ -59,4 +65,3 @@ export function getAdminNavItems(user = null) {
 export function getDefaultAdminNavItem() {
   return adminNavItems[0] || null;
 }
-

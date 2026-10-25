@@ -28,8 +28,10 @@ export async function createUserAction(prevState, formData) {
     }
 
     const rawData = {
-      name: formData.get("name")?.toString() || "",
+      username: formData.get("username")?.toString() || "",
+      fullName: formData.get("fullName")?.toString() || formData.get("name")?.toString() || "",
       email: formData.get("email")?.toString() || "",
+      phone: formData.get("phone")?.toString() || "",
       password: formData.get("password")?.toString() || "",
       role: formData.get("role")?.toString() || "reporter",
       bio: formData.get("bio")?.toString() || "",
@@ -46,8 +48,10 @@ export async function createUserAction(prevState, formData) {
     }
 
     const created = await createUser({
-      name: validated.name,
+      username: validated.username,
+      fullName: validated.fullName,
       email: validated.email,
+      phone: validated.phone,
       password: validated.password,
       role: validated.role,
       status: "active",
@@ -59,18 +63,22 @@ export async function createUserAction(prevState, formData) {
       action: "create_user",
       targetType: "user",
       targetId: created.id,
-      details: { name: validated.name, email: validated.email, role: validated.role },
+      details: { username: validated.username, role: validated.role },
     });
 
     revalidatePath("/admin");
 
     return {
       success: true,
-      message: `"${validated.name}" (${validated.email}) ব্যবহারকারী সফলভাবে যুক্ত করা হয়েছে!`,
+      message: `"${validated.username}" ব্যবহারকারী সফলভাবে যুক্ত করা হয়েছে!`,
     };
   } catch (error) {
-    if (error.message?.includes("UNIQUE constraint failed: users.email") || error.message?.includes("uq_users_email")) {
-      return { success: false, message: "এই ইমেইল ঠিকানায় ইতিমধ্যে একটি অ্যাকাউন্ট রয়েছে।" };
+    if (
+      error.message?.includes("UNIQUE constraint failed: users.username") ||
+      error.message?.includes("uq_users_username") ||
+      error.message?.includes("Duplicate entry")
+    ) {
+      return { success: false, message: "এই ইউজারনেমটি ইতিমধ্যে ব্যবহৃত হয়েছে। অনুগ্রহ করে অন্য ইউজারনেম দিন।" };
     }
     return { success: false, message: formatZodError(error, "ব্যবহারকারী যোগে সমস্যা হয়েছে।") };
   }

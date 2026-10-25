@@ -40,10 +40,14 @@ export default function AdminHeader({ onMenuToggle }) {
         {/* Right: User Role Info, Live Site Link & Quick Logout */}
         <div className="flex items-center gap-2.5 sm:gap-3">
           {user && (
-            <div className="hidden sm:flex items-center gap-2 pr-2 border-r border-slate-200">
+            <Link
+              href="/admin?tab=profile"
+              title="প্রোফাইল সেটিংস দেখুন"
+              className="hidden sm:flex items-center gap-2 pr-2 border-r border-slate-200 hover:opacity-85 transition-opacity"
+            >
               <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-slate-400" />
-                {user.name}
+                {user.fullName || user.name || user.username}
               </span>
               <Badge
                 className={`text-[10px] py-0.5 px-2 font-semibold ${
@@ -52,7 +56,7 @@ export default function AdminHeader({ onMenuToggle }) {
               >
                 {roleNameBn}
               </Badge>
-            </div>
+            </Link>
           )}
 
           <Link

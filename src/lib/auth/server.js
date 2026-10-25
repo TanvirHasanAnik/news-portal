@@ -34,8 +34,11 @@ export async function getCurrentUser() {
 
     return {
       id: dbUser.id,
-      name: dbUser.name,
-      email: dbUser.email,
+      username: dbUser.username,
+      name: dbUser.name || dbUser.full_name || dbUser.username,
+      fullName: dbUser.full_name || dbUser.name || dbUser.username,
+      email: dbUser.email || "",
+      phone: dbUser.phone || "",
       role: dbUser.role,
       status: dbUser.status,
       mustChangePassword: Boolean(dbUser.must_change_password),

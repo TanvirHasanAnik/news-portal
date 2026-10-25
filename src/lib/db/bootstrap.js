@@ -13,11 +13,14 @@ let seedingPromise = null;
 const BCRYPT_SALT_ROUNDS = 12;
 
 const TABLE_DEFINITIONS = [
-  // 1. Users table
+  // 1. Users table (Primary unique identifier is username)
   `CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    email VARCHAR(191) NOT NULL,
+    username VARCHAR(64) NOT NULL,
+    full_name VARCHAR(255) NULL,
+    name VARCHAR(255) NULL,
+    email VARCHAR(191) NULL,
+    phone VARCHAR(32) NULL,
     password VARCHAR(255) NULL,
     role VARCHAR(32) NOT NULL DEFAULT 'reporter',
     status VARCHAR(32) NOT NULL DEFAULT 'active',
@@ -26,7 +29,9 @@ const TABLE_DEFINITIONS = [
     bio TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uq_users_email (email),
+    UNIQUE KEY uq_users_username (username),
+    INDEX idx_users_email (email),
+    INDEX idx_users_phone (phone),
     INDEX idx_users_role (role),
     INDEX idx_users_status (status),
     INDEX idx_users_created_at (created_at)
@@ -301,7 +306,7 @@ async function executeUniversalQuery(sql, params = [], env = {}) {
   }
 }
 
-function resolveEnvSecrets(env = {}) {
+export function resolveEnvSecrets(env = {}) {
   const getVal = (key) =>
     env[key] !== undefined
       ? env[key]
@@ -309,24 +314,59 @@ function resolveEnvSecrets(env = {}) {
       ? process.env[key]
       : undefined;
 
+  const superAdminPassword = (
+    getVal("SUPER_ADMIN_PASSWORD") ||
+    getVal("SUPER_ADMIN_FALLBACK_PASSWORD") ||
+    getVal("INITIAL_SUPER_ADMIN_PASSWORD") ||
+    "SuperAdminSecure2026!"
+  ).trim();
+
+  const adminPassword = (
+    getVal("ADMIN_PASSWORD") ||
+    getVal("ADMIN_FALLBACK_PASSWORD") ||
+    getVal("INITIAL_ADMIN_PASSWORD") ||
+    "AdminSecure2026!"
+  ).trim();
+
+  const superAdminUsername = (
+    getVal("SUPER_ADMIN_USERNAME") ||
+    getVal("INITIAL_SUPER_ADMIN_USERNAME") ||
+    "superadmin"
+  ).trim().toLowerCase();
+
+  const adminUsername = (
+    getVal("ADMIN_USERNAME") ||
+    getVal("INITIAL_ADMIN_USERNAME") ||
+    "admin"
+  ).trim().toLowerCase();
+
   return {
-    superAdminEmail: (
-      getVal("INITIAL_SUPER_ADMIN_EMAIL") ||
-      getVal("INITIAL_ADMIN_EMAIL") ||
-      "admin@aloshbe.com"
-    ).trim(),
-    superAdminPassword:
-      getVal("INITIAL_SUPER_ADMIN_PASSWORD") ||
-      getVal("INITIAL_ADMIN_PASSWORD") ||
-      "SuperAdminSecure2026!",
-    adminEmail: (
-      getVal("INITIAL_ADMIN_EMAIL") ||
-      "manager@aloshbe.com"
-    ).trim(),
-    adminPassword:
-      getVal("INITIAL_ADMIN_PASSWORD") ||
-      "AdminSecure2026!",
+    superAdminUsername,
+    superAdminEmail: (getVal("SUPER_ADMIN_EMAIL") || getVal("INITIAL_SUPER_ADMIN_EMAIL") || "").trim().toLowerCase() || null,
+    superAdminName: (getVal("SUPER_ADMIN_NAME") || getVal("INITIAL_SUPER_ADMIN_NAME") || "সুপার অ্যাডমিন").trim(),
+    superAdminPassword,
+    superAdminFallbackPassword: superAdminPassword,
+
+    adminUsername,
+    adminEmail: (getVal("ADMIN_EMAIL") || getVal("INITIAL_ADMIN_EMAIL") || "").trim().toLowerCase() || null,
+    adminName: (getVal("ADMIN_NAME") || getVal("INITIAL_ADMIN_NAME") || "অ্যাডমিন").trim(),
+    adminPassword,
+    adminFallbackPassword: adminPassword,
   };
+}
+
+/**
+ * Returns the environment fallback password for super_admin or admin
+ */
+export function getFallbackPasswordForRole(role, env = {}) {
+  const secrets = resolveEnvSecrets(env);
+  if (role === "super_admin") {
+    return secrets.superAdminFallbackPassword;
+  }
+  if (role === "admin") {
+    return secrets.adminFallbackPassword;
+  }
+  return null;
 }
 
 /**
@@ -393,8 +433,8 @@ export async function bootstrapDatabase(env = {}) {
       // 4. Ensure initial reporter exists
       try {
         await executeUniversalQuery(
-          `INSERT IGNORE INTO users (id, name, email, role, status, bio)
-           VALUES ('usr_reporter', 'নিজস্ব প্রতিবেদক', 'reporter@aloshbe.com', 'reporter', 'active', 'আলো আসবে সংবাদ পরিবার')`,
+          `INSERT IGNORE INTO users (id, username, full_name, name, email, phone, role, status, bio)
+           VALUES ('usr_reporter', 'reporter', 'নিজস্ব প্রতিবেদক', 'নিজস্ব প্রতিবেদক', 'reporter@aloshbe.com', '', 'reporter', 'active', 'আলো আসবে সংবাদ পরিবার')`,
           [],
           env
         );
@@ -403,7 +443,7 @@ export async function bootstrapDatabase(env = {}) {
       // 5. Check and seed Super Admin and Admin
       const secrets = resolveEnvSecrets(env);
       const existingUsers = await executeUniversalQuery(
-        "SELECT id, role, email FROM users WHERE role IN (?, ?)",
+        "SELECT id, username, role, email FROM users WHERE role IN (?, ?)",
         ["super_admin", "admin"],
         env
       );
@@ -419,9 +459,9 @@ export async function bootstrapDatabase(env = {}) {
         const userId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `usr_sa_${Date.now()}`;
 
         await executeUniversalQuery(
-          `INSERT INTO users (id, name, email, password, role, status, must_change_password, bio, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 'super_admin', 'active', 1, 'সিস্টেম সুপার অ্যাডমিন', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-          [userId, "সুপার অ্যাডমিন", secrets.superAdminEmail.toLowerCase(), hashedPassword],
+          `INSERT INTO users (id, username, full_name, name, email, phone, password, role, status, must_change_password, bio, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, '', ?, 'super_admin', 'active', 1, 'সিস্টেম সুপার অ্যাডমিন', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+          [userId, secrets.superAdminUsername, secrets.superAdminName, secrets.superAdminName, secrets.superAdminEmail, hashedPassword],
           env
         );
       }
@@ -433,9 +473,9 @@ export async function bootstrapDatabase(env = {}) {
         const userId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `usr_adm_${Date.now()}`;
 
         await executeUniversalQuery(
-          `INSERT INTO users (id, name, email, password, role, status, must_change_password, bio, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 'admin', 'active', 1, 'সিস্টেম অ্যাডমিন', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-          [userId, "অ্যাডমিন", secrets.adminEmail.toLowerCase(), hashedPassword],
+          `INSERT INTO users (id, username, full_name, name, email, phone, password, role, status, must_change_password, bio, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, '', ?, 'admin', 'active', 1, 'সিস্টেম অ্যাডমিন', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+          [userId, secrets.adminUsername, secrets.adminName, secrets.adminName, secrets.adminEmail, hashedPassword],
           env
         );
       }

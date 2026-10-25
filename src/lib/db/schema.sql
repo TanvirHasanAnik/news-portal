@@ -3,11 +3,14 @@
 -- Strict Unicode (utf8mb4) & InnoDB engine for workerd / TiDB compatibility
 -- ============================================================
 
--- 1. Users table (Super Admin, Admin, Editor-in-Chief, Editor, Sub-editor, Reporter)
+-- 1. Users table (Primary identity is unique immutable username)
 CREATE TABLE IF NOT EXISTS users (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  email VARCHAR(191) NOT NULL,
+  username VARCHAR(64) NOT NULL,
+  full_name VARCHAR(255) NULL,
+  name VARCHAR(255) NULL,
+  email VARCHAR(191) NULL,
+  phone VARCHAR(32) NULL,
   password VARCHAR(255) NULL,
   role VARCHAR(32) NOT NULL DEFAULT 'reporter',
   status VARCHAR(32) NOT NULL DEFAULT 'active',
@@ -16,7 +19,9 @@ CREATE TABLE IF NOT EXISTS users (
   bio TEXT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_users_email (email),
+  UNIQUE KEY uq_users_username (username),
+  INDEX idx_users_email (email),
+  INDEX idx_users_phone (phone),
   INDEX idx_users_role (role),
   INDEX idx_users_status (status),
   INDEX idx_users_created_at (created_at)

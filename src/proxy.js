@@ -23,14 +23,9 @@ export async function proxy(request) {
     payload = await verifyJwtToken(token);
   }
 
-  // 1. Authenticated user attempting to visit login page -> redirect to admin dashboard
-  // Only redirect if there's no "from=" parameter to avoid redirect loops
+  // 1. Allow login page to always render directly without redirection.
+  // Prevents false-positive redirect loops if database was formatted or user was invalidated.
   if (isLoginPage) {
-    if (payload && payload.status === "active" && !search.includes("from=")) {
-      const dashboardUrl = new URL("/admin", request.url);
-      return NextResponse.redirect(dashboardUrl);
-    }
-
     return NextResponse.next();
   }
 

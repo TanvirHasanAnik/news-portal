@@ -3,7 +3,7 @@
 import React, { useState, useTransition, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Lock, Mail, Eye, EyeOff, LogIn, ArrowLeft, ShieldCheck } from "lucide-react";
+import { Lock, User, Eye, EyeOff, LogIn, ArrowLeft, ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { loginAction } from "@/actions/authActions";
@@ -13,7 +13,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const returnFrom = searchParams ? searchParams.get("from") : null;
 
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -23,14 +23,14 @@ function LoginForm() {
     e.preventDefault();
     setErrorMessage("");
 
-    if (!email.trim() || !password) {
-      setErrorMessage("অনুগ্রহ করে ইমেইল এবং পাসওয়ার্ড প্রদান করুন।");
+    if (!username.trim() || !password) {
+      setErrorMessage("অনুগ্রহ করে ইউজারনেম এবং পাসওয়ার্ড প্রদান করুন।");
       return;
     }
 
     startTransition(async () => {
       const formData = new FormData();
-      formData.append("email", email.trim());
+      formData.append("username", username.trim());
       formData.append("password", password);
 
       const res = await loginAction(null, formData);
@@ -55,16 +55,19 @@ function LoginForm() {
       <form onSubmit={handleLogin} className="space-y-4">
         <div>
           <label className="block text-xs font-bold text-slate-700 mb-1.5">
-            ইমেইল ঠিকানা <span className="text-red-500">*</span>
+            ইউজারনেম (Username) <span className="text-red-500">*</span>
           </label>
           <div className="relative">
-            <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <Input
-              type="email"
+              type="text"
               required
-              placeholder="admin@aloshbe.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck="false"
+              placeholder="ইউজারনেম দিন (যেমন: superadmin)"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               disabled={isPending}
               className="pl-9 text-xs h-10 border-slate-200 focus-visible:ring-slate-900 bg-slate-50/50"
             />

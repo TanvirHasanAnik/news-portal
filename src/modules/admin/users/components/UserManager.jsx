@@ -10,6 +10,10 @@ import {
   UserCheck,
   X,
   Send,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Lock,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +24,7 @@ import {
   updateUserRoleAction,
   toggleUserStatusAction,
 } from "@/actions/userActions";
+import { adminResetStaffPasswordAction } from "@/actions/authActions";
 import {
   ROLE_LABELS,
   ROLE_BADGE_STYLES,
@@ -27,7 +32,7 @@ import {
   ASSIGNABLE_ROLE_LABELS,
   isSingleUserRole,
 } from "@/lib/auth";
-import { usePermissions } from "@/contexts/AuthContext";
+import { usePermissions, useAuth } from "@/contexts/AuthContext";
 import { createUserSchema } from "@/schemas/userSchema";
 
 export function UserManager({
@@ -37,6 +42,9 @@ export function UserManager({
   canDisable: propCanDisable,
 }) {
   const { can } = usePermissions();
+  const { user: currentUser } = useAuth();
+
+  const isSuperAdmin = currentUser?.role === "super_admin";
 
   // Policy-based RBAC permission checks (overridable via props)
   const canCreateUser = propCanCreate !== undefined ? propCanCreate : can("users:create");
@@ -49,7 +57,15 @@ export function UserManager({
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
 
-  // Initialize React Hook Form with real-time validation via Zod
+  // Staff Password Reset Modal State (Super Admin exclusive)
+  const [resetTargetUser, setResetTargetUser] = useState(null);
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetError, setResetError] = useState("");
+  const [isResetPending, startResetTransition] = useTransition();
+
+  // Initialize React Hook Form for new user creation
   const {
     register,
     handleSubmit,
@@ -59,8 +75,10 @@ export function UserManager({
     resolver: zodResolver(createUserSchema),
     mode: "onChange",
     defaultValues: {
-      name: "",
+      username: "",
+      fullName: "",
       email: "",
+      phone: "",
       password: "",
       role: USER_ROLES.REPORTER,
     },
@@ -74,8 +92,10 @@ export function UserManager({
 
     startTransition(async () => {
       const formData = new FormData();
-      formData.append("name", data.name.trim());
-      formData.append("email", data.email.trim());
+      formData.append("username", data.username.trim().toLowerCase());
+      formData.append("fullName", (data.fullName || "").trim());
+      formData.append("email", (data.email || "").trim().toLowerCase());
+      formData.append("phone", (data.phone || "").trim());
       formData.append("password", data.password.trim());
       formData.append("role", data.role);
       formData.append("bio", "");
@@ -86,8 +106,11 @@ export function UserManager({
           ...prev,
           {
             id: `usr_${Date.now()}`,
-            name: data.name.trim(),
-            email: data.email.trim(),
+            username: data.username.trim().toLowerCase(),
+            full_name: (data.fullName || "").trim(),
+            name: (data.fullName || data.username).trim(),
+            email: (data.email || "").trim(),
+            phone: (data.phone || "").trim(),
             role: data.role,
             status: "active",
             bio: "",
@@ -95,7 +118,14 @@ export function UserManager({
           },
         ]);
         setFeedback({ type: "success", message: res.message });
-        reset({ name: "", email: "", password: "", role: USER_ROLES.REPORTER });
+        reset({
+          username: "",
+          fullName: "",
+          email: "",
+          phone: "",
+          password: "",
+          role: USER_ROLES.REPORTER,
+        });
         setShowAddModal(false);
       } else {
         setFeedback({ type: "error", message: res.message });
@@ -112,7 +142,7 @@ export function UserManager({
     const newRoleLabel = ROLE_LABELS[newRole] || newRole;
 
     setConfirmConfig({
-      message: `আপনি কি "${usr.name}"-এর দায়িত্ব "${oldRoleLabel}" থেকে "${newRoleLabel}"-এ পরিবর্তন করতে চান?`,
+      message: `আপনি কি "${usr.name || usr.username}"-এর দায়িত্ব "${oldRoleLabel}" থেকে "${newRoleLabel}"-এ পরিবর্তন করতে চান?`,
       onConfirm: () => {
         setConfirmConfig(null);
         startTransition(async () => {
@@ -155,6 +185,41 @@ export function UserManager({
     });
   };
 
+  // Handle Staff Password Reset Submission by Super Admin
+  const handleResetStaffPasswordSubmit = (e) => {
+    e.preventDefault();
+    setResetError("");
+
+    if (!resetTargetUser) return;
+
+    if (!resetNewPassword || resetNewPassword.length < 6) {
+      setResetError("নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।");
+      return;
+    }
+
+    if (resetNewPassword !== resetConfirmPassword) {
+      setResetError("নতুন পাসওয়ার্ড এবং নিশ্চিতকরণ পাসওয়ার্ড মিলছে না।");
+      return;
+    }
+
+    startResetTransition(async () => {
+      const formData = new FormData();
+      formData.append("userId", resetTargetUser.id);
+      formData.append("newPassword", resetNewPassword);
+
+      const res = await adminResetStaffPasswordAction(null, formData);
+      if (res.success) {
+        setFeedback({ type: "success", message: res.message });
+        setResetTargetUser(null);
+        setResetNewPassword("");
+        setResetConfirmPassword("");
+      } else {
+        setResetError(res.message || "পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে।");
+      }
+      setTimeout(() => setFeedback(null), 4000);
+    });
+  };
+
   return (
     <div className="space-y-6">
       {/* Feedback banner */}
@@ -179,7 +244,7 @@ export function UserManager({
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             {canCreateUser
-              ? "প্রতিবেদক, বার্তা সম্পাদক ও অন্যান্য সদস্যদের দায়িত্ব নির্ধারণ করুন"
+              ? "প্রতিবেদক, বার্তা সম্পাদক ও অন্যান্য সদস্যদের দায়িত্ব ও পাসওয়ার্ড পরিচালনা করুন"
               : "নিবন্ধিত সকল সদস্যদের তালিকা দেখুন (পরিবর্তনের জন্য আবেদন ট্যাব ব্যবহার করুন)"}
           </p>
         </div>
@@ -187,7 +252,14 @@ export function UserManager({
         {canCreateUser ? (
           <Button
             onClick={() => {
-              reset({ name: "", email: "", password: "", role: USER_ROLES.REPORTER });
+              reset({
+                username: "",
+                fullName: "",
+                email: "",
+                phone: "",
+                password: "",
+                role: USER_ROLES.REPORTER,
+              });
               setShowAddModal(true);
             }}
             className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-9 gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto"
@@ -213,7 +285,8 @@ export function UserManager({
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 text-xs font-semibold">
                 <th className="py-3 px-4">নাম ও পরিচিতি</th>
-                <th className="py-3 px-4">ইমেইল</th>
+                <th className="py-3 px-4">ইউজারনেম</th>
+                <th className="py-3 px-4">যোগাযোগ</th>
                 <th className="py-3 px-4">দায়িত্ব (রোল)</th>
                 <th className="py-3 px-4">অবস্থা</th>
                 <th className="py-3 px-4 text-right">কার্যক্রম</th>
@@ -228,18 +301,30 @@ export function UserManager({
                   <tr key={usr.id} className="hover:bg-slate-50/70 transition-colors">
                     {/* Name & Bio */}
                     <td className="py-3 px-4">
-                      <div className="font-semibold text-slate-900">{usr.name}</div>
+                      <div className="font-semibold text-slate-900">
+                        {usr.full_name || usr.name || usr.username}
+                      </div>
                       <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
                         {usr.bio || "কোনো বিবরণ নেই"}
                       </div>
                     </td>
 
-                    {/* Email */}
-                    <td className="py-3 px-4 text-slate-600 font-mono text-[11px]">
-                      {usr.email}
+                    {/* Username */}
+                    <td className="py-3 px-4">
+                      <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                        @{usr.username}
+                      </span>
                     </td>
 
-                    {/* Role Selector or Badge (Single user roles are permanent badges) */}
+                    {/* Contact (Email & Phone) */}
+                    <td className="py-3 px-4 text-slate-600 text-[11px]">
+                      <div>{usr.email || <span className="text-slate-400">—</span>}</div>
+                      {usr.phone && (
+                        <div className="text-slate-400 text-[10px] mt-0.5 font-mono">{usr.phone}</div>
+                      )}
+                    </td>
+
+                    {/* Role Selector or Badge */}
                     <td className="py-3 px-4">
                       {isSingleUser || !canChangeRole ? (
                         <Badge className={`${roleBadge} text-[10px] py-0.5 px-2 font-semibold`}>
@@ -280,37 +365,60 @@ export function UserManager({
                     <td className="py-3 px-4 text-right whitespace-nowrap">
                       {isSingleUser ? (
                         <span className="text-slate-400 font-mono text-xs">—</span>
-                      ) : canToggleUser ? (
-                        <button
-                          type="button"
-                          onClick={() => handleToggleStatus(usr.id, usr.status, usr.name, usr.role)}
-                          disabled={isPending}
-                          className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold cursor-pointer transition-colors ${
-                            usr.status === "active"
-                              ? "text-red-700 bg-red-50 hover:bg-red-100 border border-red-200"
-                              : "text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200"
-                          }`}
-                        >
-                          {usr.status === "active" ? (
-                            <>
-                              <UserX className="w-3.5 h-3.5" />
-                              নিষ্ক্রিয় করুন
-                            </>
-                          ) : (
-                            <>
-                              <UserCheck className="w-3.5 h-3.5" />
-                              সক্রিয় করুন
-                            </>
-                          )}
-                        </button>
                       ) : (
-                        <Link
-                          href="/admin?tab=requests"
-                          className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded border border-slate-200 transition-colors"
-                        >
-                          <Send className="w-3 h-3" />
-                          আবেদন করুন
-                        </Link>
+                        <div className="inline-flex items-center gap-1.5">
+                          {/* Super Admin Staff Password Reset Button */}
+                          {isSuperAdmin && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setResetTargetUser(usr);
+                                setResetNewPassword("");
+                                setResetConfirmPassword("");
+                                setResetError("");
+                              }}
+                              title="পাসওয়ার্ড পরিবর্তন করুন"
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 cursor-pointer transition-colors"
+                            >
+                              <KeyRound className="w-3.5 h-3.5 text-amber-600" />
+                              পাসওয়ার্ড
+                            </button>
+                          )}
+
+                          {/* Status Toggle */}
+                          {canToggleUser ? (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleStatus(usr.id, usr.status, usr.name || usr.username, usr.role)}
+                              disabled={isPending}
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold cursor-pointer transition-colors ${
+                                usr.status === "active"
+                                  ? "text-red-700 bg-red-50 hover:bg-red-100 border border-red-200"
+                                  : "text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200"
+                              }`}
+                            >
+                              {usr.status === "active" ? (
+                                <>
+                                  <UserX className="w-3.5 h-3.5" />
+                                  নিষ্ক্রিয়
+                                </>
+                              ) : (
+                                <>
+                                  <UserCheck className="w-3.5 h-3.5" />
+                                  সক্রিয়
+                                </>
+                              )}
+                            </button>
+                          ) : (
+                            <Link
+                              href="/admin?tab=requests"
+                              className="inline-flex items-center gap-1 text-[11px] text-slate-500 hover:text-slate-900 bg-slate-50 hover:bg-slate-100 px-2 py-1 rounded border border-slate-200 transition-colors"
+                            >
+                              <Send className="w-3 h-3" />
+                              আবেদন
+                            </Link>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -321,7 +429,7 @@ export function UserManager({
         </div>
       </div>
 
-      {/* Add User Modal: Only lists assignable staff roles */}
+      {/* Add User Modal */}
       {showAddModal && canCreateUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden">
@@ -329,7 +437,7 @@ export function UserManager({
               <div className="flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-slate-700" />
                 <h3 className="text-sm font-bold text-slate-900">
-                  নতুন ব্যবহারকারী যোগ করুন
+                  নতুন সদস্য যোগ করুন
                 </h3>
               </div>
               <button
@@ -341,24 +449,42 @@ export function UserManager({
             </div>
 
             <form onSubmit={handleSubmit(onCreateUser)} className="p-5 space-y-3.5">
+              {/* Username */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  ব্যবহারকারীর পুরো নাম <span className="text-red-500">*</span>
+                  ইউজারনেম (স্থায়ী পরিচয়) <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="text"
+                  placeholder="যেমন: anik_reporter (ইংরেজি অক্ষর ও সংখ্যা)"
+                  {...register("username")}
+                  className={`text-xs h-9 font-mono ${errors.username ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                />
+                {errors.username && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{errors.username.message}</p>
+                )}
+              </div>
+
+              {/* Full Name */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  পুরো নাম
                 </label>
                 <Input
                   type="text"
                   placeholder="যেমন: তানভীর আহমেদ"
-                  {...register("name")}
-                  className={`text-xs h-9 ${errors.name ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                  {...register("fullName")}
+                  className={`text-xs h-9 ${errors.fullName ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                 />
-                {errors.name && (
-                  <p className="text-[11px] text-red-500 font-medium mt-1">{errors.name.message}</p>
+                {errors.fullName && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{errors.fullName.message}</p>
                 )}
               </div>
 
+              {/* Email */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  ইমেইল ঠিকানা <span className="text-red-500">*</span>
+                  ইমেইল ঠিকানা (ঐচ্ছিক)
                 </label>
                 <Input
                   type="email"
@@ -371,6 +497,23 @@ export function UserManager({
                 )}
               </div>
 
+              {/* Phone */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  ফোন নম্বর (ঐচ্ছিক)
+                </label>
+                <Input
+                  type="tel"
+                  placeholder="০১৭xxxxxxxx"
+                  {...register("phone")}
+                  className={`text-xs h-9 ${errors.phone ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                />
+                {errors.phone && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{errors.phone.message}</p>
+                )}
+              </div>
+
+              {/* Password */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   প্রাথমিক পাসওয়ার্ড <span className="text-red-500">*</span>
@@ -386,6 +529,7 @@ export function UserManager({
                 )}
               </div>
 
+              {/* Role */}
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   দায়িত্ব ও পদবী (Role) <span className="text-red-500">*</span>
@@ -421,6 +565,109 @@ export function UserManager({
                   className="bg-slate-900 hover:bg-slate-800 text-white"
                 >
                   {isPending ? "সংরক্ষণ হচ্ছে..." : "যোগ করুন"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Super Admin Staff Password Reset Modal */}
+      {resetTargetUser && isSuperAdmin && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl shadow-xl max-w-sm w-full border border-slate-200 overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-amber-600" />
+                <h3 className="text-sm font-bold text-slate-900">
+                  পাসওয়ার্ড পরিবর্তন
+                </h3>
+              </div>
+              <button
+                onClick={() => setResetTargetUser(null)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleResetStaffPasswordSubmit} className="p-5 space-y-4">
+              <div className="bg-slate-50 rounded-lg p-3 border border-slate-200 text-xs">
+                <span className="text-slate-500">সদস্য: </span>
+                <span className="font-bold text-slate-900 font-mono">
+                  @{resetTargetUser.username}
+                </span>
+                {resetTargetUser.full_name && (
+                  <span className="text-slate-600 font-medium ml-1">
+                    ({resetTargetUser.full_name})
+                  </span>
+                )}
+              </div>
+
+              {resetError && (
+                <div className="p-2.5 rounded bg-red-50 border border-red-200 text-red-700 text-xs font-semibold">
+                  {resetError}
+                </div>
+              )}
+
+              {/* New Password */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  নতুন পাসওয়ার্ড <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <Input
+                    type={showResetPassword ? "text" : "password"}
+                    required
+                    placeholder="কমপক্ষে ৬ অক্ষর"
+                    value={resetNewPassword}
+                    onChange={(e) => setResetNewPassword(e.target.value)}
+                    disabled={isResetPending}
+                    className="text-xs h-9 pr-9"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowResetPassword(!showResetPassword)}
+                    tabIndex={-1}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    {showResetPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  পাসওয়ার্ড নিশ্চিত করুন <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type={showResetPassword ? "text" : "password"}
+                  required
+                  placeholder="পুনরায় নতুন পাসওয়ার্ড দিন"
+                  value={resetConfirmPassword}
+                  onChange={(e) => setResetConfirmPassword(e.target.value)}
+                  disabled={isResetPending}
+                  className="text-xs h-9"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setResetTargetUser(null)}
+                >
+                  বাতিল
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={isResetPending}
+                  className="bg-slate-900 hover:bg-slate-800 text-white"
+                >
+                  {isResetPending ? "পরিবর্তন হচ্ছে..." : "সংরক্ষণ করুন"}
                 </Button>
               </div>
             </form>

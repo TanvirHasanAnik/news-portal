@@ -6,6 +6,7 @@ import CurationModule from "@/modules/admin/curation";
 import CategoriesModule from "@/modules/admin/categories";
 import UsersModule from "@/modules/admin/users";
 import RequestsModule from "@/modules/admin/requests";
+import ProfileModule from "@/modules/admin/profile";
 import { canUserAccessModule } from "@/lib/auth";
 
 const moduleComponents = {
@@ -16,6 +17,7 @@ const moduleComponents = {
   categories: CategoriesModule,
   users: UsersModule,
   requests: RequestsModule,
+  profile: ProfileModule,
 };
 
 /**
