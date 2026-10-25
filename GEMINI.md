@@ -17,6 +17,7 @@ Repository: Direct database read write (query) functions
 Server components: takes the repository function’s data and render the ui
 Server actions: Server Actions catch user input then pass to repository to update db
 
+## Follow best coding practices like reusability, manageability and keeping it as simple as possible.
 
 # Admin Panel features
 Super Admin: 
