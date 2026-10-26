@@ -192,7 +192,10 @@ export const articleCreateSchema = z.object({
 
   // 7. Media & Metadata
   images: z.array(z.string()).max(3, "সর্বোচ্চ ৩টি ছবি যোগ করা যাবে।").optional().default([]),
-  status: z.enum(["published", "draft"]).optional().default("published"),
+  status: z
+    .enum(["draft", "pending", "published", "rejected", "archived"])
+    .optional()
+    .default("published"),
   isBreaking: z.boolean().optional().default(false),
   isLead: z.boolean().optional().default(false),
   isHandpicked: z.boolean().optional().default(false),

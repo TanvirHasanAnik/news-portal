@@ -4,20 +4,40 @@ import React, { useTransition, useRef, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { articleCreateSchema } from "@/schemas/articleSchema";
-import { createArticleAction } from "@/actions/articleActions";
+import { createArticleAction, updateArticleAction } from "@/actions/articleActions";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import ArticleFormFeedback from "./ArticleFormFeedback";
 import ArticleContentFields from "./ArticleContentFields";
 import ArticleMediaFields from "./ArticleMediaFields";
 import ArticlePublishSettings from "./ArticlePublishSettings";
 import ArticleFormSubmit from "./ArticleFormSubmit";
+import { isLowerRole as checkIsLowerRole } from "@/config/roles";
+import { usePermissions } from "@/contexts/AuthContext";
 
-export default function ArticleCreateForm({ categories = [] }) {
+export default function ArticleCreateForm({
+  categories = [],
+  initialArticle = null,
+  currentUser = null,
+}) {
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState(null);
   const uncommittedImagesRef = useRef(new Set());
 
-  const defaultCategorySlug = categories[2]?.slug || categories[0]?.slug || "national";
+  const isEditing = Boolean(initialArticle);
+  const isLower = checkIsLowerRole(currentUser?.role);
+
+  const defaultCategorySlug =
+    initialArticle?.categorySlug ||
+    categories[2]?.slug ||
+    categories[0]?.slug ||
+    "national";
+
+  // Normalize initial images
+  const initialImages = Array.isArray(initialArticle?.images)
+    ? initialArticle.images
+    : initialArticle?.image
+    ? [initialArticle.image]
+    : [];
 
   // Initialize React Hook Form paired with centralized Zod Article Schema
   const {
@@ -32,14 +52,14 @@ export default function ArticleCreateForm({ categories = [] }) {
     resolver: zodResolver(articleCreateSchema),
     mode: "onChange",
     defaultValues: {
-      headline: "",
-      summary: "",
-      content: "",
+      headline: initialArticle?.headline || "",
+      summary: initialArticle?.summary || "",
+      content: initialArticle?.content || "",
       categorySlug: defaultCategorySlug,
-      subcategoryName: "",
-      images: [],
-      youtubeUrl: "",
-      status: "published",
+      subcategoryName: initialArticle?.subcategory || "",
+      images: initialImages,
+      youtubeUrl: initialArticle?.youtubeUrl || "",
+      status: initialArticle?.status || (isLower ? "pending" : "published"),
     },
   });
 
@@ -54,12 +74,10 @@ export default function ArticleCreateForm({ categories = [] }) {
 
   // Update images and immediately delete any removed ones from Cloudflare R2
   const handleImagesChange = (newImages) => {
-    // Track newly added images
     newImages.forEach((img) => uncommittedImagesRef.current.add(img));
 
-    // Delete any removed images from R2
     images.forEach((img) => {
-      if (!newImages.includes(img)) {
+      if (!newImages.includes(img) && !initialImages.includes(img)) {
         uncommittedImagesRef.current.delete(img);
         fetch("/api/upload", {
           method: "DELETE",
@@ -72,7 +90,7 @@ export default function ArticleCreateForm({ categories = [] }) {
     setValue("images", newImages, { shouldValidate: true });
   };
 
-  // Reset form and purge all uncommitted images from Cloudflare R2
+  // Reset form
   const handleReset = () => {
     const toDelete = Array.from(uncommittedImagesRef.current);
     if (toDelete.length > 0) {
@@ -85,19 +103,19 @@ export default function ArticleCreateForm({ categories = [] }) {
     }
 
     reset({
-      headline: "",
-      summary: "",
-      content: "",
+      headline: initialArticle?.headline || "",
+      summary: initialArticle?.summary || "",
+      content: initialArticle?.content || "",
       categorySlug: defaultCategorySlug,
-      subcategoryName: "",
-      images: [],
-      youtubeUrl: "",
-      status: "published",
+      subcategoryName: initialArticle?.subcategory || "",
+      images: initialImages,
+      youtubeUrl: initialArticle?.youtubeUrl || "",
+      status: initialArticle?.status || (isLower ? "pending" : "published"),
     });
     setResult(null);
   };
 
-  // Clean up uncommitted images from R2 if user navigates away or closes tab without submitting/drafting
+  // Cleanup uncommitted images on navigation
   useEffect(() => {
     const handleBeforeUnload = () => {
       const pending = Array.from(uncommittedImagesRef.current);
@@ -121,7 +139,6 @@ export default function ArticleCreateForm({ categories = [] }) {
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      // SPA navigation unmount cleanup
       const pending = Array.from(uncommittedImagesRef.current);
       if (pending.length > 0) {
         fetch("/api/upload", {
@@ -134,10 +151,15 @@ export default function ArticleCreateForm({ categories = [] }) {
     };
   }, []);
 
-  const onValidSubmit = async (data, targetStatus = "published") => {
+  const onValidSubmit = async (data, targetStatus) => {
     setResult(null);
 
+    const resolvedStatus = targetStatus || (isLower ? "pending" : "published");
+
     const formData = new FormData();
+    if (isEditing) {
+      formData.append("articleId", initialArticle.dbId || initialArticle.id);
+    }
     formData.append("headline", data.headline);
     formData.append("summary", data.summary || "");
     formData.append("content", data.content || "");
@@ -146,26 +168,28 @@ export default function ArticleCreateForm({ categories = [] }) {
     formData.append("images", JSON.stringify(data.images?.slice(0, 3) || []));
     formData.append("image", data.images?.[0] || "");
     formData.append("youtubeUrl", data.youtubeUrl || "");
-    formData.append("authorName", "নিজস্ব প্রতিবেদক");
     formData.append("location", "ঢাকা");
-    formData.append("status", targetStatus);
+    formData.append("status", resolvedStatus);
 
     startTransition(async () => {
-      const res = await createArticleAction(null, formData);
+      const actionFn = isEditing ? updateArticleAction : createArticleAction;
+      const res = await actionFn(null, formData);
       setResult(res);
+
       if (res?.success) {
-        // Article successfully saved in database — commit images so they are retained permanently
         uncommittedImagesRef.current.clear();
-        reset({
-          headline: "",
-          summary: "",
-          content: "",
-          categorySlug: defaultCategorySlug,
-          subcategoryName: "",
-          images: [],
-          youtubeUrl: "",
-          status: "published",
-        });
+        if (!isEditing) {
+          reset({
+            headline: "",
+            summary: "",
+            content: "",
+            categorySlug: defaultCategorySlug,
+            subcategoryName: "",
+            images: [],
+            youtubeUrl: "",
+            status: isLower ? "pending" : "published",
+          });
+        }
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
     });
@@ -174,13 +198,25 @@ export default function ArticleCreateForm({ categories = [] }) {
   const [confirmConfig, setConfirmConfig] = useState(null);
 
   const handleFormSubmit = handleSubmit((data) => {
-    setConfirmConfig({
-      message: "আপনি কি নিশ্চিতভাবে এই সংবাদটি প্রকাশ করতে চান?",
-      onConfirm: () => {
-        setConfirmConfig(null);
-        onValidSubmit(data, "published");
-      },
-    });
+    if (isLower) {
+      setConfirmConfig({
+        message: "আপনি কি নিশ্চিতভাবে এই সংবাদটি পর্যালোচনার জন্য জমা দিতে চান?",
+        onConfirm: () => {
+          setConfirmConfig(null);
+          onValidSubmit(data, "pending");
+        },
+      });
+    } else {
+      setConfirmConfig({
+        message: isEditing
+          ? "আপনি কি এই সংবাদটি অনুমোদন ও প্রকাশ করতে চান?"
+          : "আপনি কি নিশ্চিতভাবে এই সংবাদটি প্রকাশ করতে চান?",
+        onConfirm: () => {
+          setConfirmConfig(null);
+          onValidSubmit(data, "published");
+        },
+      });
+    }
   });
 
   const handleSaveDraft = handleSubmit((data) => {
@@ -193,9 +229,20 @@ export default function ArticleCreateForm({ categories = [] }) {
     });
   });
 
+  const handleReject = handleSubmit((data) => {
+    setConfirmConfig({
+      message: "আপনি কি নিশ্চিতভাবে এই সংবাদটি প্রত্যাখ্যান করতে চান? এটি প্রতিবেদকের কাছে প্রত্যাখ্যাত হিসেবে চিহ্নিত থাকবে।",
+      confirmVariant: "destructive",
+      onConfirm: () => {
+        setConfirmConfig(null);
+        onValidSubmit(data, "rejected");
+      },
+    });
+  });
+
   const requestReset = () => {
     setConfirmConfig({
-      message: "আপনি কি নিশ্চিত যে ফর্মের সকল তথ্য মুছে ফেলে রিসেট করতে চান?",
+      message: "আপনি কি নিশ্চিত যে ফর্মের পরিবর্তনগুলো রিসেট করতে চান?",
       confirmVariant: "destructive",
       onConfirm: () => {
         setConfirmConfig(null);
@@ -247,7 +294,11 @@ export default function ArticleCreateForm({ categories = [] }) {
 
             <ArticleFormSubmit
               isPending={isPending}
+              isEditing={isEditing}
+              isLowerRole={isLower}
+              currentStatus={initialArticle?.status || "draft"}
               onSaveDraft={handleSaveDraft}
+              onReject={!isLower && isEditing ? handleReject : null}
               onReset={requestReset}
             />
           </div>

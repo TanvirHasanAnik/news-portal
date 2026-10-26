@@ -22,6 +22,7 @@ import {
   mapDbArticleToFrontend,
 } from "@/repositories/articleRepository";
 import { recordArticleView } from "@/repositories/analyticsRepository";
+import { getCurrentUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +81,14 @@ export default async function ArticlePage({ params }) {
   try {
     dbRow = await findArticleBySlugOrId(id);
     if (dbRow) {
+      // Live visibility rule: Only published articles are live on the site.
+      // Draft, pending, or rejected articles can only be previewed by authenticated staff.
+      if (dbRow.status !== "published") {
+        const user = await getCurrentUser();
+        if (!user) {
+          notFound();
+        }
+      }
       article = mapDbArticleToFrontend(dbRow);
     }
   } catch (err) {

@@ -4,7 +4,7 @@ import React from "react";
 import { X, History, User, Clock } from "lucide-react";
 import { formatTimeAgo } from "@/utils/dateUtils";
 
-export function ArticleRevisionsDialog({ isOpen, onClose, revisions = [], articleTitle = "" }) {
+export function ArticleRevisionsDialog({ isOpen, onClose, revisions = [], articleTitle = "", isLoading = false }) {
   if (!isOpen) return null;
 
   return (
@@ -29,7 +29,11 @@ export function ArticleRevisionsDialog({ isOpen, onClose, revisions = [], articl
 
         {/* Modal Body */}
         <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1">
-          {revisions.length === 0 ? (
+          {isLoading ? (
+            <div className="py-12 text-center text-slate-400 text-sm">
+              ইতিহাস লোড করা হচ্ছে...
+            </div>
+          ) : revisions.length === 0 ? (
             <div className="py-8 text-center text-slate-400 text-sm">
               এই আর্টিকেলের কোনো পূর্ববর্তী রিভিশন সংরক্ষিত নেই।
             </div>
@@ -42,7 +46,7 @@ export function ArticleRevisionsDialog({ isOpen, onClose, revisions = [], articl
                     <div className="flex items-center justify-between text-xs text-slate-500 mb-1.5">
                       <div className="flex items-center gap-1.5 font-medium text-slate-800">
                         <User className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{rev.editor_name || "সম্পাদক"}</span>
+                        <span>{rev.editor_name || (rev.editor_username ? `@${rev.editor_username}` : "সম্পাদক")}</span>
                       </div>
                       <div className="flex items-center gap-1 text-[11px] text-slate-400">
                         <Clock className="w-3 h-3" />

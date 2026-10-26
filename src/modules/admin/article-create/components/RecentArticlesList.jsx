@@ -1,10 +1,13 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
-import { Clock, ExternalLink, Flame, Star, Sparkles, FileText } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Clock, ExternalLink, Flame, Star, Sparkles, FileText, Edit } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatTimeAgo } from "@/utils/dateUtils";
 
-export default function RecentArticlesList({ articles = [] }) {
+export default function RecentArticlesList({ articles = [], isLowerRole = false }) {
   if (articles.length === 0) {
     return (
       <Card className="border-slate-200">
@@ -12,7 +15,9 @@ export default function RecentArticlesList({ articles = [] }) {
           <FileText className="w-8 h-8 mx-auto text-slate-300" />
           <p className="text-sm font-medium">এখনও কোনো আর্টিকেল তৈরি করা হয়নি।</p>
           <p className="text-xs text-slate-400">
-            বামপাশের ফর্মটি পূরণ করে প্রথম আর্টিকেলটি প্রকাশ করুন।
+            {isLowerRole
+              ? "উপরের ফর্মটি পূরণ করে খসড়া সংরক্ষণ করুন বা পর্যালোচনার জন্য জমা দিন।"
+              : "উপরের ফর্মটি পূরণ করে প্রথম আর্টিকেলটি প্রকাশ করুন।"}
           </p>
         </CardContent>
       </Card>
@@ -25,7 +30,7 @@ export default function RecentArticlesList({ articles = [] }) {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-base font-bold text-slate-900">
-              ডাটাবেজে সংরক্ষিত সাম্প্রতিক আর্টিকেল
+              {isLowerRole ? "আপনার সাম্প্রতিক আর্টিকেলসমূহ" : "ডাটাবেজে সংরক্ষিত সাম্প্রতিক আর্টিকেল"}
             </CardTitle>
           </div>
           <Badge variant="outline" className="font-mono text-xs">
@@ -36,6 +41,9 @@ export default function RecentArticlesList({ articles = [] }) {
       <CardContent className="p-0 divide-y divide-slate-100">
         {articles.map((art) => {
           const isPublished = art.status === "published";
+          const isPending = art.status === "pending" || art.status === "pending_approval";
+          const isRejected = art.status === "rejected";
+          const isDraft = art.status === "draft";
 
           return (
             <div
@@ -46,14 +54,23 @@ export default function RecentArticlesList({ articles = [] }) {
                 <div className="space-y-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <Badge
-                      variant={isPublished ? "success" : "secondary"}
-                      className="text-[11px]"
+                      className={`text-[11px] ${
+                        isPublished
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : isPending
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : isRejected
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : "bg-slate-100 text-slate-700 border-slate-200"
+                      }`}
                     >
                       {isPublished
                         ? "প্রকাশিত"
-                        : art.status === "draft"
-                        ? "খসড়া"
-                        : "পর্যালোচনার অপেক্ষায়"}
+                        : isPending
+                        ? "পর্যালোচনার অপেক্ষায়"
+                        : isRejected
+                        ? "প্রত্যাখ্যাত"
+                        : "খসড়া"}
                     </Badge>
 
                     <Badge variant="outline" className="text-[11px] bg-slate-50">
@@ -85,32 +102,45 @@ export default function RecentArticlesList({ articles = [] }) {
                     )}
                   </div>
 
-                  <h4 className="font-serif-bangla text-base font-bold text-slate-900 leading-snug hover:text-red-600 transition-colors">
+                  <Link
+                    href={`/admin?tab=create-article&editId=${art.id}`}
+                    className="block font-serif-bangla text-base font-bold text-slate-900 leading-snug hover:text-blue-600 transition-colors line-clamp-1"
+                  >
                     {art.headline}
-                  </h4>
+                  </Link>
+
+                  <div className="flex items-center gap-3 text-xs text-slate-400">
+                    <span>
+                      তৈরি: @{art.created_by || art.author_name || "প্রতিবেদক"} ({formatTimeAgo(art.created_at)})
+                    </span>
+                    {art.last_edited_by && (
+                      <span>
+                        • সম্পাদনা: @{art.last_edited_by} ({formatTimeAgo(art.updated_at || art.created_at)})
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <Link
-                  href={`/article/${art.slug || art.id}`}
-                  target="_blank"
-                  title="সাইটে দেখুন"
-                  className="shrink-0 p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </Link>
-              </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Link
+                    href={`/admin?tab=create-article&editId=${art.id}`}
+                    title="সম্পাদনা করুন"
+                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Link>
 
-              {art.summary && (
-                <p className="text-xs text-slate-600 line-clamp-2 font-serif-bangla leading-relaxed">
-                  {art.summary}
-                </p>
-              )}
-
-              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {art.created_at ? new Date(art.created_at).toLocaleString("bn-BD") : "এখনই"}
-                </span>
+                  {isPublished && (
+                    <Link
+                      href={`/article/${art.slug || art.id}`}
+                      target="_blank"
+                      title="সাইটে দেখুন"
+                      className="p-2 text-slate-400 hover:text-slate-900 hover:bg-slate-200/50 rounded-lg transition-colors"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Link>
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -119,4 +149,3 @@ export default function RecentArticlesList({ articles = [] }) {
     </Card>
   );
 }
-

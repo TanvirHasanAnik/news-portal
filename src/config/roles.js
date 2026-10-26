@@ -121,6 +121,36 @@ export const USER_ROLES = {
   REPORTER: ROLES.REPORTER.id,
 };
 
+/**
+ * Upper Editorial and Administrative Roles
+ * Have full permission to view, edit, approve, publish, or reject any article across the system
+ */
+export const UPPER_ROLES = [
+  ROLES.SUPER_ADMIN.id,
+  ROLES.ADMIN.id,
+  ROLES.EDITOR_IN_CHIEF.id,
+  ROLES.EDITOR.id,
+];
+
+/**
+ * Lower Roles (Content Creators)
+ * Can create and submit articles for review; can only view and manage their own articles
+ */
+export const LOWER_ROLES = [
+  ROLES.SUB_EDITOR.id,
+  ROLES.REPORTER.id,
+];
+
+export function isUpperRole(roleId) {
+  if (!roleId) return false;
+  return UPPER_ROLES.includes(roleId);
+}
+
+export function isLowerRole(roleId) {
+  if (!roleId) return false;
+  return LOWER_ROLES.includes(roleId);
+}
+
 export const ROLE_LABELS = Object.fromEntries(
   ALL_ROLES.map((r) => [r.id, r.nameBn])
 );

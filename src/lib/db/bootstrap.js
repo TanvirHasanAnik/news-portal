@@ -106,6 +106,8 @@ const TABLE_DEFINITIONS = [
     is_breaking TINYINT(1) NOT NULL DEFAULT 0,
     is_lead TINYINT(1) NOT NULL DEFAULT 0,
     is_handpicked TINYINT(1) NOT NULL DEFAULT 0,
+    created_by VARCHAR(64) NULL,
+    last_edited_by VARCHAR(64) NULL,
     view_count INT NOT NULL DEFAULT 0,
     published_at TIMESTAMP NULL DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -121,6 +123,8 @@ const TABLE_DEFINITIONS = [
     INDEX idx_articles_lead (is_lead, status, created_at),
     INDEX idx_articles_handpicked (is_handpicked, status, created_at),
     INDEX idx_articles_author (author_id),
+    INDEX idx_articles_created_by (created_by),
+    INDEX idx_articles_last_edited_by (last_edited_by),
     INDEX idx_articles_view_count (view_count)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
@@ -387,6 +391,14 @@ export async function bootstrapDatabase(env = {}) {
       for (const tableSql of TABLE_DEFINITIONS) {
         await executeUniversalQuery(tableSql, [], env);
       }
+
+      // Safe schema migrations for articles table (created_by, last_edited_by)
+      try {
+        await executeUniversalQuery("ALTER TABLE articles ADD COLUMN created_by VARCHAR(64) NULL", [], env);
+      } catch (_e) {}
+      try {
+        await executeUniversalQuery("ALTER TABLE articles ADD COLUMN last_edited_by VARCHAR(64) NULL", [], env);
+      } catch (_e) {}
 
       // 2. Ensure initial categories exist
       try {

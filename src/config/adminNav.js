@@ -8,7 +8,7 @@ import {
   ClipboardList,
   UserCircle,
 } from "lucide-react";
-import { canUserAccessModule } from "@/lib/auth";
+import { canUserAccessModule, isLowerRole } from "@/lib/auth";
 
 /**
  * Client-safe navigation definitions for Admin Panel sidebar and header.
@@ -59,7 +59,18 @@ export const adminNavItems = [
 
 export function getAdminNavItems(user = null) {
   if (!user) return adminNavItems;
-  return adminNavItems.filter((item) => canUserAccessModule(user, item.id));
+  const isLower = isLowerRole(user.role);
+  return adminNavItems
+    .filter((item) => canUserAccessModule(user, item.id))
+    .map((item) => {
+      if (item.id === "article-list" && isLower) {
+        return {
+          ...item,
+          label: "আমার আর্টিকেলসমূহ",
+        };
+      }
+      return item;
+    });
 }
 
 export function getDefaultAdminNavItem() {

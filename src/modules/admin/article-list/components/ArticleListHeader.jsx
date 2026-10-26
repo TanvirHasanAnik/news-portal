@@ -3,7 +3,7 @@ import Link from "next/link";
 import { FileText, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function ArticleListHeader({ totalCount = 0 }) {
+export function ArticleListHeader({ totalCount = 0, isLowerRole = false }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
       <div>
@@ -12,11 +12,13 @@ export function ArticleListHeader({ totalCount = 0 }) {
             <FileText className="w-5 h-5" />
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-            সকল আর্টিকেল ও অনুমোদন
+            {isLowerRole ? "আমার আর্টিকেলসমূহ" : "সকল আর্টিকেল ও অনুমোদন"}
           </h1>
         </div>
         <p className="text-sm text-slate-500 mt-1">
-          প্রকাশিত, খসড়া এবং অনুমোদনের অপেক্ষায় থাকা সংবাদ সম্পাদনা, অনুমোদন এবং আর্কাইভ ব্যবস্থাপনা।
+          {isLowerRole
+            ? "আপনার তৈরি করা খসড়া, পর্যালোচনার জন্য পাঠানো, অনুমোদিত এবং প্রত্যাখ্যাত সংবাদের তালিকা।"
+            : "সকল প্রতিবেদকের প্রকাশিত, খসড়া, অপেক্ষমাণ ও প্রত্যাখ্যাত সংবাদ সম্পাদনা, অনুমোদন ও ব্যবস্থাপনা।"}
         </p>
       </div>
 

@@ -70,12 +70,21 @@ export function mapDbArticleToFrontend(dbRow) {
     images: imagesArray,
     youtubeUrl: dbRow.youtube_url || null,
     author: dbRow.author_name || "নিজস্ব প্রতিবেদক",
+    authorId: dbRow.author_id || null,
+    authorName: dbRow.author_name || "নিজস্ব প্রতিবেদক",
+    createdBy: dbRow.created_by || dbRow.author_name || "নিজস্ব প্রতিবেদক",
+    created_by: dbRow.created_by || dbRow.author_name || "নিজস্ব প্রতিবেদক",
+    lastEditedBy: dbRow.last_edited_by || dbRow.created_by || dbRow.author_name || "নিজস্ব প্রতিবেদক",
+    last_edited_by: dbRow.last_edited_by || dbRow.created_by || dbRow.author_name || "নিজস্ব প্রতিবেদক",
     location: dbRow.location || "ঢাকা",
     time: isoTime,
     publishedAt: isoTime,
     createdAt: normalizeTimestamp(dbRow.created_at),
+    created_at: dbRow.created_at,
+    updatedAt: normalizeTimestamp(dbRow.updated_at || dbRow.created_at),
+    updated_at: dbRow.updated_at,
     hasCustomImage: Boolean(primaryImage),
-    status: dbRow.status || "published",
+    status: dbRow.status === "pending_approval" ? "pending" : (dbRow.status || "published"),
     isLead: Boolean(dbRow.is_lead),
     isBreaking: Boolean(dbRow.is_breaking),
     isHandpicked: Boolean(dbRow.is_handpicked),
@@ -118,6 +127,9 @@ export async function createArticle(data) {
     imagesJson = JSON.stringify([primaryImage]);
   }
 
+  const createdBy = data.createdBy || data.authorUsername || data.authorName || "নিজস্ব প্রতিবেদক";
+  const lastEditedBy = data.lastEditedBy || createdBy;
+
   const insertSql = `
     INSERT INTO articles (
       id, headline, slug, summary, content,
@@ -126,6 +138,7 @@ export async function createArticle(data) {
       images, image, youtube_url,
       author_id, author_name, location, read_time,
       status, is_breaking, is_lead, is_handpicked,
+      created_by, last_edited_by,
       view_count, published_at, created_at, updated_at
     ) VALUES (
       ?, ?, ?, ?, ?,
@@ -134,6 +147,7 @@ export async function createArticle(data) {
       ?, ?, ?,
       ?, ?, ?, ?,
       ?, ?, ?, ?,
+      ?, ?,
       0, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )
   `;
@@ -160,6 +174,8 @@ export async function createArticle(data) {
     data.isBreaking ? 1 : 0,
     data.isLead ? 1 : 0,
     data.isHandpicked ? 1 : 0,
+    createdBy,
+    lastEditedBy,
     publishedAt,
   ];
 
@@ -192,12 +208,147 @@ export async function createArticle(data) {
         "create_article",
         "article",
         id,
-        JSON.stringify({ headline: data.headline, status: data.status, category: data.categoryName }),
+        JSON.stringify({ headline: data.headline, status: data.status, category: data.categoryName, created_by: createdBy }),
       ]
     );
   });
 
   return { id, slug };
+}
+
+/**
+ * Updates an existing article with atomic revision logging and automatic audit tracking (last_edited_by)
+ */
+export async function updateArticle(id, data) {
+  const current = await getArticleById(id);
+  if (!current) {
+    throw new Error("সংবাদটি খুঁজে পাওয়া যায়নি");
+  }
+
+  const editorUsername = data.lastEditedBy || data.editorUsername || "সম্পাদক";
+  const editorId = data.editorId || current.author_id || "usr_editor";
+
+  // Parse images if provided
+  let imagesJson = current.images;
+  let primaryImage = current.image;
+
+  if (data.images !== undefined) {
+    if (Array.isArray(data.images)) {
+      const sliced = data.images.slice(0, 3);
+      imagesJson = JSON.stringify(sliced);
+      primaryImage = data.image || sliced[0] || null;
+    } else if (typeof data.images === "string" && data.images.trim()) {
+      try {
+        const parsed = JSON.parse(data.images);
+        if (Array.isArray(parsed)) {
+          const sliced = parsed.slice(0, 3);
+          imagesJson = JSON.stringify(sliced);
+          primaryImage = data.image || sliced[0] || null;
+        } else {
+          imagesJson = JSON.stringify([data.images]);
+          primaryImage = data.image || data.images;
+        }
+      } catch {
+        imagesJson = JSON.stringify([data.images]);
+        primaryImage = data.image || data.images;
+      }
+    } else if (data.image) {
+      imagesJson = JSON.stringify([data.image]);
+      primaryImage = data.image;
+    }
+  }
+
+  const newStatus = data.status || current.status;
+  const isNowPublished = newStatus === "published";
+  const publishedAt = isNowPublished ? (current.published_at || new Date()) : current.published_at;
+
+  const updateSql = `
+    UPDATE articles SET
+      headline = ?,
+      summary = ?,
+      content = ?,
+      category_id = ?,
+      category_name = ?,
+      category_slug = ?,
+      subcategory_id = ?,
+      subcategory_name = ?,
+      images = ?,
+      image = ?,
+      youtube_url = ?,
+      location = ?,
+      read_time = ?,
+      status = ?,
+      is_breaking = ?,
+      is_lead = ?,
+      is_handpicked = ?,
+      last_edited_by = ?,
+      published_at = ?,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `;
+
+  const bindParams = [
+    data.headline !== undefined ? data.headline : current.headline,
+    data.summary !== undefined ? data.summary : current.summary,
+    data.content !== undefined ? data.content : current.content,
+    data.categoryId !== undefined ? data.categoryId : current.category_id,
+    data.categoryName !== undefined ? data.categoryName : current.category_name,
+    data.categorySlug !== undefined ? data.categorySlug : current.category_slug,
+    data.subcategoryId !== undefined ? data.subcategoryId : current.subcategory_id,
+    data.subcategoryName !== undefined ? data.subcategoryName : current.subcategory_name,
+    imagesJson,
+    primaryImage,
+    data.youtubeUrl !== undefined ? data.youtubeUrl : current.youtube_url,
+    data.location !== undefined ? data.location : current.location,
+    data.readTime !== undefined ? data.readTime : current.read_time,
+    newStatus,
+    data.isBreaking !== undefined ? (data.isBreaking ? 1 : 0) : current.is_breaking,
+    data.isLead !== undefined ? (data.isLead ? 1 : 0) : current.is_lead,
+    data.isHandpicked !== undefined ? (data.isHandpicked ? 1 : 0) : current.is_handpicked,
+    editorUsername,
+    publishedAt,
+    id,
+  ];
+
+  await withTransaction(async (tx) => {
+    // 1. Update article record
+    await tx.query(updateSql, bindParams);
+
+    // 2. Insert revision log
+    await tx.query(
+      `INSERT INTO article_revisions (id, article_id, editor_id, headline, summary, content, change_summary, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [
+        `rev_${Date.now()}`,
+        id,
+        editorId,
+        data.headline || current.headline,
+        data.summary || current.summary || "",
+        data.content || current.content || "",
+        data.changeSummary || `সম্পাদনা করেছেন: ${editorUsername}`,
+      ]
+    );
+
+    // 3. Record audit log
+    await tx.query(
+      `INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+      [
+        `log_${Date.now()}`,
+        editorId,
+        "edit_article",
+        "article",
+        id,
+        JSON.stringify({
+          headline: data.headline || current.headline,
+          status: newStatus,
+          last_edited_by: editorUsername,
+        }),
+      ]
+    );
+  });
+
+  return { id, slug: current.slug };
 }
 
 export async function getArticleById(id) {
@@ -276,8 +427,15 @@ export async function getPublishedArticles({ categorySlug, limit = 20, offset = 
   return rows || [];
 }
 
-export async function getRecentArticles(limit = 10) {
+export async function getRecentArticles({ authorId, createdBy, limit = 10 } = {}) {
   const safeLimit = Math.min(Math.max(1, Number(limit) || 10), 100);
+  if (authorId || createdBy) {
+    const rows = await query(
+      "SELECT * FROM articles WHERE (author_id = ? OR created_by = ?) ORDER BY created_at DESC LIMIT ?",
+      [authorId || "", createdBy || "", safeLimit]
+    );
+    return rows || [];
+  }
   const rows = await query(
     "SELECT * FROM articles ORDER BY created_at DESC LIMIT ?",
     [safeLimit]
@@ -285,22 +443,32 @@ export async function getRecentArticles(limit = 10) {
   return rows || [];
 }
 
-export async function getAllArticles({ status, limit = 20, offset = 0 } = {}) {
-  const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 100);
+export async function getAllArticles({ status, authorId, createdBy, limit = 50, offset = 0 } = {}) {
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 50), 200);
   const safeOffset = Math.max(0, Number(offset) || 0);
 
-  if (status) {
-    const rows = await query(
-      "SELECT * FROM articles WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-      [status, safeLimit, safeOffset]
-    );
-    return rows || [];
+  const conditions = [];
+  const params = [];
+
+  if (status && status !== "all") {
+    if (status === "pending") {
+      conditions.push("(status = 'pending' OR status = 'pending_approval')");
+    } else {
+      conditions.push("status = ?");
+      params.push(status);
+    }
   }
 
-  const rows = await query(
-    "SELECT * FROM articles ORDER BY created_at DESC LIMIT ? OFFSET ?",
-    [safeLimit, safeOffset]
-  );
+  if (authorId || createdBy) {
+    conditions.push("(author_id = ? OR created_by = ?)");
+    params.push(authorId || "", createdBy || "");
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const sql = `SELECT * FROM articles ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+  params.push(safeLimit, safeOffset);
+
+  const rows = await query(sql, params);
   return rows || [];
 }
 
@@ -315,19 +483,40 @@ export async function deleteArticle(id) {
 }
 
 /**
- * Updates an article's publishing status (e.g. published, draft, pending_approval, archived)
+ * Updates an article's publishing status (published, draft, pending, rejected, archived)
+ * Automatically updates last_edited_by with editor's username and logs audit trail
  */
-export async function updateArticleStatus(id, status, editorId = "usr_superadmin") {
-  const publishedAt = status === "published" ? new Date() : null;
-
+export async function updateArticleStatus(id, status, editorId = "usr_superadmin", editorUsername = "admin") {
   return await withTransaction(async (tx) => {
     const result = await tx.query(
       `UPDATE articles 
        SET status = ?, 
-           published_at = COALESCE(published_at, ?), 
+           published_at = CASE WHEN ? = 'published' THEN COALESCE(published_at, CURRENT_TIMESTAMP) ELSE published_at END,
+           last_edited_by = ?,
            updated_at = CURRENT_TIMESTAMP 
        WHERE id = ?`,
-      [status, publishedAt, id]
+      [status, status, editorUsername, id]
+    );
+
+    // Insert revision log for state transition
+    const statusLabels = {
+      published: "প্রকাশিত",
+      draft: "খসড়া",
+      pending: "পর্যালোচনার অপেক্ষায়",
+      rejected: "প্রত্যাখ্যাত",
+      archived: "আর্কাইভকৃত",
+    };
+
+    await tx.query(
+      `INSERT INTO article_revisions (id, article_id, editor_id, headline, summary, content, change_summary, created_at)
+       SELECT ?, id, ?, headline, summary, content, ?, CURRENT_TIMESTAMP
+       FROM articles WHERE id = ?`,
+      [
+        `rev_${Date.now()}`,
+        editorId,
+        `স্ট্যাটাস পরিবর্তন: ${statusLabels[status] || status} (দ্বারা: @${editorUsername})`,
+        id,
+      ]
     );
 
     await tx.query(
@@ -339,7 +528,7 @@ export async function updateArticleStatus(id, status, editorId = "usr_superadmin
         "update_status",
         "article",
         id,
-        JSON.stringify({ status }),
+        JSON.stringify({ status, last_edited_by: editorUsername }),
       ]
     );
 
@@ -375,7 +564,7 @@ export async function toggleArticleFlag(id, flagName) {
  */
 export async function getArticleRevisions(articleId) {
   const rows = await query(
-    `SELECT r.*, u.name as editor_name 
+    `SELECT r.*, u.name as editor_name, u.username as editor_username
      FROM article_revisions r 
      LEFT JOIN users u ON r.editor_id = u.id 
      WHERE r.article_id = ? 
@@ -386,25 +575,31 @@ export async function getArticleRevisions(articleId) {
 }
 
 /**
- * Return counts of articles grouped by their status
+ * Return counts of articles grouped by their status, optionally filtered by author
  */
-export async function getArticleStatusCounts() {
-  const rows = await query(
-    "SELECT status, COUNT(*) as count FROM articles GROUP BY status"
-  );
+export async function getArticleStatusCounts({ authorId, createdBy } = {}) {
+  const hasAuthorFilter = Boolean(authorId || createdBy);
+  const sql = hasAuthorFilter
+    ? "SELECT status, COUNT(*) as count FROM articles WHERE (author_id = ? OR created_by = ?) GROUP BY status"
+    : "SELECT status, COUNT(*) as count FROM articles GROUP BY status";
+  const params = hasAuthorFilter ? [authorId || "", createdBy || ""] : [];
+
+  const rows = await query(sql, params);
 
   const counts = {
     all: 0,
     published: 0,
     draft: 0,
-    pending_approval: 0,
+    pending: 0,
+    rejected: 0,
     archived: 0,
   };
 
   (rows || []).forEach((row) => {
     const num = Number(row.count) || 0;
-    if (counts[row.status] !== undefined) {
-      counts[row.status] = num;
+    const st = row.status === "pending_approval" ? "pending" : row.status;
+    if (counts[st] !== undefined) {
+      counts[st] += num;
     }
     counts.all += num;
   });
