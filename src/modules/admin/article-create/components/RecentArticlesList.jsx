@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Clock, ExternalLink, Flame, Star, Sparkles, FileText, Edit } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatTimeAgo } from "@/utils/dateUtils";
+import { formatTimeAgo, formatStaticDateTime } from "@/utils/dateUtils";
 
 export default function RecentArticlesList({ articles = [], isLowerRole = false }) {
   if (articles.length === 0) {
@@ -111,11 +111,11 @@ export default function RecentArticlesList({ articles = [], isLowerRole = false 
 
                   <div className="flex items-center gap-3 text-xs text-slate-400">
                     <span>
-                      তৈরি: @{art.created_by || art.author_name || "প্রতিবেদক"} ({formatTimeAgo(art.created_at)})
+                      তৈরি: @{art.created_by || "reporter"} ({formatStaticDateTime(art.created_at)})
                     </span>
                     {art.last_edited_by && (
                       <span>
-                        • সম্পাদনা: @{art.last_edited_by} ({formatTimeAgo(art.updated_at || art.created_at)})
+                        • সম্পাদনা: @{art.last_edited_by} ({formatStaticDateTime(art.last_edited_at || art.updated_at || art.created_at)})
                       </span>
                     )}
                   </div>

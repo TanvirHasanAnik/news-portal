@@ -1,14 +1,15 @@
+import { canUserAccessModule, isLowerRole } from "@/lib/auth";
 import {
   BarChart3,
+  Bell,
+  ClipboardList,
   FilePlus2,
   FileText,
-  Sparkles,
   FolderTree,
-  Users,
-  ClipboardList,
+  Sparkles,
   UserCircle,
+  Users,
 } from "lucide-react";
-import { canUserAccessModule, isLowerRole } from "@/lib/auth";
 
 /**
  * Client-safe navigation definitions for Admin Panel sidebar and header.
@@ -27,7 +28,7 @@ export const adminNavItems = [
   },
   {
     id: "article-list",
-    label: "সকল আর্টিকেল ও অনুমোদন",
+    label: "আর্টিকেল তালিকা",
     icon: FileText,
   },
   {
@@ -49,6 +50,11 @@ export const adminNavItems = [
     id: "requests",
     label: "অ্যাডমিন আবেদনসমূহ",
     icon: ClipboardList,
+  },
+  {
+    id: "notifications",
+    label: "নোটিফিকেশন",
+    icon: Bell,
   },
   {
     id: "profile",

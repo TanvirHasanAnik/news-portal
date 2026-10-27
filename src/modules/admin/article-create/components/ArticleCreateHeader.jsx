@@ -2,10 +2,14 @@ import React from "react";
 import Link from "next/link";
 import { ArrowLeft, Clock, User, CheckCircle2, FileEdit } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatTimeAgo } from "@/utils/dateUtils";
+import { formatTimeAgo, formatStaticDateTime } from "@/utils/dateUtils";
 
-export default function ArticleCreateHeader({ initialArticle = null }) {
+export default function ArticleCreateHeader({ initialArticle = null, currentUser = null }) {
   const isEditing = Boolean(initialArticle);
+  const isSubEditorReview =
+    currentUser?.role === "sub_editor" &&
+    initialArticle &&
+    initialArticle.created_by !== currentUser?.username;
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
@@ -48,6 +52,25 @@ export default function ArticleCreateHeader({ initialArticle = null }) {
                   : "খসড়া"}
               </Badge>
             )}
+
+            {isSubEditorReview && (
+              <Badge
+                variant="outline"
+                className="text-xs font-semibold bg-teal-50 text-teal-700 border-teal-200"
+              >
+                প্রতিবেদকের জমাকৃত সংবাদ পর্যালোচনা
+              </Badge>
+            )}
+
+            {Boolean(initialArticle?.is_passed_to_upper || initialArticle?.isPassedToUpper) && (
+              <Badge
+                variant="outline"
+                className="text-xs font-semibold bg-teal-50 text-teal-700 border-teal-200 flex items-center gap-1"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" />
+                সহ-সম্পাদক কর্তৃক পরীক্ষিত {initialArticle.passed_by ? `(@${initialArticle.passed_by})` : ""}
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -55,24 +78,40 @@ export default function ArticleCreateHeader({ initialArticle = null }) {
         {isEditing && (
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-xs text-slate-500">
             <span className="flex items-center gap-1">
-              <span className="text-slate-400">মূল লেখক:</span>
+              <span className="text-slate-400">তৈরি:</span>
               <strong className="text-slate-700 font-semibold">
-                @{initialArticle.created_by || initialArticle.author || "প্রতিবেদক"}
+                @{initialArticle.created_by || "reporter"}
               </strong>
               <span className="text-slate-400">
-                ({formatTimeAgo(initialArticle.created_at || initialArticle.createdAt)})
+                ({formatStaticDateTime(initialArticle.created_at || initialArticle.createdAt)})
               </span>
             </span>
 
-            <span className="flex items-center gap-1">
-              <span className="text-slate-400">সর্বশেষ সম্পাদনা:</span>
-              <strong className="text-slate-700 font-semibold">
-                @{initialArticle.last_edited_by || initialArticle.created_by || initialArticle.author || "প্রতিবেদক"}
-              </strong>
-              <span className="text-slate-400">
-                ({formatTimeAgo(initialArticle.updated_at || initialArticle.updatedAt || initialArticle.createdAt)})
+            {initialArticle.last_edited_by && (
+              <span className="flex items-center gap-1">
+                <span className="text-slate-400">সর্বশেষ সম্পাদনা:</span>
+                <strong className="text-slate-700 font-semibold">
+                  @{initialArticle.last_edited_by}
+                </strong>
+                <span className="text-slate-400">
+                  ({formatStaticDateTime(initialArticle.last_edited_at || initialArticle.updated_at || initialArticle.updatedAt)})
+                </span>
               </span>
-            </span>
+            )}
+
+            {Boolean(initialArticle.is_passed_to_upper || initialArticle.isPassedToUpper) && (
+              <span className="flex items-center gap-1 text-teal-700">
+                <span className="text-teal-600">সহ-সম্পাদক যাচাই:</span>
+                <strong className="text-teal-800 font-semibold">
+                  @{initialArticle.passed_by || "sub_editor"}
+                </strong>
+                {initialArticle.passed_at && (
+                  <span className="text-teal-600/80">
+                    ({formatStaticDateTime(initialArticle.passed_at)})
+                  </span>
+                )}
+              </span>
+            )}
           </div>
         )}
       </div>

@@ -108,6 +108,10 @@ const TABLE_DEFINITIONS = [
     is_handpicked TINYINT(1) NOT NULL DEFAULT 0,
     created_by VARCHAR(64) NULL,
     last_edited_by VARCHAR(64) NULL,
+    last_edited_at TIMESTAMP NULL DEFAULT NULL,
+    is_passed_to_upper TINYINT(1) NOT NULL DEFAULT 0,
+    passed_by VARCHAR(64) NULL,
+    passed_at TIMESTAMP NULL DEFAULT NULL,
     view_count INT NOT NULL DEFAULT 0,
     published_at TIMESTAMP NULL DEFAULT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -205,6 +209,24 @@ const TABLE_DEFINITIONS = [
     INDEX idx_comments_article_status (article_id, status),
     INDEX idx_comments_created_at (created_at),
     INDEX idx_comments_parent_id (parent_id)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+  // 11. Notifications table
+  `CREATE TABLE IF NOT EXISTS notifications (
+    id VARCHAR(64) NOT NULL PRIMARY KEY,
+    user_id VARCHAR(64) NOT NULL,
+    type VARCHAR(64) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    target_type VARCHAR(64) NULL,
+    target_id VARCHAR(64) NULL,
+    target_slug VARCHAR(191) NULL,
+    action_by VARCHAR(64) NULL,
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_notifications_user_created (user_id, created_at),
+    INDEX idx_notifications_user_read (user_id, is_read),
+    INDEX idx_notifications_type (type)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ];
 
@@ -392,13 +414,185 @@ export async function bootstrapDatabase(env = {}) {
         await executeUniversalQuery(tableSql, [], env);
       }
 
-      // Safe schema migrations for articles table (created_by, last_edited_by)
+      // Safe schema migrations for articles table (created_by, last_edited_by, last_edited_at, is_passed_to_upper, etc.)
       try {
         await executeUniversalQuery("ALTER TABLE articles ADD COLUMN created_by VARCHAR(64) NULL", [], env);
       } catch (_e) {}
       try {
         await executeUniversalQuery("ALTER TABLE articles ADD COLUMN last_edited_by VARCHAR(64) NULL", [], env);
       } catch (_e) {}
+      try {
+        await executeUniversalQuery("ALTER TABLE articles ADD COLUMN last_edited_at TIMESTAMP NULL DEFAULT NULL", [], env);
+      } catch (_e) {}
+      try {
+        await executeUniversalQuery("ALTER TABLE articles ADD COLUMN is_passed_to_upper TINYINT(1) NOT NULL DEFAULT 0", [], env);
+      } catch (_e) {}
+      try {
+        await executeUniversalQuery("ALTER TABLE articles ADD COLUMN passed_by VARCHAR(64) NULL", [], env);
+      } catch (_e) {}
+      try {
+        await executeUniversalQuery("ALTER TABLE articles ADD COLUMN passed_at TIMESTAMP NULL DEFAULT NULL", [], env);
+      } catch (_e) {}
+
+      // Backfill created_by with username and ensure last_edited_by only exists for real edits
+      try {
+        await executeUniversalQuery(
+          `UPDATE articles a
+           LEFT JOIN users u ON a.author_id = u.id
+           SET a.created_by = COALESCE(u.username, 'reporter')
+           WHERE a.created_by IS NULL OR a.created_by = '' OR a.created_by = 'নিজস্ব প্রতিবেদক'`,
+          [],
+          env
+        );
+        // Clean out bogus last_edited_by that matched created_by or was dummy text
+        await executeUniversalQuery(
+          `UPDATE articles
+           SET last_edited_by = NULL
+           WHERE last_edited_by = created_by 
+              OR last_edited_by = 'নিজস্ব প্রতিবেদক' 
+              OR last_edited_by = 'সম্পাদক'
+              OR last_edited_by = ''`,
+          [],
+          env
+        );
+      } catch (_e) {}
+
+      // Seed initial notifications for existing approved/rejected articles and requests if notifications table is empty
+      try {
+        const notifCountRows = await executeUniversalQuery("SELECT COUNT(*) as cnt FROM notifications", [], env);
+        const notifCount = Number(Array.isArray(notifCountRows) ? notifCountRows[0]?.cnt : 0);
+        if (notifCount === 0) {
+          // 1. Initial notifications for approved & rejected articles
+          const artRows = await executeUniversalQuery(
+            `SELECT a.id, a.headline, a.slug, a.status, a.author_id, a.is_passed_to_upper, a.passed_by, a.created_at, u.username as author_username
+             FROM articles a
+             LEFT JOIN users u ON a.author_id = u.id
+             WHERE a.status IN ('published', 'rejected') AND a.author_id IS NOT NULL
+             ORDER BY a.created_at DESC LIMIT 20`,
+            [],
+            env
+          );
+          if (Array.isArray(artRows)) {
+            for (const art of artRows) {
+              const isApproved = art.status === "published";
+              await executeUniversalQuery(
+                `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
+                 VALUES (?, ?, ?, ?, ?, 'article', ?, ?, 'admin', 0, ?)`,
+                [
+                  `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                  art.author_id,
+                  isApproved ? "article_approved" : "article_rejected",
+                  isApproved ? "সংবাদ অনুমোদিত ও প্রকাশিত হয়েছে" : "সংবাদ প্রত্যাখ্যাত হয়েছে",
+                  isApproved
+                    ? `আপনার সংবাদ "${art.headline}" অনুমোদন ও প্রকাশ করা হয়েছে।`
+                    : `আপনার সংবাদ "${art.headline}" পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।`,
+                  art.id,
+                  art.slug,
+                  art.created_at || new Date(),
+                ],
+                env
+              );
+
+              if (isApproved && art.is_passed_to_upper && art.passed_by) {
+                const subUserRows = await executeUniversalQuery(
+                  "SELECT id FROM users WHERE username = ?",
+                  [art.passed_by],
+                  env
+                );
+                if (Array.isArray(subUserRows) && subUserRows[0]?.id && subUserRows[0].id !== art.author_id) {
+                  await executeUniversalQuery(
+                    `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
+                     VALUES (?, ?, 'article_approved', 'যাচাইকৃত সংবাদ অনুমোদিত ও প্রকাশিত হয়েছে', ?, 'article', ?, ?, 'admin', 0, ?)`,
+                    [
+                      `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                      subUserRows[0].id,
+                      `আপনার যাচাই ও অগ্রসরকৃত সংবাদ "${art.headline}" কর্তৃপক্ষ কর্তৃক অনুমোদিত ও প্রকাশিত হয়েছে।`,
+                      art.id,
+                      art.slug,
+                      art.created_at || new Date(),
+                    ],
+                    env
+                  );
+                }
+              }
+            }
+          }
+          // 2. Initial notifications for approved & rejected admin requests
+          const reqRows = await executeUniversalQuery(
+            `SELECT id, requester_id, request_type, status, reviewer_note, created_at
+             FROM admin_requests
+             WHERE status IN ('approved', 'rejected')
+             ORDER BY created_at DESC LIMIT 10`,
+            [],
+            env
+          );
+          if (Array.isArray(reqRows)) {
+            for (const r of reqRows) {
+              const isApproved = r.status === "approved";
+              const typeLabels = {
+                new_user: "নতুন ব্যবহারকারী তৈরির আবেদন",
+                disable_user: "ব্যবহারকারী নিষ্ক্রিয়করণের আবেদন",
+                role_change: "রোল পরিবর্তনের আবেদন",
+              };
+              const reqLabel = typeLabels[r.request_type] || "প্রশাসনিক আবেদন";
+              await executeUniversalQuery(
+                `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
+                 VALUES (?, ?, ?, ?, ?, 'request', ?, NULL, 'superadmin', 0, ?)`,
+                [
+                  `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                  r.requester_id,
+                  isApproved ? "request_approved" : "request_rejected",
+                  isApproved ? "প্রশাসনিক আবেদন অনুমোদিত হয়েছে" : "প্রশাসনিক আবেদন প্রত্যাখ্যাত হয়েছে",
+                  isApproved
+                    ? `আপনার "${reqLabel}" সুপার অ্যাডমিন কর্তৃক অনুমোদিত হয়েছে।`
+                    : `আপনার "${reqLabel}" প্রত্যাখ্যাত হয়েছে। ${r.reviewer_note ? `নোট: ${r.reviewer_note}` : ""}`,
+                  r.id,
+                  r.created_at || new Date(),
+                ],
+                env
+              );
+            }
+          }
+
+          // 3. Initial notifications for sub-editors for any pending reporter submissions
+          const subEditorRows = await executeUniversalQuery(
+            "SELECT id FROM users WHERE role = 'sub_editor' AND status = 'active'",
+            [],
+            env
+          );
+          if (Array.isArray(subEditorRows) && subEditorRows.length > 0) {
+            const pendingReporterArticles = await executeUniversalQuery(
+              `SELECT a.id, a.headline, a.slug, COALESCE(u.username, a.created_by, 'reporter') as reporter_username, a.created_at
+               FROM articles a
+               LEFT JOIN users u ON a.author_id = u.id
+               WHERE (a.status = 'pending' OR a.status = 'pending_approval')
+               ORDER BY a.created_at DESC LIMIT 5`,
+              [],
+              env
+            );
+            if (Array.isArray(pendingReporterArticles)) {
+              for (const pArt of pendingReporterArticles) {
+                for (const sub of subEditorRows) {
+                  await executeUniversalQuery(
+                    `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
+                     VALUES (?, ?, 'article_submitted', 'প্রতিবেদকের নতুন সংবাদ জমা', ?, 'article', ?, ?, ?, 0, ?)`,
+                    [
+                      `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                      sub.id,
+                      `প্রতিবেদক @${pArt.reporter_username} পর্যালোচনার জন্য নতুন সংবাদ "${pArt.headline}" জমা দিয়েছেন।`,
+                      pArt.id,
+                      pArt.slug,
+                      pArt.reporter_username,
+                      pArt.created_at || new Date(),
+                    ],
+                    env
+                  );
+                }
+              }
+            }
+          }
+        }
+      } catch (_notifSeedErr) {}
 
       // 2. Ensure initial categories exist
       try {

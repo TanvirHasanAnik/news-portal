@@ -72,10 +72,33 @@ export function mapDbArticleToFrontend(dbRow) {
     author: dbRow.author_name || "নিজস্ব প্রতিবেদক",
     authorId: dbRow.author_id || null,
     authorName: dbRow.author_name || "নিজস্ব প্রতিবেদক",
-    createdBy: dbRow.created_by || dbRow.author_name || "নিজস্ব প্রতিবেদক",
-    created_by: dbRow.created_by || dbRow.author_name || "নিজস্ব প্রতিবেদক",
-    lastEditedBy: dbRow.last_edited_by || dbRow.created_by || dbRow.author_name || "নিজস্ব প্রতিবেদক",
-    last_edited_by: dbRow.last_edited_by || dbRow.created_by || dbRow.author_name || "নিজস্ব প্রতিবেদক",
+    createdBy:
+      dbRow.created_by && dbRow.created_by !== "নিজস্ব প্রতিবেদক"
+        ? dbRow.created_by
+        : dbRow.author_username || (dbRow.author_id === "usr_superadmin" ? "superadmin" : dbRow.author_id === "usr_admin" ? "admin" : "reporter"),
+    created_by:
+      dbRow.created_by && dbRow.created_by !== "নিজস্ব প্রতিবেদক"
+        ? dbRow.created_by
+        : dbRow.author_username || (dbRow.author_id === "usr_superadmin" ? "superadmin" : dbRow.author_id === "usr_admin" ? "admin" : "reporter"),
+    lastEditedBy:
+      dbRow.last_edited_by &&
+      dbRow.last_edited_by !== "নিজস্ব প্রতিবেদক" &&
+      dbRow.last_edited_by !== "সম্পাদক"
+        ? dbRow.last_edited_by
+        : null,
+    last_edited_by:
+      dbRow.last_edited_by &&
+      dbRow.last_edited_by !== "নিজস্ব প্রতিবেদক" &&
+      dbRow.last_edited_by !== "সম্পাদক"
+        ? dbRow.last_edited_by
+        : null,
+    lastEditedAt: normalizeTimestamp(dbRow.last_edited_at),
+    last_edited_at: dbRow.last_edited_at || null,
+    isPassedToUpper: Boolean(dbRow.is_passed_to_upper),
+    is_passed_to_upper: Boolean(dbRow.is_passed_to_upper) ? 1 : 0,
+    passedBy: dbRow.passed_by || null,
+    passed_by: dbRow.passed_by || null,
+    passedAt: dbRow.passed_at || null,
     location: dbRow.location || "ঢাকা",
     time: isoTime,
     publishedAt: isoTime,
@@ -127,8 +150,8 @@ export async function createArticle(data) {
     imagesJson = JSON.stringify([primaryImage]);
   }
 
-  const createdBy = data.createdBy || data.authorUsername || data.authorName || "নিজস্ব প্রতিবেদক";
-  const lastEditedBy = data.lastEditedBy || createdBy;
+  const createdBy = data.createdBy || data.authorUsername || "reporter";
+  const lastEditedBy = data.lastEditedBy || null;
 
   const insertSql = `
     INSERT INTO articles (
@@ -225,7 +248,7 @@ export async function updateArticle(id, data) {
     throw new Error("সংবাদটি খুঁজে পাওয়া যায়নি");
   }
 
-  const editorUsername = data.lastEditedBy || data.editorUsername || "সম্পাদক";
+  const editorUsername = data.lastEditedBy || data.editorUsername || "admin";
   const editorId = data.editorId || current.author_id || "usr_editor";
 
   // Parse images if provided
@@ -262,6 +285,48 @@ export async function updateArticle(id, data) {
   const isNowPublished = newStatus === "published";
   const publishedAt = isNowPublished ? (current.published_at || new Date()) : current.published_at;
 
+  const isPassedToUpper = data.passToUpper ? 1 : (data.isPassedToUpper !== undefined ? (data.isPassedToUpper ? 1 : 0) : (current.is_passed_to_upper || 0));
+  const passedBy = data.passToUpper ? editorUsername : (data.passedBy || current.passed_by || null);
+  const passedAt = data.passToUpper ? new Date() : (current.passed_at || null);
+
+  // Helper normalizers to accurately detect whether any content was actually modified
+  const normalizeStr = (val) => (val === null || val === undefined ? "" : String(val).trim());
+  const normalizeJson = (val) => {
+    if (!val) return "[]";
+    try {
+      const parsed = typeof val === "string" ? JSON.parse(val) : val;
+      if (Array.isArray(parsed)) return JSON.stringify(parsed.filter(Boolean));
+      return JSON.stringify([String(parsed)]);
+    } catch {
+      return JSON.stringify([String(val)]);
+    }
+  };
+
+  const headlineChanged = data.headline !== undefined && normalizeStr(data.headline) !== normalizeStr(current.headline);
+  const summaryChanged = data.summary !== undefined && normalizeStr(data.summary) !== normalizeStr(current.summary);
+  const contentChanged = data.content !== undefined && normalizeStr(data.content) !== normalizeStr(current.content);
+  const categoryChanged = data.categorySlug !== undefined && normalizeStr(data.categorySlug) !== normalizeStr(current.category_slug);
+  const subcategoryChanged = data.subcategoryName !== undefined && normalizeStr(data.subcategoryName) !== normalizeStr(current.subcategory_name);
+  const imagesChanged = data.images !== undefined && normalizeJson(imagesJson) !== normalizeJson(current.images);
+  const imageChanged = data.image !== undefined && normalizeStr(primaryImage) !== normalizeStr(current.image);
+  const youtubeChanged = data.youtubeUrl !== undefined && normalizeStr(data.youtubeUrl) !== normalizeStr(current.youtube_url);
+  const locationChanged = data.location !== undefined && normalizeStr(data.location) !== normalizeStr(current.location);
+
+  const hasContentChanged =
+    headlineChanged ||
+    summaryChanged ||
+    contentChanged ||
+    categoryChanged ||
+    subcategoryChanged ||
+    imagesChanged ||
+    imageChanged ||
+    youtubeChanged ||
+    locationChanged;
+
+  // STRICT RULE: Only update last_edited_by and last_edited_at if content was actually changed
+  const lastEditedBy = hasContentChanged ? editorUsername : (current.last_edited_by || null);
+  const lastEditedAt = hasContentChanged ? new Date() : (current.last_edited_at || null);
+
   const updateSql = `
     UPDATE articles SET
       headline = ?,
@@ -282,6 +347,10 @@ export async function updateArticle(id, data) {
       is_lead = ?,
       is_handpicked = ?,
       last_edited_by = ?,
+      last_edited_at = ?,
+      is_passed_to_upper = ?,
+      passed_by = ?,
+      passed_at = ?,
       published_at = ?,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
@@ -305,7 +374,11 @@ export async function updateArticle(id, data) {
     data.isBreaking !== undefined ? (data.isBreaking ? 1 : 0) : current.is_breaking,
     data.isLead !== undefined ? (data.isLead ? 1 : 0) : current.is_lead,
     data.isHandpicked !== undefined ? (data.isHandpicked ? 1 : 0) : current.is_handpicked,
-    editorUsername,
+    lastEditedBy,
+    lastEditedAt,
+    isPassedToUpper,
+    passedBy,
+    passedAt,
     publishedAt,
     id,
   ];
@@ -314,20 +387,21 @@ export async function updateArticle(id, data) {
     // 1. Update article record
     await tx.query(updateSql, bindParams);
 
-    // 2. Insert revision log
-    await tx.query(
-      `INSERT INTO article_revisions (id, article_id, editor_id, headline, summary, content, change_summary, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-      [
-        `rev_${Date.now()}`,
-        id,
-        editorId,
-        data.headline || current.headline,
-        data.summary || current.summary || "",
-        data.content || current.content || "",
-        data.changeSummary || `সম্পাদনা করেছেন: ${editorUsername}`,
-      ]
-    );
+    // 2. Insert revision log ONLY if content actually changed
+    if (hasContentChanged) {
+      await tx.query(
+        `INSERT INTO article_revisions (id, article_id, editor_id, headline, summary, content, change_summary, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [
+          `rev_${Date.now()}`,
+          editorId,
+          data.headline || current.headline,
+          data.summary || current.summary || "",
+          data.content || current.content || "",
+          data.changeSummary || `সম্পাদনা করেছেন: ${editorUsername}`,
+        ]
+      );
+    }
 
     // 3. Record audit log
     await tx.query(
@@ -336,27 +410,115 @@ export async function updateArticle(id, data) {
       [
         `log_${Date.now()}`,
         editorId,
-        "edit_article",
+        hasContentChanged ? "edit_article" : (data.passToUpper ? "pass_article" : "review_article"),
         "article",
         id,
         JSON.stringify({
           headline: data.headline || current.headline,
           status: newStatus,
-          last_edited_by: editorUsername,
+          has_content_changed: hasContentChanged,
+          last_edited_by: lastEditedBy,
+          passed_to_upper: Boolean(isPassedToUpper),
         }),
       ]
     );
+
+    // 4. Create notification for author if status changed to published or rejected
+    if (newStatus !== current.status && current.author_id && current.author_id !== editorId) {
+      if (newStatus === "published") {
+        await tx.query(
+          `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
+           VALUES (?, ?, 'article_approved', 'সংবাদ অনুমোদিত ও প্রকাশিত হয়েছে', ?, 'article', ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+          [
+            `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            current.author_id,
+            `আপনার সংবাদ "${data.headline || current.headline}" অনুমোদন ও প্রকাশ করা হয়েছে।`,
+            id,
+            current.slug,
+            editorUsername,
+          ]
+        );
+      } else if (newStatus === "rejected") {
+        await tx.query(
+          `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
+           VALUES (?, ?, 'article_rejected', 'সংবাদ প্রত্যাখ্যাত হয়েছে', ?, 'article', ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+          [
+            `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            current.author_id,
+            `আপনার সংবাদ "${data.headline || current.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।`,
+            id,
+            current.slug,
+            editorUsername,
+          ]
+        );
+      }
+    }
+
+    // 5. Notify sub-editor if this article was passed forward by them
+    if (
+      newStatus !== current.status &&
+      (current.is_passed_to_upper || isPassedToUpper) &&
+      (current.passed_by || passedBy)
+    ) {
+      const subUsername = current.passed_by || passedBy;
+      const subUser = await tx.queryOne(
+        "SELECT id, username FROM users WHERE username = ?",
+        [subUsername]
+      );
+
+      if (subUser && subUser.id !== editorId && subUser.id !== current.author_id) {
+        if (newStatus === "published") {
+          await tx.query(
+            `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
+             VALUES (?, ?, 'article_approved', 'যাচাইকৃত সংবাদ অনুমোদিত ও প্রকাশিত হয়েছে', ?, 'article', ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+            [
+              `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              subUser.id,
+              `আপনার যাচাই ও অগ্রসরকৃত সংবাদ "${data.headline || current.headline}" ঊর্ধ্বতন কর্তৃপক্ষ (@${editorUsername}) কর্তৃক অনুমোদিত ও প্রকাশিত হয়েছে।`,
+              id,
+              current.slug,
+              editorUsername,
+            ]
+          );
+        } else if (newStatus === "rejected") {
+          await tx.query(
+            `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
+             VALUES (?, ?, 'article_rejected', 'যাচাইকৃত সংবাদ প্রত্যাখ্যাত হয়েছে', ?, 'article', ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+            [
+              `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              subUser.id,
+              `আপনার যাচাইকৃত সংবাদ "${data.headline || current.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।`,
+              id,
+              current.slug,
+              editorUsername,
+            ]
+          );
+        }
+      }
+    }
   });
 
-  return { id, slug: current.slug };
+  return { id, slug: current.slug, hasContentChanged, lastEditedBy };
 }
 
 export async function getArticleById(id) {
-  return await queryOne("SELECT * FROM articles WHERE id = ?", [id]);
+  return await queryOne(
+    `SELECT a.*, u.role AS author_role, u.username AS author_username
+     FROM articles a
+     LEFT JOIN users u ON a.author_id = u.id
+     WHERE a.id = ?`,
+    [id]
+  );
 }
 
 export async function getArticleBySlug(slug) {
-  return await queryOne("SELECT * FROM articles WHERE slug = ?", [slug]);
+  return await queryOne(
+    `SELECT a.*, u.role AS author_role, u.username AS author_username
+     FROM articles a
+     LEFT JOIN users u ON a.author_id = u.id
+     WHERE a.slug = ?`,
+    [slug]
+  );
 }
 
 /**
@@ -429,21 +591,36 @@ export async function getPublishedArticles({ categorySlug, limit = 20, offset = 
 
 export async function getRecentArticles({ authorId, createdBy, limit = 10 } = {}) {
   const safeLimit = Math.min(Math.max(1, Number(limit) || 10), 100);
+  const selectCols = `
+    a.*, 
+    COALESCE(NULLIF(NULLIF(a.created_by, ''), 'নিজস্ব প্রতিবেদক'), u.username, 'reporter') AS created_by,
+    NULLIF(TRIM(a.last_edited_by), '') AS last_edited_by,
+    a.last_edited_at AS last_edited_at,
+    COALESCE(a.is_passed_to_upper, 0) AS is_passed_to_upper,
+    a.passed_by AS passed_by,
+    a.passed_at AS passed_at
+  `;
+
   if (authorId || createdBy) {
     const rows = await query(
-      "SELECT * FROM articles WHERE (author_id = ? OR created_by = ?) ORDER BY created_at DESC LIMIT ?",
-      [authorId || "", createdBy || "", safeLimit]
+      `SELECT ${selectCols} FROM articles a 
+       LEFT JOIN users u ON a.author_id = u.id 
+       WHERE (a.author_id = ? OR a.created_by = ? OR u.username = ?) 
+       ORDER BY a.created_at DESC LIMIT ?`,
+      [authorId || "", createdBy || "", createdBy || "", safeLimit]
     );
     return rows || [];
   }
   const rows = await query(
-    "SELECT * FROM articles ORDER BY created_at DESC LIMIT ?",
+    `SELECT ${selectCols} FROM articles a 
+     LEFT JOIN users u ON a.author_id = u.id 
+     ORDER BY a.created_at DESC LIMIT ?`,
     [safeLimit]
   );
   return rows || [];
 }
 
-export async function getAllArticles({ status, authorId, createdBy, limit = 50, offset = 0 } = {}) {
+export async function getAllArticles({ status, authorId, createdBy, forSubEditor, limit = 50, offset = 0 } = {}) {
   const safeLimit = Math.min(Math.max(1, Number(limit) || 50), 200);
   const safeOffset = Math.max(0, Number(offset) || 0);
 
@@ -452,50 +629,114 @@ export async function getAllArticles({ status, authorId, createdBy, limit = 50, 
 
   if (status && status !== "all") {
     if (status === "pending") {
-      conditions.push("(status = 'pending' OR status = 'pending_approval')");
+      conditions.push("(a.status = 'pending' OR a.status = 'pending_approval')");
     } else {
-      conditions.push("status = ?");
+      conditions.push("a.status = ?");
       params.push(status);
     }
   }
 
-  if (authorId || createdBy) {
-    conditions.push("(author_id = ? OR created_by = ?)");
-    params.push(authorId || "", createdBy || "");
+  if (forSubEditor && (authorId || createdBy)) {
+    conditions.push(
+      "((a.author_id = ? OR a.created_by = ? OR u.username = ?) OR ((a.status = 'pending' OR a.status = 'pending_approval') AND (u.role = 'reporter' OR u.role IS NULL)))"
+    );
+    params.push(authorId || "", createdBy || "", createdBy || "");
+  } else if (authorId || createdBy) {
+    conditions.push("(a.author_id = ? OR a.created_by = ? OR u.username = ?)");
+    params.push(authorId || "", createdBy || "", createdBy || "");
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-  const sql = `SELECT * FROM articles ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+  const sql = `
+    SELECT a.*, 
+           u.role AS author_role,
+           COALESCE(NULLIF(NULLIF(a.created_by, ''), 'নিজস্ব প্রতিবেদক'), u.username, 'reporter') AS created_by,
+           NULLIF(TRIM(a.last_edited_by), '') AS last_edited_by,
+           a.last_edited_at AS last_edited_at,
+           COALESCE(a.is_passed_to_upper, 0) AS is_passed_to_upper,
+           a.passed_by AS passed_by,
+           a.passed_at AS passed_at
+    FROM articles a
+    LEFT JOIN users u ON a.author_id = u.id
+    ${whereClause} 
+    ORDER BY a.created_at DESC LIMIT ? OFFSET ?
+  `;
   params.push(safeLimit, safeOffset);
 
   const rows = await query(sql, params);
   return rows || [];
 }
 
-export async function deleteArticle(id) {
+export async function deleteArticle(id, editorId = "usr_superadmin", editorUsername = "admin") {
   return await withTransaction(async (tx) => {
+    const existing = await tx.query("SELECT headline FROM articles WHERE id = ?", [id]);
+    const headline = existing && existing[0]?.headline ? existing[0].headline : "সংবাদ";
+
     // Cascade-delete dependent revisions and curated references
     await tx.query("DELETE FROM article_revisions WHERE article_id = ?", [id]);
     await tx.query("DELETE FROM curated_news WHERE article_id = ?", [id]);
     await tx.query("DELETE FROM analytics_page_views WHERE article_id = ?", [id]);
-    return await tx.query("DELETE FROM articles WHERE id = ?", [id]);
+    const result = await tx.query("DELETE FROM articles WHERE id = ?", [id]);
+
+    await tx.query(
+      `INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, created_at)
+       VALUES (?, ?, 'delete_article', 'article', ?, ?, CURRENT_TIMESTAMP)`,
+      [
+        `log_${Date.now()}`,
+        editorId,
+        id,
+        JSON.stringify({ headline, last_edited_by: editorUsername }),
+      ]
+    );
+
+    return result;
   });
 }
 
 /**
+ * Retrieves audit logs specifically for article operations (create, edit, status change, delete)
+ * Available for Upper Roles: super admin, admin, chief editor, editor
+ */
+export async function getArticleAuditLogs(limit = 100) {
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 100), 200);
+  const rows = await query(
+    `SELECT l.*, 
+            COALESCE(u.username, u.name, 'admin') as user_name, 
+            u.email as user_email, 
+            u.role as user_role,
+            a.headline as article_headline,
+            a.slug as article_slug
+     FROM audit_logs l
+     LEFT JOIN users u ON l.user_id = u.id
+     LEFT JOIN articles a ON l.target_id = a.id
+     WHERE l.target_type = 'article' 
+        OR l.action IN ('create_article', 'edit_article', 'update_status', 'delete_article')
+     ORDER BY l.created_at DESC
+     LIMIT ?`,
+    [safeLimit]
+  );
+  return rows || [];
+}
+
+/**
  * Updates an article's publishing status (published, draft, pending, rejected, archived)
- * Automatically updates last_edited_by with editor's username and logs audit trail
+ * Strictly preserves author and last_edited_by (does NOT overwrite last_edited_by or edit date with publisher)
  */
 export async function updateArticleStatus(id, status, editorId = "usr_superadmin", editorUsername = "admin") {
   return await withTransaction(async (tx) => {
+    // Lookup article before update to get author details and headline
+    const targetArticle = await tx.queryOne(
+      "SELECT id, headline, slug, status, author_id, is_passed_to_upper, passed_by FROM articles WHERE id = ?",
+      [id]
+    );
+
     const result = await tx.query(
       `UPDATE articles 
        SET status = ?, 
            published_at = CASE WHEN ? = 'published' THEN COALESCE(published_at, CURRENT_TIMESTAMP) ELSE published_at END,
-           last_edited_by = ?,
            updated_at = CURRENT_TIMESTAMP 
        WHERE id = ?`,
-      [status, status, editorUsername, id]
+      [status, status, id]
     );
 
     // Insert revision log for state transition
@@ -528,12 +769,95 @@ export async function updateArticleStatus(id, status, editorId = "usr_superadmin
         "update_status",
         "article",
         id,
-        JSON.stringify({ status, last_edited_by: editorUsername }),
+        JSON.stringify({ status, changed_by: editorUsername }),
       ]
     );
 
+    // Create workflow notification for author if status is approved/published or rejected
+    if (targetArticle && targetArticle.author_id && targetArticle.author_id !== editorId) {
+      if (status === "published") {
+        await tx.query(
+          `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
+           VALUES (?, ?, 'article_approved', 'সংবাদ অনুমোদিত ও প্রকাশিত হয়েছে', ?, 'article', ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+          [
+            `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            targetArticle.author_id,
+            `আপনার সংবাদ "${targetArticle.headline}" অনুমোদন ও প্রকাশ করা হয়েছে।`,
+            id,
+            targetArticle.slug,
+            editorUsername,
+          ]
+        );
+      } else if (status === "rejected") {
+        await tx.query(
+          `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
+           VALUES (?, ?, 'article_rejected', 'সংবাদ প্রত্যাখ্যাত হয়েছে', ?, 'article', ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+          [
+            `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            targetArticle.author_id,
+            `আপনার সংবাদ "${targetArticle.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।`,
+            id,
+            targetArticle.slug,
+            editorUsername,
+          ]
+        );
+      }
+    }
+
+    // Notify sub-editor if this article was passed forward by them
+    if (targetArticle && targetArticle.is_passed_to_upper && targetArticle.passed_by) {
+      const subUser = await tx.queryOne(
+        "SELECT id, username FROM users WHERE username = ?",
+        [targetArticle.passed_by]
+      );
+
+      if (subUser && subUser.id !== editorId && subUser.id !== targetArticle.author_id) {
+        if (status === "published") {
+          await tx.query(
+            `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
+             VALUES (?, ?, 'article_approved', 'যাচাইকৃত সংবাদ অনুমোদিত ও প্রকাশিত হয়েছে', ?, 'article', ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+            [
+              `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              subUser.id,
+              `আপনার যাচাই ও অগ্রসরকৃত সংবাদ "${targetArticle.headline}" ঊর্ধ্বতন কর্তৃপক্ষ (@${editorUsername}) কর্তৃক অনুমোদিত ও প্রকাশিত হয়েছে।`,
+              id,
+              targetArticle.slug,
+              editorUsername,
+            ]
+          );
+        } else if (status === "rejected") {
+          await tx.query(
+            `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
+             VALUES (?, ?, 'article_rejected', 'যাচাইকৃত সংবাদ প্রত্যাখ্যাত হয়েছে', ?, 'article', ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+            [
+              `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+              subUser.id,
+              `আপনার যাচাইকৃত সংবাদ "${targetArticle.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।`,
+              id,
+              targetArticle.slug,
+              editorUsername,
+            ]
+          );
+        }
+      }
+    }
+
     return result;
   });
+}
+
+/**
+ * Sub-editor passes a reporter's submitted article forward to upper roles without editing content
+ */
+export async function passArticleToUpper(id, subEditorUsername = "sub_editor") {
+  return await query(
+    `UPDATE articles 
+     SET is_passed_to_upper = 1,
+         passed_by = ?,
+         passed_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [subEditorUsername, id]
+  );
 }
 
 /**
@@ -605,6 +929,17 @@ export async function getArticleStatusCounts({ authorId, createdBy } = {}) {
   });
 
   return counts;
+}
+
+/**
+ * Returns total count of articles awaiting upper-role review/approval
+ * (i.e. submitted directly by reporters or sub-editors, or passed forward by sub-editor)
+ */
+export async function getPendingArticlesCountForUpperRoles() {
+  const row = await queryOne(
+    "SELECT COUNT(*) as count FROM articles WHERE status = 'pending' OR status = 'pending_approval'"
+  );
+  return Number(row?.count || 0);
 }
 
 /**

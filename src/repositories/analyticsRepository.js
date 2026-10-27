@@ -84,9 +84,11 @@ export async function recordArticleView(articleId, { categorySlug = "", subcateg
 export async function getRecentAuditLogs(limit = 15) {
   const safeLimit = Math.min(Math.max(1, Number(limit) || 15), 100);
   const rows = await query(
-    `SELECT l.*, u.name as user_name, u.email as user_email, u.role as user_role
+    `SELECT l.*, COALESCE(u.username, u.name, 'admin') as user_name, u.email as user_email, u.role as user_role
      FROM audit_logs l
      LEFT JOIN users u ON l.user_id = u.id
+     WHERE l.target_type IN ('curated_news', 'categories', 'category', 'subcategory', 'user', 'admin_request')
+        OR l.action IN ('create_user', 'update_user_role', 'disable_user', 'enable_user', 'admin_reset_user_password', 'override_password', 'change_password', 'submit_admin_request', 'approve_request', 'reject_request', 'add_curation', 'batch_update_curation', 'batch_update_categories', 'create_category', 'update_category', 'delete_category')
      ORDER BY l.created_at DESC
      LIMIT ?`,
     [safeLimit]

@@ -151,10 +151,16 @@ export default function ArticleCreateForm({
     };
   }, []);
 
-  const onValidSubmit = async (data, targetStatus) => {
+  const onValidSubmit = async (data, targetStatus, passToUpper = false) => {
     setResult(null);
 
-    const resolvedStatus = targetStatus || (isLower ? "pending" : "published");
+    const resolvedStatus =
+      targetStatus ||
+      (isEditing
+        ? initialArticle?.status || (isLower ? "pending" : "published")
+        : isLower
+        ? "pending"
+        : "published");
 
     const formData = new FormData();
     if (isEditing) {
@@ -170,6 +176,7 @@ export default function ArticleCreateForm({
     formData.append("youtubeUrl", data.youtubeUrl || "");
     formData.append("location", "ঢাকা");
     formData.append("status", resolvedStatus);
+    formData.append("passToUpper", passToUpper ? "true" : "false");
 
     startTransition(async () => {
       const actionFn = isEditing ? updateArticleAction : createArticleAction;
@@ -196,9 +203,25 @@ export default function ArticleCreateForm({
   };
 
   const [confirmConfig, setConfirmConfig] = useState(null);
+  const isSubEditorReview =
+    currentUser?.role === "sub_editor" &&
+    isEditing &&
+    initialArticle?.created_by !== currentUser?.username;
 
   const handleFormSubmit = handleSubmit((data) => {
-    if (isLower) {
+    if (isEditing) {
+      if (isSubEditorReview) {
+        handlePassSubEditorEdit();
+        return;
+      }
+      setConfirmConfig({
+        message: "আপনি কি নিশ্চিতভাবে এই সংবাদের পরিবর্তনগুলো আপডেট করতে চান?",
+        onConfirm: () => {
+          setConfirmConfig(null);
+          onValidSubmit(data, initialArticle?.status);
+        },
+      });
+    } else if (isLower) {
       setConfirmConfig({
         message: "আপনি কি নিশ্চিতভাবে এই সংবাদটি পর্যালোচনার জন্য জমা দিতে চান?",
         onConfirm: () => {
@@ -208,15 +231,33 @@ export default function ArticleCreateForm({
       });
     } else {
       setConfirmConfig({
-        message: isEditing
-          ? "আপনি কি এই সংবাদটি অনুমোদন ও প্রকাশ করতে চান?"
-          : "আপনি কি নিশ্চিতভাবে এই সংবাদটি প্রকাশ করতে চান?",
+        message: "আপনি কি নিশ্চিতভাবে এই সংবাদটি প্রকাশ করতে চান?",
         onConfirm: () => {
           setConfirmConfig(null);
           onValidSubmit(data, "published");
         },
       });
     }
+  });
+
+  const handleSaveSubEditorEdit = handleSubmit((data) => {
+    setConfirmConfig({
+      message: "আপনি কি সম্পাদিত তথ্যগুলো সংরক্ষণ করে প্রতিবেদকদের তালিকায় রাখতে চান?",
+      onConfirm: () => {
+        setConfirmConfig(null);
+        onValidSubmit(data, "pending", false);
+      },
+    });
+  });
+
+  const handlePassSubEditorEdit = handleSubmit((data) => {
+    setConfirmConfig({
+      message: "আপনি কি নিশ্চিতভাবে এই সংবাদটি বর্তমান সম্পাদিত আকারে ঊর্ধ্বতন কর্তৃপক্ষের অনুমোদনের জন্য পাঠাতে চান?",
+      onConfirm: () => {
+        setConfirmConfig(null);
+        onValidSubmit(data, "pending", true);
+      },
+    });
   });
 
   const handleSaveDraft = handleSubmit((data) => {
@@ -296,8 +337,11 @@ export default function ArticleCreateForm({
               isPending={isPending}
               isEditing={isEditing}
               isLowerRole={isLower}
+              isSubEditorReview={isSubEditorReview}
               currentStatus={initialArticle?.status || "draft"}
-              onSaveDraft={handleSaveDraft}
+              onSaveSubEditorEdit={isSubEditorReview ? handleSaveSubEditorEdit : null}
+              onPassToUpper={isSubEditorReview ? handlePassSubEditorEdit : null}
+              onSaveDraft={!isEditing ? handleSaveDraft : null}
               onReject={!isLower && isEditing ? handleReject : null}
               onReset={requestReset}
             />

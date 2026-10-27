@@ -58,9 +58,9 @@ export async function updateAdminRequestStatus(id, { status, reviewedBy = "usr_s
     );
 
     // If approved and was a user action, apply change within the same atomic transaction
-    if (status === "approved") {
-      const req = await tx.queryOne("SELECT * FROM admin_requests WHERE id = ?", [id]);
-      if (req) {
+    const req = await tx.queryOne("SELECT * FROM admin_requests WHERE id = ?", [id]);
+    if (req) {
+      if (status === "approved") {
         try {
           const details = req.payload ? JSON.parse(req.payload) : {};
           if (req.request_type === "disable_user" && req.target_user_id) {
@@ -78,6 +78,32 @@ export async function updateAdminRequestStatus(id, { status, reviewedBy = "usr_s
         } catch (_parseErr) {
           // payload parsing error
         }
+      }
+
+      // Create workflow notification for requester
+      if (req.requester_id) {
+        const isApproved = status === "approved";
+        const typeLabels = {
+          new_user: "নতুন ব্যবহারকারী তৈরির আবেদন",
+          disable_user: "ব্যবহারকারী নিষ্ক্রিয়করণের আবেদন",
+          role_change: "রোল পরিবর্তনের আবেদন",
+        };
+        const reqLabel = typeLabels[req.request_type] || "প্রশাসনিক আবেদন";
+        await tx.query(
+          `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, action_by, is_read, created_at)
+           VALUES (?, ?, ?, ?, ?, 'request', ?, ?, 0, CURRENT_TIMESTAMP)`,
+          [
+            `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+            req.requester_id,
+            isApproved ? "request_approved" : "request_rejected",
+            isApproved ? "প্রশাসনিক আবেদন অনুমোদিত হয়েছে" : "প্রশাসনিক আবেদন প্রত্যাখ্যাত হয়েছে",
+            isApproved
+              ? `আপনার "${reqLabel}" সুপার অ্যাডমিন কর্তৃক অনুমোদিত হয়েছে।`
+              : `আপনার "${reqLabel}" প্রত্যাখ্যাত হয়েছে। ${reviewerNote ? `নোট: ${reviewerNote}` : ""}`,
+            id,
+            reviewedBy,
+          ]
+        );
       }
     }
 

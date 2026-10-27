@@ -9,7 +9,6 @@ import {
   XCircle,
   Archive,
   Trash2,
-  History,
   Zap,
   BookmarkCheck,
   Send,
@@ -17,21 +16,22 @@ import {
   RotateCcw,
   FileText,
   User,
+  History,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   updateArticleStatusAction,
+  passArticleToUpperAction,
   toggleArticleFlagAction,
   deleteArticleAction,
-  getArticleRevisionsAction,
 } from "@/actions/articleActions";
-import { ArticleRevisionsDialog } from "./ArticleRevisionsDialog";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
-import { formatTimeAgo } from "@/utils/dateUtils";
-import { usePermissions } from "@/contexts/AuthContext";
+import { formatTimeAgo, formatStaticDateTime } from "@/utils/dateUtils";
+import { useAuth, usePermissions } from "@/contexts/AuthContext";
 import { isLowerRole as checkIsLowerRole } from "@/config/roles";
+import { ArticleAuditLogsSection } from "./ArticleAuditLogsSection";
 
 export function ArticleListTable({
   initialArticles = [],
@@ -39,14 +39,20 @@ export function ArticleListTable({
   categories = [],
   currentUser = null,
   isLowerRole = false,
+  auditLogs = [],
   canApprove: propCanApprove,
   canArchive: propCanArchive,
   canDelete: propCanDelete,
   canManageCuration: propCanManageCuration,
 }) {
   const { can } = usePermissions();
+  const { setPendingArticlesCount } = useAuth();
 
   const isLower = isLowerRole || checkIsLowerRole(currentUser?.role);
+  const isSubEditor = currentUser?.role === "sub_editor";
+  const isReporter = currentUser?.role === "reporter";
+  const isUpper = !isLower;
+
   const canApprove = propCanApprove !== undefined ? propCanApprove : can("article:approve");
   const canArchive = propCanArchive !== undefined ? propCanArchive : can("article:archive");
   const canDelete = propCanDelete !== undefined ? propCanDelete : can("article:delete");
@@ -54,22 +60,17 @@ export function ArticleListTable({
     propCanManageCuration !== undefined ? propCanManageCuration : can("curation:manage");
 
   const [articles, setArticles] = useState(initialArticles);
-  // View mode for Upper Roles: "all" (All Articles) vs "my" (My Articles). Lower roles always "my"
-  const [activeView, setActiveView] = useState("all");
+  // View mode:
+  // Upper Roles: "all" (All Articles) vs "my" (My Articles) vs "audit"
+  // Sub-Editor: "reporters" (Reporters' Submissions) vs "my" (My Articles)
+  // Reporter: "my"
+  const [activeView, setActiveView] = useState(() => (currentUser?.role === "sub_editor" ? "reporters" : "all"));
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
-
-  // Revision modal state
-  const [revisionModal, setRevisionModal] = useState({
-    isOpen: false,
-    articleTitle: "",
-    revisions: [],
-    isLoading: false,
-  });
 
   // Determine if an article belongs to the current user
   const isOwnArticle = (art) => {
@@ -82,17 +83,25 @@ export function ArticleListTable({
     );
   };
 
-  // Base scope based on upper-role sub-view ("all" vs "my")
+  // Base scope based on role and active sub-view
   const scopedArticles = useMemo(() => {
-    if (isLower) {
-      // Lower roles only ever see their own articles
-      return articles;
-    }
-    if (activeView === "my") {
+    if (isReporter) {
+      // Reporter only ever sees their own articles
       return articles.filter(isOwnArticle);
     }
-    return articles;
-  }, [articles, isLower, activeView, currentUser]);
+    if (isSubEditor) {
+      if (activeView === "reporters") {
+        // Reporters' submitted articles (awaiting review)
+        return articles.filter((art) => !isOwnArticle(art));
+      }
+      return articles.filter(isOwnArticle);
+    }
+    if (activeView === "my") {
+      return articles.filter((art) => isOwnArticle(art) && art.status !== "rejected");
+    }
+    // "All Articles" view for upper roles: Upper roles cannot see others' drafts
+    return articles.filter((art) => art.status !== "draft");
+  }, [articles, isReporter, isSubEditor, activeView, currentUser]);
 
   // Compute live status counts for the currently active scope
   const computedCounts = useMemo(() => {
@@ -138,6 +147,7 @@ export function ArticleListTable({
 
   const executeStatusChange = (articleId, newStatus) => {
     startTransition(async () => {
+      const prevArt = articles.find((a) => a.id === articleId);
       const res = await updateArticleStatusAction(articleId, newStatus);
       if (res.success) {
         setArticles((prev) =>
@@ -146,12 +156,24 @@ export function ArticleListTable({
               ? {
                   ...a,
                   status: newStatus,
-                  last_edited_by: currentUser?.username || a.last_edited_by,
-                  updated_at: new Date().toISOString(),
+                  published_at:
+                    newStatus === "published"
+                      ? a.published_at || new Date().toISOString()
+                      : a.published_at,
                 }
               : a
           )
         );
+
+        // Update upper-role pending articles count live
+        const wasPending = prevArt?.status === "pending" || prevArt?.status === "pending_approval";
+        const isNowPending = newStatus === "pending" || newStatus === "pending_approval";
+        if (wasPending && !isNowPending) {
+          setPendingArticlesCount?.((c) => Math.max(0, c - 1));
+        } else if (!wasPending && isNowPending) {
+          setPendingArticlesCount?.((c) => c + 1);
+        }
+
         setFeedback({ type: "success", message: res.message });
       } else {
         setFeedback({ type: "error", message: res.message });
@@ -186,6 +208,40 @@ export function ArticleListTable({
     }
 
     executeStatusChange(articleId, newStatus);
+  };
+
+  const handlePassForward = (articleId, headline) => {
+    setConfirmConfig({
+      message: `আপনি কি "${headline || "এই সংবাদটি"}" যাচাই করে ঊর্ধ্বতন কর্তৃপক্ষের অনুমোদনের জন্য পাঠাতে চান?`,
+      confirmVariant: "default",
+      onConfirm: () => {
+        setConfirmConfig(null);
+        startTransition(async () => {
+          const res = await passArticleToUpperAction(articleId);
+          if (res.success) {
+            setArticles((prev) =>
+              prev.map((a) =>
+                a.id === articleId
+                  ? {
+                      ...a,
+                      is_passed_to_upper: 1,
+                      passed_by: currentUser?.username || "sub_editor",
+                      passed_at: new Date().toISOString(),
+                    }
+                  : a
+              )
+            );
+            setFeedback({
+              type: "success",
+              message: "সংবাদটি সফলভাবে যাচাই করে ঊর্ধ্বতন কর্তৃপক্ষের কাছে পাঠানো হয়েছে।",
+            });
+          } else {
+            setFeedback({ type: "error", message: res.message });
+          }
+          setTimeout(() => setFeedback(null), 4000);
+        });
+      },
+    });
   };
 
   const handleToggleFlag = (articleId, flagName) => {
@@ -229,32 +285,6 @@ export function ArticleListTable({
     });
   };
 
-  const openRevisions = async (art) => {
-    setRevisionModal({
-      isOpen: true,
-      articleTitle: art.headline,
-      revisions: [],
-      isLoading: true,
-    });
-
-    try {
-      const res = await getArticleRevisionsAction(art.id || art.dbId);
-      setRevisionModal({
-        isOpen: true,
-        articleTitle: art.headline,
-        revisions: res?.revisions || [],
-        isLoading: false,
-      });
-    } catch (_e) {
-      setRevisionModal({
-        isOpen: true,
-        articleTitle: art.headline,
-        revisions: [],
-        isLoading: false,
-      });
-    }
-  };
-
   return (
     <div className="space-y-6">
       {/* Feedback banner */}
@@ -276,7 +306,7 @@ export function ArticleListTable({
         </div>
       )}
 
-      {/* Upper Roles View Selector ("All Articles" vs "My Articles") */}
+      {/* Upper Roles View Selector ("All Articles", "My Articles", "Article Audits") */}
       {!isLower && (
         <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
           <button
@@ -291,7 +321,56 @@ export function ArticleListTable({
                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
             }`}
           >
-            সকল আর্টিকেল ({articles.length})
+            সকল আর্টিকেল ({articles.filter((art) => art.status !== "draft").length})
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveView("my");
+              setSelectedStatus("all");
+            }}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+              activeView === "my"
+                ? "bg-slate-900 text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            আমার আর্টিকেল ({articles.filter((art) => isOwnArticle(art) && art.status !== "rejected").length})
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveView("audit");
+            }}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeView === "audit"
+                ? "bg-slate-900 text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            <History className="w-3.5 h-3.5" />
+            আর্টিকেল অডিট ({auditLogs.length})
+          </button>
+        </div>
+      )}
+
+      {/* Sub-Editor View Selector ("Reporters' Submissions" vs "My Articles") */}
+      {isSubEditor && (
+        <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveView("reporters");
+              setSelectedStatus("all");
+            }}
+            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
+              activeView === "reporters"
+                ? "bg-slate-900 text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            <Send className="w-3.5 h-3.5 text-blue-500" />
+            প্রতিবেদকদের জমাকৃত সংবাদ ({articles.filter((art) => !isOwnArticle(art)).length})
           </button>
           <button
             type="button"
@@ -310,8 +389,12 @@ export function ArticleListTable({
         </div>
       )}
 
-      {/* Status Filter Tabs */}
-      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100/80 rounded-xl border border-slate-200/60">
+      {activeView === "audit" && !isLower ? (
+        <ArticleAuditLogsSection logs={auditLogs} />
+      ) : (
+        <>
+          {/* Status Filter Tabs */}
+          <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100/80 rounded-xl border border-slate-200/60">
         <button
           type="button"
           onClick={() => setSelectedStatus("all")}
@@ -324,20 +407,10 @@ export function ArticleListTable({
           সবগুলো ({computedCounts.all || 0})
         </button>
 
-        {/* For Lower Roles: Drafts first, then Pending, Approved, Rejected */}
+        {/* For Lower Roles */}
         {isLower ? (
-          <>
-            <button
-              type="button"
-              onClick={() => setSelectedStatus("draft")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                selectedStatus === "draft"
-                  ? "bg-white text-slate-800 shadow-2xs font-bold"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              খসড়া ({computedCounts.draft || 0})
-            </button>
+          isSubEditor && activeView === "reporters" ? (
+            /* Sub-Editor viewing Reporter Submissions */
             <button
               type="button"
               onClick={() => setSelectedStatus("pending")}
@@ -349,31 +422,57 @@ export function ArticleListTable({
             >
               পর্যালোচনার অপেক্ষায় ({computedCounts.pending || 0})
             </button>
-            <button
-              type="button"
-              onClick={() => setSelectedStatus("published")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                selectedStatus === "published"
-                  ? "bg-white text-emerald-700 shadow-2xs font-bold"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              অনুমোদিত ও প্রকাশিত ({computedCounts.published || 0})
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelectedStatus("rejected")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                selectedStatus === "rejected"
-                  ? "bg-white text-rose-700 shadow-2xs font-bold"
-                  : "text-slate-500 hover:text-slate-900"
-              }`}
-            >
-              প্রত্যাখ্যাত ({computedCounts.rejected || 0})
-            </button>
-          </>
-        ) : (
-          /* For Upper Roles: Pending, Published, Draft, Rejected, Archived */
+          ) : (
+            /* Own Articles view: Drafts first, then Pending, Approved, Rejected */
+            <>
+              <button
+                type="button"
+                onClick={() => setSelectedStatus("draft")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  selectedStatus === "draft"
+                    ? "bg-white text-slate-800 shadow-2xs font-bold"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                খসড়া ({computedCounts.draft || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedStatus("pending")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  selectedStatus === "pending"
+                    ? "bg-white text-amber-700 shadow-2xs font-bold"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                পর্যালোচনার অপেক্ষায় ({computedCounts.pending || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedStatus("published")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  selectedStatus === "published"
+                    ? "bg-white text-emerald-700 shadow-2xs font-bold"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                অনুমোদিত ও প্রকাশিত ({computedCounts.published || 0})
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedStatus("rejected")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  selectedStatus === "rejected"
+                    ? "bg-white text-rose-700 shadow-2xs font-bold"
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
+              >
+                প্রত্যাখ্যাত ({computedCounts.rejected || 0})
+              </button>
+            </>
+          )
+        ) : activeView === "all" ? (
+          /* For Upper Roles ("All Articles"): Pending, Published, Rejected, Archived (Drafts excluded) */
           <>
             <button
               type="button"
@@ -399,6 +498,43 @@ export function ArticleListTable({
             </button>
             <button
               type="button"
+              onClick={() => setSelectedStatus("rejected")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                selectedStatus === "rejected"
+                  ? "bg-white text-rose-700 shadow-2xs font-bold"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              প্রত্যাখ্যাত ({computedCounts.rejected || 0})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedStatus("archived")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                selectedStatus === "archived"
+                  ? "bg-white text-zinc-700 shadow-2xs font-bold"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              আর্কাইভ ({computedCounts.archived || 0})
+            </button>
+          </>
+        ) : (
+          /* For Upper Roles ("My Articles"): Published, Draft, Pending, Archived (Rejected excluded) */
+          <>
+            <button
+              type="button"
+              onClick={() => setSelectedStatus("published")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                selectedStatus === "published"
+                  ? "bg-white text-emerald-700 shadow-2xs font-bold"
+                  : "text-slate-500 hover:text-slate-900"
+              }`}
+            >
+              প্রকাশিত ({computedCounts.published || 0})
+            </button>
+            <button
+              type="button"
               onClick={() => setSelectedStatus("draft")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 selectedStatus === "draft"
@@ -410,14 +546,14 @@ export function ArticleListTable({
             </button>
             <button
               type="button"
-              onClick={() => setSelectedStatus("rejected")}
+              onClick={() => setSelectedStatus("pending")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                selectedStatus === "rejected"
-                  ? "bg-white text-rose-700 shadow-2xs font-bold"
+                selectedStatus === "pending"
+                  ? "bg-white text-amber-700 shadow-2xs font-bold"
                   : "text-slate-500 hover:text-slate-900"
               }`}
             >
-              প্রত্যাখ্যাত ({computedCounts.rejected || 0})
+              পর্যালোচনার অপেক্ষায় ({computedCounts.pending || 0})
             </button>
             <button
               type="button"
@@ -485,7 +621,10 @@ export function ArticleListTable({
                 filteredArticles.map((art) => {
                   const status = art.status === "pending_approval" ? "pending" : art.status;
                   const isAuthor = isOwnArticle(art);
-                  const canEdit = !isLower || isAuthor;
+                  const canEdit =
+                    !isLower ||
+                    isAuthor ||
+                    (isSubEditor && !isAuthor && (status === "pending" || art.status === "pending_approval"));
 
                   return (
                     <tr key={art.id} className="hover:bg-slate-50/70 transition-colors">
@@ -527,19 +666,18 @@ export function ArticleListTable({
                               প্রকাশিত
                             </Badge>
                           )}
+
+                          {Boolean(art.is_passed_to_upper) && (
+                            <Badge className="bg-teal-50 text-teal-700 border-teal-200 text-[10px] py-0 px-1.5 shrink-0 flex items-center gap-1 font-semibold">
+                              <CheckCircle2 className="w-3 h-3 text-teal-600" />
+                              সহ-সম্পাদক কর্তৃক পরীক্ষিত {art.passed_by ? `(@${art.passed_by})` : ""}
+                            </Badge>
+                          )}
                         </div>
 
                         <div className="flex items-center gap-3 mt-1.5 text-[11px] text-slate-400">
                           <span>{formatTimeAgo(art.published_at || art.created_at)}</span>
                           {art.subcategory_name && <span>• {art.subcategory_name}</span>}
-                          <button
-                            type="button"
-                            onClick={() => openRevisions(art)}
-                            className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-                          >
-                            <History className="w-3 h-3" />
-                            রিভিশন ইতিহাস
-                          </button>
                         </div>
                       </td>
 
@@ -550,27 +688,42 @@ export function ArticleListTable({
                         </span>
                       </td>
 
-                      {/* 3. Audit Metadata (Requirement 4: created_by and last_edited_by) */}
+                      {/* 3. Audit Metadata: created_by and last_edited_by */}
                       <td className="py-3.5 px-3 whitespace-nowrap">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5 text-xs text-slate-700">
                             <span className="text-slate-400 font-normal">তৈরি:</span>
                             <span className="font-semibold text-slate-800">
-                              @{art.created_by || art.author_name || "প্রতিবেদক"}
+                              @{art.created_by || "reporter"}
                             </span>
                             <span className="text-slate-400 text-[11px]">
-                              ({formatTimeAgo(art.created_at)})
+                              ({formatStaticDateTime(art.created_at)})
                             </span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                            <span className="text-slate-400 font-normal">সর্বশেষ সম্পাদনা:</span>
-                            <span className="font-medium text-slate-700">
-                              @{art.last_edited_by || art.created_by || art.author_name || "প্রতিবেদক"}
-                            </span>
-                            <span className="text-slate-400">
-                              ({formatTimeAgo(art.updated_at || art.created_at)})
-                            </span>
-                          </div>
+                          {art.last_edited_by && (
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+                              <span className="text-slate-400 font-normal">সর্বশেষ সম্পাদনা:</span>
+                              <span className="font-medium text-slate-700">
+                                @{art.last_edited_by}
+                              </span>
+                              <span className="text-slate-400">
+                                ({formatStaticDateTime(art.last_edited_at || art.updated_at)})
+                              </span>
+                            </div>
+                          )}
+                          {Boolean(art.is_passed_to_upper) && (
+                            <div className="flex items-center gap-1.5 text-[11px] text-teal-700 font-medium">
+                              <span className="text-teal-600 font-normal">সহ-সম্পাদক যাচাই:</span>
+                              <span className="font-semibold text-teal-800">
+                                @{art.passed_by || "sub_editor"}
+                              </span>
+                              {art.passed_at && (
+                                <span className="text-teal-600/80 text-[10px]">
+                                  ({formatStaticDateTime(art.passed_at)})
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </td>
 
@@ -629,8 +782,8 @@ export function ArticleListTable({
                                 </button>
                               )}
 
-                              {/* Reject Button (when pending or published) */}
-                              {(status === "pending" || status === "published") && canApprove && (
+                              {/* Reject Button (when pending or published, and not own article) */}
+                              {(status === "pending" || status === "published") && canApprove && !isAuthor && (
                                 <button
                                   type="button"
                                   onClick={() => handleStatusChange(art.id, "rejected", art.headline)}
@@ -657,8 +810,32 @@ export function ArticleListTable({
                               )}
                             </>
                           ) : (
-                            /* Lower Roles (Reporter / Sub-Editor) Actions: Submit for Review, Withdraw */
+                            /* Lower Roles (Reporter / Sub-Editor) Actions: Submit for Review, Withdraw, Pass Forward */
                             <>
+                              {/* Sub-Editor Action for Reporter Submissions: Pass Forward to Upper Roles */}
+                              {isSubEditor && !isAuthor && (status === "pending" || art.status === "pending_approval") && (
+                                art.is_passed_to_upper ? (
+                                  <span
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold cursor-default select-none"
+                                    title={`ইতিমধ্যে @${art.passed_by || "সহ-সম্পাদক"} কর্তৃক ঊর্ধ্বতনদের কাছে পাঠানো হয়েছে`}
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                    প্রেরিত
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePassForward(art.id, art.headline)}
+                                    title="যাচাই করে ঊর্ধ্বতনদের কাছে পাঠান"
+                                    disabled={isPending}
+                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 text-white hover:bg-blue-700 text-xs font-semibold cursor-pointer shadow-xs transition-colors"
+                                  >
+                                    <Send className="w-3.5 h-3.5" />
+                                    পাস করুন
+                                  </button>
+                                )
+                              )}
+
                               {(status === "draft" || status === "rejected") && isAuthor && (
                                 <button
                                   type="button"
@@ -687,11 +864,11 @@ export function ArticleListTable({
                             </>
                           )}
 
-                          {/* Edit Button (Upper roles can edit ANY article; Lower roles can edit own) */}
+                          {/* Edit Button */}
                           {canEdit && (
                             <Link
                               href={`/admin?tab=create-article&editId=${art.id}`}
-                              title="সম্পাদনা করুন"
+                              title={isSubEditor && !isAuthor ? "যাচাই ও সম্পাদনা করুন" : "সম্পাদনা করুন"}
                               className="p-1.5 rounded-md text-slate-600 hover:text-blue-600 hover:bg-blue-50 cursor-pointer transition-colors"
                             >
                               <Edit className="w-3.5 h-3.5" />
@@ -711,7 +888,7 @@ export function ArticleListTable({
                           )}
 
                           {/* Delete (if permitted by role) */}
-                          {canDelete && (
+                          {((canDelete && isUpper) || (isAuthor && status === "draft")) && (
                             <button
                               type="button"
                               onClick={() => handleDelete(art.id, art.headline)}
@@ -732,15 +909,8 @@ export function ArticleListTable({
           </table>
         </div>
       </div>
-
-      {/* Revision Modal */}
-      <ArticleRevisionsDialog
-        isOpen={revisionModal.isOpen}
-        onClose={() => setRevisionModal({ isOpen: false, articleTitle: "", revisions: [], isLoading: false })}
-        articleTitle={revisionModal.articleTitle}
-        revisions={revisionModal.revisions}
-        isLoading={revisionModal.isLoading}
-      />
+      </>
+      )}
 
       {/* Re-confirmation Modal */}
       <ConfirmModal

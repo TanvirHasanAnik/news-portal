@@ -3,6 +3,7 @@
 import { Badge } from "@/components/ui/badge";
 import { adminNavItems, getDefaultAdminNavItem } from "@/config/adminNav";
 import { useAuth } from "@/contexts/AuthContext";
+import { isUpperRole } from "@/config/roles";
 import { cn } from "@/lib/utils";
 import { Globe, LogOut, X } from "lucide-react";
 import Link from "next/link";
@@ -12,7 +13,16 @@ import { useEffect } from "react";
 /**
  * Shared sidebar content used in both desktop sidebar and mobile drawer
  */
-function SidebarContent({ activeModules, currentTab, onItemClick, user, roleNameBn, onLogout }) {
+function SidebarContent({
+  activeModules,
+  currentTab,
+  onItemClick,
+  user,
+  roleNameBn,
+  onLogout,
+  unreadNotificationsCount = 0,
+  pendingArticlesCount = 0,
+}) {
   const initialChar = user?.name ? user.name.trim().charAt(0) : "সু";
 
   return (
@@ -85,7 +95,26 @@ function SidebarContent({ activeModules, currentTab, onItemClick, user, roleName
                     <span>{item.label}</span>
                   </div>
 
-                  {item.badge && (
+                  {item.id === "notifications" && unreadNotificationsCount > 0 ? (
+                    <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold text-white bg-rose-600 rounded-full shadow-2xs">
+                      {unreadNotificationsCount > 99
+                        ? "৯৯+"
+                        : unreadNotificationsCount.toLocaleString("bn-BD")}
+                    </span>
+                  ) : item.id === "article-list" && isUpperRole(user?.role) && pendingArticlesCount > 0 ? (
+                    <span
+                      className={cn(
+                        "flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold rounded-full shadow-2xs",
+                        isActive
+                          ? "bg-amber-400 text-slate-900"
+                          : "bg-amber-500 text-white"
+                      )}
+                    >
+                      {pendingArticlesCount > 99
+                        ? "৯৯+"
+                        : pendingArticlesCount.toLocaleString("bn-BD")}
+                    </span>
+                  ) : item.badge ? (
                     <Badge
                       variant={isActive ? "secondary" : "outline"}
                       className={cn(
@@ -97,7 +126,7 @@ function SidebarContent({ activeModules, currentTab, onItemClick, user, roleName
                     >
                       {item.badge}
                     </Badge>
-                  )}
+                  ) : null}
                 </Link>
               );
             })}
@@ -135,12 +164,27 @@ function SidebarContent({ activeModules, currentTab, onItemClick, user, roleName
 
 export default function AdminSidebar({ mobileOpen = false, onCloseMobile }) {
   const searchParams = useSearchParams();
-  const { user, roleNameBn, canAccessTab, logout } = useAuth();
+  const {
+    user,
+    roleNameBn,
+    canAccessTab,
+    logout,
+    unreadNotificationsCount,
+    clearUnreadNotifications,
+    pendingArticlesCount,
+  } = useAuth();
 
   // Filter modules strictly based on policy-based permissions
   const activeModules = adminNavItems.filter((item) => canAccessTab(item.id));
   const fallbackModule = activeModules[0] || getDefaultAdminNavItem();
   const currentTab = searchParams.get("tab") || fallbackModule?.id || "create-article";
+
+  // When visiting the notification page, clear unread badge immediately
+  useEffect(() => {
+    if (currentTab === "notifications") {
+      clearUnreadNotifications?.();
+    }
+  }, [currentTab, clearUnreadNotifications]);
 
   // Close mobile drawer on Escape key
   useEffect(() => {
@@ -164,6 +208,8 @@ export default function AdminSidebar({ mobileOpen = false, onCloseMobile }) {
           user={user}
           roleNameBn={roleNameBn}
           onLogout={logout}
+          unreadNotificationsCount={unreadNotificationsCount}
+          pendingArticlesCount={pendingArticlesCount}
         />
       </aside>
 
@@ -216,6 +262,8 @@ export default function AdminSidebar({ mobileOpen = false, onCloseMobile }) {
                 user={user}
                 roleNameBn={roleNameBn}
                 onLogout={logout}
+                unreadNotificationsCount={unreadNotificationsCount}
+                pendingArticlesCount={pendingArticlesCount}
               />
             </div>
           </div>

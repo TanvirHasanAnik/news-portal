@@ -28,13 +28,20 @@ export default function ArticleFormFeedback({ result, onReset }) {
             >
               <RefreshCw className="w-3.5 h-3.5 mr-1" /> নতুন আরেকটি সংবাদ লিখুন
             </Button>
-            {result.slug && (
+            {(result.isPublished || result.status === "published") && result.slug ? (
               <Link
                 href={`/article/${result.slug}`}
                 target="_blank"
                 className="inline-flex items-center text-xs font-semibold text-emerald-900 underline hover:text-emerald-700"
               >
                 ওয়েবসাইটে দেখুন <ExternalLink className="w-3.5 h-3.5 ml-1" />
+              </Link>
+            ) : (
+              <Link
+                href="/admin?tab=article-list"
+                className="inline-flex items-center text-xs font-semibold text-emerald-900 underline hover:text-emerald-700"
+              >
+                আর্টিকেল তালিকায় দেখুন
               </Link>
             )}
           </div>

@@ -6,10 +6,11 @@ import {
   updateArticle,
   getArticleById,
   updateArticleStatus,
+  passArticleToUpper,
   toggleArticleFlag,
   deleteArticle,
-  getArticleRevisions,
 } from "@/repositories/articleRepository";
+import { notifySubEditorsOfReporterArticle } from "@/repositories/notificationRepository";
 import { getCategoryBySlug, getAllCategoriesWithSubcategories } from "@/repositories/categoryRepository";
 import { articleCreateSchema } from "@/schemas/articleSchema";
 import { getCurrentUser } from "@/lib/auth/server";
@@ -199,6 +200,20 @@ export async function createArticleAction(prevState, formData) {
     revalidatePath("/");
     revalidatePath(`/category/${validated.categorySlug}`);
 
+    // If submitted by reporter for approval, notify sub-editors
+    if (currentUser.role === "reporter" && (validated.status === "pending" || validated.status === "pending_approval")) {
+      try {
+        await notifySubEditorsOfReporterArticle({
+          articleId: result.id,
+          headline: validated.headline,
+          slug: result.slug,
+          reporterUsername: currentUser.username,
+        });
+      } catch (notifErr) {
+        console.error("Failed to notify sub-editors on article create:", notifErr);
+      }
+    }
+
     const statusLabels = {
       published: "প্রকাশিত",
       draft: "খসড়া হিসেবে সংরক্ষিত",
@@ -206,10 +221,14 @@ export async function createArticleAction(prevState, formData) {
       rejected: "প্রত্যাখ্যাত",
     };
 
+    const isPublished = validated.status === "published";
+
     return {
       success: true,
       articleId: result.id,
       slug: result.slug,
+      status: validated.status,
+      isPublished,
       message: `সংবাদটি (${statusLabels[validated.status] || validated.status}) সফলভাবে সম্পন্ন হয়েছে!`,
     };
   } catch (error) {
@@ -248,15 +267,28 @@ export async function updateArticleAction(prevState, formData) {
 
     // RBAC Check:
     // Upper roles: full permission to edit any article in any state authored by anyone
-    // Lower roles: can ONLY edit their own articles
-    if (isLowerRole(currentUser.role)) {
-      const isAuthor =
-        existingArticle.author_id === currentUser.id ||
-        existingArticle.created_by === currentUser.username;
+    // Sub-editor: can edit own articles, or reporter submitted articles (pending review)
+    // Reporter: can ONLY edit their own articles
+    const isAuthor =
+      existingArticle.author_id === currentUser.id ||
+      existingArticle.created_by === currentUser.username;
+
+    if (currentUser.role === "reporter") {
       if (!isAuthor) {
         return {
           success: false,
           message: "অন্য কারো সংবাদ সম্পাদনা করার অনুমতি আপনার নেই।",
+        };
+      }
+    } else if (currentUser.role === "sub_editor") {
+      const isReporterSubmitted =
+        (existingArticle.status === "pending" || existingArticle.status === "pending_approval") &&
+        (existingArticle.author_role === "reporter" || existingArticle.created_by !== currentUser.username);
+
+      if (!isAuthor && !isReporterSubmitted) {
+        return {
+          success: false,
+          message: "কেবলমাত্র আপনার নিজের সংবাদ অথবা প্রতিবেদকদের জমাকৃত সংবাদ সম্পাদনা করার অনুমতি আপনার আছে।",
         };
       }
     }
@@ -351,9 +383,12 @@ export async function updateArticleAction(prevState, formData) {
       }
     }
 
+    const isSubEditorReview = currentUser.role === "sub_editor" && !isAuthor;
+    const passToUpper = formData.get("passToUpper") === "true";
+
     const readTime = calculateReadTime(validated.content);
 
-    await updateArticle(articleId, {
+    const updateResult = await updateArticle(articleId, {
       headline: validated.headline,
       summary: validated.summary || validated.headline.substring(0, 150),
       content: validated.content || "",
@@ -367,19 +402,39 @@ export async function updateArticleAction(prevState, formData) {
       youtubeUrl: validated.youtubeUrl || null,
       location,
       readTime,
-      status: validated.status,
+      status: isSubEditorReview ? "pending" : validated.status,
       isBreaking: validated.isBreaking,
       isLead: validated.isLead,
       isHandpicked: validated.isHandpicked,
       lastEditedBy: currentUser.username,
       editorId: currentUser.id,
       changeSummary: `সংবাদ সম্পাদনা করেছেন: @${currentUser.username}`,
+      passToUpper: isSubEditorReview ? passToUpper : false,
     });
 
     revalidatePath("/admin");
     revalidatePath("/");
     revalidatePath(`/category/${validated.categorySlug}`);
     revalidatePath(`/article/${existingArticle.slug}`);
+
+    // If reporter transitions draft to pending review, notify sub-editors
+    if (
+      currentUser.role === "reporter" &&
+      targetStatus === "pending" &&
+      existingArticle.status !== "pending" &&
+      existingArticle.status !== "pending_approval"
+    ) {
+      try {
+        await notifySubEditorsOfReporterArticle({
+          articleId,
+          headline: validated.headline,
+          slug: existingArticle.slug,
+          reporterUsername: currentUser.username,
+        });
+      } catch (notifErr) {
+        console.error("Failed to notify sub-editors on article update:", notifErr);
+      }
+    }
 
     const statusLabels = {
       published: "প্রকাশিত",
@@ -389,11 +444,31 @@ export async function updateArticleAction(prevState, formData) {
       archived: "আর্কাইভকৃত",
     };
 
+    const finalStatus = isSubEditorReview ? "pending" : validated.status;
+    const isPublished = finalStatus === "published";
+
+    let successMessage = `সংবাদটি (${statusLabels[validated.status] || validated.status}) সফলভাবে আপডেট হয়েছে!`;
+    if (isSubEditorReview) {
+      if (passToUpper) {
+        successMessage = updateResult?.hasContentChanged
+          ? "সংবাদটি সম্পাদিত আকারে সফলভাবে ঊর্ধ্বতন কর্তৃপক্ষের কাছে পাঠানো হয়েছে!"
+          : "সংবাদটি অপরিবর্তিত আকারে সফলভাবে ঊর্ধ্বতন কর্তৃপক্ষের কাছে পাঠানো হয়েছে!";
+      } else {
+        successMessage = updateResult?.hasContentChanged
+          ? "সম্পাদনা সফলভাবে সংরক্ষণ করা হয়েছে এবং প্রতিবেদকদের জমাকৃত তালিকায় সংরক্ষিত রয়েছে।"
+          : "সংবাদে কোনো পরিবর্তন নেই; এটি প্রতিবেদকদের জমাকৃত তালিকায় সংরক্ষিত রয়েছে।";
+      }
+    }
+
     return {
       success: true,
       articleId,
       slug: existingArticle.slug,
-      message: `সংবাদটি (${statusLabels[validated.status] || validated.status}) সফলভাবে আপডেট হয়েছে!`,
+      status: finalStatus,
+      isPublished,
+      hasContentChanged: updateResult?.hasContentChanged,
+      lastEditedBy: updateResult?.lastEditedBy,
+      message: successMessage,
     };
   } catch (error) {
     console.error("updateArticleAction error:", error);
@@ -401,6 +476,45 @@ export async function updateArticleAction(prevState, formData) {
       success: false,
       message: `সংবাদ আপডেটে সমস্যা: ${error.message}`,
     };
+  }
+}
+
+/**
+ * Server Action: Sub-editor passes a reporter's submitted article to upper roles
+ */
+export async function passArticleToUpperAction(articleId) {
+  try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.role !== "sub_editor") {
+      return { success: false, message: "শুধুমাত্র সহ-সম্পাদক এই কাজটি করতে পারেন।" };
+    }
+
+    if (!articleId) {
+      return { success: false, message: "আর্টিকেল আইডি পাওয়া যায়নি।" };
+    }
+
+    const article = await getArticleById(articleId);
+    if (!article) {
+      return { success: false, message: "সংবাদটি ডাটাবেজে পাওয়া যায়নি।" };
+    }
+
+    const isAuthor =
+      article.author_id === currentUser.id ||
+      article.created_by === currentUser.username;
+    if (isAuthor) {
+      return { success: false, message: "নিজের তৈরি সংবাদ সরাসরি পাস করা যাবে না, পর্যালোচনার জন্য জমা দিন।" };
+    }
+
+    await passArticleToUpper(articleId, currentUser.username);
+    revalidatePath("/admin");
+
+    return {
+      success: true,
+      message: "সংবাদটি সফলভাবে যাচাই করে ঊর্ধ্বতন কর্তৃপক্ষের কাছে পাঠানো হয়েছে।",
+    };
+  } catch (error) {
+    console.error("passArticleToUpperAction error:", error);
+    return { success: false, message: `সংবাদ পাস করতে সমস্যা: ${error.message}` };
   }
 }
 
@@ -426,15 +540,38 @@ export async function updateArticleStatusAction(articleId, newStatus) {
     }
 
     // Role-based status transition checks:
-    if (isLowerRole(currentUser.role)) {
-      const isAuthor =
-        article.author_id === currentUser.id ||
-        article.created_by === currentUser.username;
+    const isAuthor =
+      article.author_id === currentUser.id ||
+      article.created_by === currentUser.username;
+
+    if (currentUser.role === "reporter") {
       if (!isAuthor) {
         return { success: false, message: "অন্য কারো সংবাদের স্ট্যাটাস পরিবর্তনের অধিকার আপনার নেই।" };
       }
       if (newStatus !== "draft" && newStatus !== "pending") {
         return { success: false, message: "প্রতিবেদক হিসেবে আপনি শুধুমাত্র খসড়া বা পর্যালোচনার আবেদন করতে পারেন।" };
+      }
+    } else if (currentUser.role === "sub_editor") {
+      if (!isAuthor) {
+        const isReporterSubmitted =
+          article.status === "pending" || article.status === "pending_approval";
+        if (!isReporterSubmitted) {
+          return { success: false, message: "অন্য কারো সংবাদের স্ট্যাটাস পরিবর্তনের অধিকার আপনার নেই।" };
+        }
+        // Sub-editor can only pass forward to upper roles with pending status (cannot publish/reject)
+        if (newStatus !== "pending") {
+          return {
+            success: false,
+            message: "সহ-সম্পাদক সরাসরি সংবাদ প্রকাশ বা বাতিল করতে পারেন না। এটি ঊর্ধ্বতন কর্তৃপক্ষের কাছে পাঠাতে হবে।",
+          };
+        }
+      } else {
+        if (newStatus !== "draft" && newStatus !== "pending") {
+          return {
+            success: false,
+            message: "সহ-সম্পাদক হিসেবে নিজের সংবাদ শুধুমাত্র খসড়া রাখতে পারেন বা ঊর্ধ্বতনদের পর্যালোচনার জন্য জমা দিতে পারেন।",
+          };
+        }
       }
     }
 
@@ -446,6 +583,25 @@ export async function updateArticleStatusAction(articleId, newStatus) {
     }
     if (article.slug) {
       revalidatePath(`/article/${article.slug}`);
+    }
+
+    // If reporter transitions article to pending review, notify sub-editors
+    if (
+      currentUser.role === "reporter" &&
+      newStatus === "pending" &&
+      article.status !== "pending" &&
+      article.status !== "pending_approval"
+    ) {
+      try {
+        await notifySubEditorsOfReporterArticle({
+          articleId,
+          headline: article.headline,
+          slug: article.slug,
+          reporterUsername: currentUser.username,
+        });
+      } catch (notifErr) {
+        console.error("Failed to notify sub-editors on article status change:", notifErr);
+      }
     }
 
     const statusLabels = {
@@ -462,19 +618,6 @@ export async function updateArticleStatusAction(articleId, newStatus) {
     };
   } catch (error) {
     return { success: false, message: `স্ট্যাটাস পরিবর্তন ব্যর্থ: ${error.message}` };
-  }
-}
-
-/**
- * Server Action: Fetch revisions for a given article
- */
-export async function getArticleRevisionsAction(articleId) {
-  try {
-    if (!articleId) return { success: false, revisions: [] };
-    const revs = await getArticleRevisions(articleId);
-    return { success: true, revisions: revs };
-  } catch (error) {
-    return { success: false, revisions: [], error: error.message };
   }
 }
 
@@ -501,7 +644,12 @@ export async function deleteArticleAction(articleId) {
     if (!articleId) {
       return { success: false, message: "আর্টিকেল আইডি আবশ্যক।" };
     }
-    await deleteArticle(articleId);
+    const currentUser = await getCurrentUser();
+    await deleteArticle(
+      articleId,
+      currentUser?.id || "usr_superadmin",
+      currentUser?.username || "admin"
+    );
     revalidatePath("/admin");
     revalidatePath("/");
     return { success: true, message: "আর্টিকেলটি সফলভাবে মুছে ফেলা হয়েছে।" };

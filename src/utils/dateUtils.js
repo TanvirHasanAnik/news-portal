@@ -113,3 +113,37 @@ export function formatTimeAgo(timestamp) {
     return 'কিছুক্ষণ আগে';
   }
 }
+
+const BENGALI_MONTHS = [
+  'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
+  'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+];
+
+/**
+ * Formats a timestamp into a static Bengali date & hour/time string
+ * Example: "২৭ অক্টোবর ২০২৬, ৯:৩৯ PM"
+ */
+export function formatStaticDateTime(timestamp) {
+  if (!timestamp) return '—';
+  try {
+    const raw = typeof timestamp === 'string' ? timestamp.replace(' ', 'T') : timestamp;
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return '—';
+
+    const day = toBengaliDigits(d.getDate());
+    const month = BENGALI_MONTHS[d.getMonth()] || '';
+    const year = toBengaliDigits(d.getFullYear());
+
+    let hours = d.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    const bnHours = toBengaliDigits(hours);
+    const bnMinutes = toBengaliDigits(String(d.getMinutes()).padStart(2, '0'));
+
+    return `${day} ${month} ${year}, ${bnHours}:${bnMinutes} ${ampm}`;
+  } catch (_e) {
+    return '—';
+  }
+}
+
+export const formatAuditDateTime = formatStaticDateTime;

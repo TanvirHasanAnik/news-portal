@@ -2,23 +2,39 @@
 
 import { logoutAction } from "@/actions/authActions";
 import {
-    canRoleAccessTab,
-    getPermissionsForRole,
-    hasPermission,
+  canRoleAccessTab,
+  getPermissionsForRole,
+  hasPermission,
 } from "@/config/permissions";
 import { ROLES, getRoleById, getRoleName } from "@/config/roles";
 import { useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useMemo } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 const AuthContext = createContext(null);
 
 /**
  * React Context Provider for Application Authentication & Granular RBAC Permissions
  */
-export function AuthProvider({ children, initialUser = null }) {
+export function AuthProvider({
+  children,
+  initialUser = null,
+  initialUnreadNotificationsCount = 0,
+  initialPendingArticlesCount = 0,
+}) {
   const router = useRouter();
   const user = initialUser;
   const roleId = user?.role || null;
+
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(
+    initialUnreadNotificationsCount || 0
+  );
+  const [pendingArticlesCount, setPendingArticlesCount] = useState(
+    initialPendingArticlesCount || 0
+  );
+
+  const clearUnreadNotifications = useCallback(() => {
+    setUnreadNotificationsCount(0);
+  }, []);
 
   const roleObj = useMemo(() => getRoleById(roleId), [roleId]);
   const permissions = useMemo(() => getPermissionsForRole(roleId), [roleId]);
@@ -73,8 +89,25 @@ export function AuthProvider({ children, initialUser = null }) {
       canAccessTab,
       hasRole,
       logout,
+      unreadNotificationsCount,
+      setUnreadNotificationsCount,
+      clearUnreadNotifications,
+      pendingArticlesCount,
+      setPendingArticlesCount,
     }),
-    [user, roleId, roleObj, permissions, can, canAccessTab, hasRole, logout]
+    [
+      user,
+      roleId,
+      roleObj,
+      permissions,
+      can,
+      canAccessTab,
+      hasRole,
+      logout,
+      unreadNotificationsCount,
+      clearUnreadNotifications,
+      pendingArticlesCount,
+    ]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -92,23 +125,9 @@ export function useAuth() {
 }
 
 /**
- * Policy-based permission hook for Granular RBAC checks (can(), canAccessTab())
+ * Convenience hook for checking role permissions
  */
 export function usePermissions() {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error("usePermissions must be used within an AuthProvider");
-  }
-  return {
-    can: context.can,
-    canAccessTab: context.canAccessTab,
-    permissions: context.permissions,
-    role: context.role,
-    roleObj: context.roleObj,
-    roleNameBn: context.roleNameBn,
-    roleNameEn: context.roleNameEn,
-    hasRole: context.hasRole,
-    user: context.user,
-  };
+  const { can, canAccessTab, hasRole, role, permissions } = useAuth();
+  return { can, canAccessTab, hasRole, role, permissions };
 }
-

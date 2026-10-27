@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Send, RefreshCw, FileText, CheckCircle2, XCircle } from "lucide-react";
+import { Send, RefreshCw, FileText, XCircle, Save, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -9,7 +9,10 @@ export default function ArticleFormSubmit({
   isPending,
   isEditing = false,
   isLowerRole = false,
+  isSubEditorReview = false,
   currentStatus = "published",
+  onSaveSubEditorEdit,
+  onPassToUpper,
   onSaveDraft,
   onReject,
   onReset,
@@ -17,8 +20,60 @@ export default function ArticleFormSubmit({
   return (
     <Card className="border-slate-200 shadow-sm">
       <CardContent className="p-4 space-y-2.5">
-        {/* Lower Roles Action: Submit for Review */}
-        {isLowerRole ? (
+        {/* Main Action Buttons */}
+        {isEditing ? (
+          isSubEditorReview ? (
+            /* Sub-editor reviewing reporter's article: 2 distinct submission options */
+            <div className="space-y-2">
+              <Button
+                type="button"
+                onClick={onPassToUpper}
+                disabled={isPending}
+                className="w-full text-sm sm:text-base font-bold shadow-md bg-blue-600 hover:bg-blue-700 cursor-pointer text-white"
+              >
+                {isPending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> পাঠানো হচ্ছে...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" /> যাচাই করে ঊর্ধ্বতনদের কাছে পাঠান
+                  </>
+                )}
+              </Button>
+
+              <Button
+                type="button"
+                onClick={onSaveSubEditorEdit}
+                disabled={isPending}
+                variant="outline"
+                className="w-full text-xs sm:text-sm font-semibold border-slate-300 bg-white text-slate-800 hover:bg-slate-50 cursor-pointer"
+              >
+                <Save className="w-4 h-4 mr-2 text-slate-600" /> সম্পাদনা সংরক্ষণ করুন (তালিকায় থাকবে)
+              </Button>
+            </div>
+          ) : (
+            /* Standard editing mode for author / upper roles */
+            <Button
+              type="submit"
+              variant="success"
+              size="lg"
+              disabled={isPending}
+              className="w-full text-sm sm:text-base font-bold shadow-md bg-blue-600 hover:bg-blue-700 cursor-pointer text-white"
+            >
+              {isPending ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> সংরক্ষণ করা হচ্ছে...
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 mr-2" /> সংবাদ আপডেট করুন
+                </>
+              )}
+            </Button>
+          )
+        ) : isLowerRole ? (
+          /* Creation Mode for Lower Roles: Submit for Review */
           <Button
             type="submit"
             variant="success"
@@ -37,7 +92,7 @@ export default function ArticleFormSubmit({
             )}
           </Button>
         ) : (
-          /* Upper Roles Action: Publish Directly or Approve */
+          /* Creation Mode for Upper Roles: Publish Directly */
           <Button
             type="submit"
             variant="success"
@@ -51,26 +106,27 @@ export default function ArticleFormSubmit({
               </>
             ) : (
               <>
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                {isEditing ? "অনুমোদন ও প্রকাশ করুন" : "সংবাদ প্রকাশ করুন"}
+                <Send className="w-4 h-4 mr-2" /> সংবাদ প্রকাশ করুন
               </>
             )}
           </Button>
         )}
 
-        {/* Draft Action Button */}
-        <Button
-          type="button"
-          variant="outline"
-          size="default"
-          onClick={onSaveDraft}
-          disabled={isPending}
-          className="w-full text-xs sm:text-sm font-semibold border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
-        >
-          <FileText className="w-4 h-4 mr-2 text-slate-500" /> খসড়া হিসেবে সংরক্ষণ
-        </Button>
+        {/* Draft Action Button: strictly omitted in editing mode */}
+        {!isEditing && onSaveDraft && (
+          <Button
+            type="button"
+            variant="outline"
+            size="default"
+            onClick={onSaveDraft}
+            disabled={isPending}
+            className="w-full text-xs sm:text-sm font-semibold border-slate-300 text-slate-700 hover:bg-slate-50 hover:text-slate-900 cursor-pointer"
+          >
+            <FileText className="w-4 h-4 mr-2 text-slate-500" /> খসড়া হিসেবে সংরক্ষণ
+          </Button>
+        )}
 
-        {/* Upper Roles: Reject Option for Pending / Published articles */}
+        {/* Upper Roles: Optional Reject Button when editing Pending / Published articles */}
         {!isLowerRole && isEditing && onReject && (currentStatus === "pending" || currentStatus === "published") && (
           <Button
             type="button"
@@ -84,7 +140,7 @@ export default function ArticleFormSubmit({
           </Button>
         )}
 
-        {/* Reset Button */}
+        {/* Reset / Cancel Button */}
         <Button
           type="button"
           variant="ghost"
@@ -93,7 +149,7 @@ export default function ArticleFormSubmit({
           disabled={isPending}
           className="w-full text-xs text-slate-500 hover:text-slate-800 cursor-pointer"
         >
-          ফর্ম রিসেট করুন
+          {isEditing ? "পরিবর্তন বাতিল করুন" : "ফর্ম রিসেট করুন"}
         </Button>
       </CardContent>
     </Card>

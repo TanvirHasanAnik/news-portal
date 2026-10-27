@@ -29,11 +29,21 @@ export default async function ArticleCreateModule({ currentUser, searchParams })
     try {
       const rawArticle = (await getArticleById(editId)) || (await getArticleBySlug(editId));
       if (rawArticle) {
-        if (isLower) {
+        if (currentUser?.role === "reporter") {
           const isAuthor =
             rawArticle.author_id === currentUser?.id ||
             rawArticle.created_by === currentUser?.username;
           if (!isAuthor) {
+            isUnauthorizedEdit = true;
+          }
+        } else if (currentUser?.role === "sub_editor") {
+          const isAuthor =
+            rawArticle.author_id === currentUser?.id ||
+            rawArticle.created_by === currentUser?.username;
+          const isReporterSubmitted =
+            (rawArticle.status === "pending" || rawArticle.status === "pending_approval") &&
+            (rawArticle.author_role === "reporter" || rawArticle.created_by !== currentUser?.username);
+          if (!isAuthor && !isReporterSubmitted) {
             isUnauthorizedEdit = true;
           }
         }
@@ -70,7 +80,7 @@ export default async function ArticleCreateModule({ currentUser, searchParams })
   return (
     <div className="space-y-8">
       {/* Module Header with Audit Metadata when editing */}
-      <ArticleCreateHeader initialArticle={initialArticle} />
+      <ArticleCreateHeader initialArticle={initialArticle} currentUser={currentUser} />
 
       {/* Article Form (Client Component with Create/Edit and Workflow States) */}
       <ArticleCreateForm
