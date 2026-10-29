@@ -24,7 +24,7 @@ import {
 
 export function ProfileForm({ user }) {
 
-  const [fullName, setFullName] = useState(user?.fullName || user?.name || "");
+  const [fullName, setFullName] = useState(user?.fullName || user?.full_name || "");
   const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [bio, setBio] = useState(user?.bio || "");
@@ -114,7 +114,7 @@ export function ProfileForm({ user }) {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900">
-              {user?.fullName || user?.name || user?.username}
+              {user?.fullName || user?.full_name || user?.username}
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs text-slate-500 font-mono">

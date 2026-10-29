@@ -1,11 +1,12 @@
 import { getDb, query, queryOne, withTransaction } from "@/lib/db";
 
 function normalizeTimestamp(ts) {
-  if (!ts) return new Date().toISOString();
+  if (!ts) return null;
   if (ts instanceof Date) return ts.toISOString();
-  const str = String(ts).trim();
-  if (str.includes("T")) {
-    return str.endsWith("Z") ? str : `${str}Z`;
+  let str = String(ts).trim();
+  if (!str) return null;
+  if (/([zZ]|[+-]\d{2}(:?\d{2})?)$/.test(str)) {
+    return str;
   }
   return str.replace(" ", "T") + "Z";
 }
@@ -32,7 +33,7 @@ export function mapDbArticleToFrontend(dbRow) {
   }
 
   const primaryImage = imagesArray[0] || dbRow.image || null;
-  const isoTime = normalizeTimestamp(dbRow.published_at || dbRow.created_at);
+  const isoTime = normalizeTimestamp(dbRow.published_at || dbRow.created_at) || new Date().toISOString();
 
   return {
     id: dbRow.slug || dbRow.id,
@@ -74,19 +75,20 @@ export function mapDbArticleToFrontend(dbRow) {
         ? dbRow.last_edited_by
         : null,
     lastEditedAt: normalizeTimestamp(dbRow.last_edited_at),
-    last_edited_at: dbRow.last_edited_at || null,
+    last_edited_at: normalizeTimestamp(dbRow.last_edited_at),
     isPassedToUpper: Boolean(dbRow.is_passed_to_upper),
     is_passed_to_upper: Boolean(dbRow.is_passed_to_upper) ? 1 : 0,
     passedBy: dbRow.passed_by || null,
     passed_by: dbRow.passed_by || null,
-    passedAt: dbRow.passed_at || null,
+    passedAt: normalizeTimestamp(dbRow.passed_at),
+    passed_at: normalizeTimestamp(dbRow.passed_at),
     location: dbRow.location || "ঢাকা",
     time: isoTime,
     publishedAt: isoTime,
     createdAt: normalizeTimestamp(dbRow.created_at),
-    created_at: dbRow.created_at,
+    created_at: normalizeTimestamp(dbRow.created_at),
     updatedAt: normalizeTimestamp(dbRow.updated_at || dbRow.created_at),
-    updated_at: dbRow.updated_at,
+    updated_at: normalizeTimestamp(dbRow.updated_at || dbRow.created_at),
     hasCustomImage: Boolean(primaryImage),
     status: dbRow.status === "pending_approval" ? "pending" : (dbRow.status || "published"),
     isLead: Boolean(dbRow.is_lead),

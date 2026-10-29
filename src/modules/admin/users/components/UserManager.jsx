@@ -321,7 +321,7 @@ export function UserManager({
 
                     <td className="py-3 px-4">
                       <div className="font-semibold text-slate-900">
-                        {usr.full_name || usr.name || usr.username}
+                        {usr.full_name || <span className="text-slate-400 font-normal">—</span>}
                       </div>
                       <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
                         {usr.bio || "কোনো বিবরণ নেই"}

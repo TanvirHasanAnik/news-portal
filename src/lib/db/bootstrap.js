@@ -349,13 +349,13 @@ export function resolveEnvSecrets(env = {}) {
   return {
     superAdminUsername,
     superAdminEmail: (getVal("SUPER_ADMIN_EMAIL") || getVal("INITIAL_SUPER_ADMIN_EMAIL") || "").trim().toLowerCase() || null,
-    superAdminName: (getVal("SUPER_ADMIN_NAME") || getVal("INITIAL_SUPER_ADMIN_NAME") || "Super Admin").trim(),
+    superAdminName: (getVal("SUPER_ADMIN_NAME") || getVal("INITIAL_SUPER_ADMIN_NAME") || "").trim() || null,
     superAdminPassword,
     superAdminFallbackPassword: superAdminPassword,
 
     adminUsername,
     adminEmail: (getVal("ADMIN_EMAIL") || getVal("INITIAL_ADMIN_EMAIL") || "").trim().toLowerCase() || null,
-    adminName: (getVal("ADMIN_NAME") || getVal("INITIAL_ADMIN_NAME") || "Admin").trim(),
+    adminName: (getVal("ADMIN_NAME") || getVal("INITIAL_ADMIN_NAME") || "").trim() || null,
     adminPassword,
     adminFallbackPassword: adminPassword,
   };
@@ -606,8 +606,24 @@ export async function bootstrapDatabase(env = {}) {
 
       try {
         await executeUniversalQuery(
-          `INSERT IGNORE INTO users (id, username, full_name, name, email, phone, role, status, bio)
-           VALUES ('usr_reporter', 'reporter', 'Reporter', 'Reporter', 'reporter@aloshbe.com', '', 'reporter', 'active', 'আলো আসবে সংবাদ পরিবার')`,
+          "DELETE FROM users WHERE id = 'usr_reporter' OR username = 'reporter'",
+          [],
+          env
+        );
+      } catch (_e) {}
+
+      try {
+        await executeUniversalQuery(
+          `UPDATE users 
+           SET full_name = NULL, name = NULL, email = NULL 
+           WHERE role = 'super_admin' AND (full_name IN ('Super Admin', 'সুপার অ্যাডমিন') OR email IN ('superadmin@aloshbe.com', 'admin@aloshbe.com'))`,
+          [],
+          env
+        );
+        await executeUniversalQuery(
+          `UPDATE users 
+           SET full_name = NULL, name = NULL, email = NULL 
+           WHERE role = 'admin' AND (full_name IN ('Admin', 'অ্যাডমিন') OR email IN ('admin@aloshbe.com', 'superadmin@aloshbe.com'))`,
           [],
           env
         );

@@ -88,6 +88,9 @@ export async function getConnectionHandle() {
 
   if (isWorkerRuntime()) {
     const conn = await mysql.createConnection(config);
+    try {
+      await conn.query("SET time_zone = '+00:00'");
+    } catch (_e) {}
     return {
       connection: conn,
       query: (sql, params) => conn.query(sql, params),
@@ -106,6 +109,9 @@ export async function getConnectionHandle() {
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
+    });
+    globalNodePool.on("connection", (connection) => {
+      connection.query("SET time_zone = '+00:00'");
     });
   }
 

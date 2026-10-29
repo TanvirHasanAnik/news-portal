@@ -5,13 +5,14 @@ function toBengaliDigits(num) {
 
 export function getEnglishDateBangla(d = new Date()) {
   try {
+    const dateObj = parseDateSafe(d) || new Date();
     const formatter = new Intl.DateTimeFormat('bn-BD', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
       year: 'numeric',
     });
-    return formatter.format(d).replace(/,\s*([০-৯\d]+)$/, ' $1');
+    return formatter.format(dateObj).replace(/,\s*([০-৯\d]+)$/, ' $1');
   } catch (e) {
     return 'বৃহস্পতিবার, ১৫ অক্টোবর ২০২৬';
   }
@@ -78,9 +79,17 @@ export function getHijriDate(d = new Date()) {
 export function parseDateSafe(timestamp) {
   if (!timestamp) return null;
   if (timestamp instanceof Date) return timestamp;
+  if (typeof timestamp === 'number') {
+    const d = new Date(timestamp);
+    return isNaN(d.getTime()) ? null : d;
+  }
   let str = String(timestamp).trim();
   if (!str) return null;
-  if (!str.includes('Z') && !str.includes('+') && !str.includes('-0') && !str.includes('+0')) {
+  if (/^\d+$/.test(str)) {
+    const d = new Date(Number(str));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (!/([zZ]|[+-]\d{2}(:?\d{2})?)$/.test(str)) {
     str = str.replace(' ', 'T') + 'Z';
   } else {
     str = str.replace(' ', 'T');
@@ -91,11 +100,14 @@ export function parseDateSafe(timestamp) {
 
 export function formatTimeAgo(timestamp) {
   if (!timestamp) return 'কিছুক্ষণ আগে';
+  if (typeof timestamp === 'string' && (timestamp.includes('আগে') || timestamp === 'এইমাত্র')) {
+    return timestamp;
+  }
   try {
     const date = parseDateSafe(timestamp);
-    if (!date) return 'কিছুক্ষণ আগে';
+    if (!date || isNaN(date.getTime())) return 'কিছুক্ষণ আগে';
     const now = new Date();
-    const diffSeconds = Math.max(0, Math.floor((now - date) / 1000));
+    const diffSeconds = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 1000));
 
     if (diffSeconds < 60) {
       return 'এইমাত্র';
@@ -128,7 +140,7 @@ export function formatStaticDateTime(timestamp) {
   if (!timestamp) return '—';
   try {
     const d = parseDateSafe(timestamp);
-    if (!d) return '—';
+    if (!d || isNaN(d.getTime())) return '—';
 
     const day = toBengaliDigits(d.getDate());
     const month = BENGALI_MONTHS[d.getMonth()] || '';

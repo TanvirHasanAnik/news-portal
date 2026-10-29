@@ -20,7 +20,7 @@ function SidebarContent({
   unreadNotificationsCount = 0,
   pendingArticlesCount = 0,
 }) {
-  const initialChar = user?.name ? user.name.trim().charAt(0) : "সু";
+  const initialChar = user?.username ? user.username.trim().charAt(0).toUpperCase() : (user?.name ? user.name.trim().charAt(0) : "U");
 
   return (
     <>
@@ -34,7 +34,7 @@ function SidebarContent({
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-slate-900 truncate">
-                  {user?.name || "ব্যবহারকারী"}
+                  {user?.username || "ব্যবহারকারী"}
                 </p>
                 <p className="text-xs text-slate-500 font-medium truncate">
                   {roleNameBn || "অ্যাডমিন"}
@@ -51,12 +51,6 @@ function SidebarContent({
             >
               <LogOut className="w-4 h-4" />
             </button>
-          </div>
-
-          <div className="mt-2 pt-2 border-t border-slate-200/60">
-            <p className="text-[11px] text-slate-400 font-mono truncate">
-              {user?.email || "admin@aloshbe.com"}
-            </p>
           </div>
         </div>
 

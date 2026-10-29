@@ -1,12 +1,11 @@
 "use client";
 
-import React from "react";
-import { Controller } from "react-hook-form";
-import { FileText, AlertCircle, X } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertCircle, FileText, X } from "lucide-react";
+import { Controller } from "react-hook-form";
 import RichTextEditor from "./RichTextEditor";
 
 export default function ArticleContentFields({
@@ -55,7 +54,7 @@ export default function ArticleContentFields({
                     onChange={field.onChange}
                     onBlur={field.onBlur}
                     ref={field.ref}
-                    className={`font-serif-bangla text-lg font-medium transition-colors ${
+                    className={`font-serif-bangla text-lg font-medium placeholder:text-sm placeholder:font-normal transition-colors ${
                       field.value ? "pr-8" : ""
                     } ${
                       errors?.headline ? "border-red-500 focus:border-red-600 ring-1 ring-red-500/20" : ""
@@ -79,7 +78,7 @@ export default function ArticleContentFields({
               id="headline"
               placeholder="মূল শিরোনাম এখানে লিখুন"
               {...register("headline")}
-              className={`font-serif-bangla text-lg font-medium transition-colors ${
+              className={`font-serif-bangla text-lg font-medium placeholder:text-sm placeholder:font-normal transition-colors ${
                 errors?.headline ? "border-red-500 focus:border-red-600 ring-1 ring-red-500/20" : ""
               }`}
             />
@@ -89,7 +88,7 @@ export default function ArticleContentFields({
               placeholder="মূল শিরোনাম এখানে লিখুন"
               value={headline}
               onChange={(e) => setHeadline && setHeadline(e.target.value)}
-              className="font-serif-bangla text-lg font-medium"
+              className="font-serif-bangla text-lg font-medium placeholder:text-sm placeholder:font-normal"
             />
           )}
 
