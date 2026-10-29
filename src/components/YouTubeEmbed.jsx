@@ -1,11 +1,6 @@
 import React from "react";
 import { getYouTubeEmbedUrl } from "../utils/imageUtils";
 
-/**
- * Reusable YouTubeEmbed Component
- * 
- * Renders a responsive 16:9 YouTube video player iframe with privacy-enhanced mode.
- */
 export default function YouTubeEmbed({
   url,
   title = "ভিডিও প্রতিবেদন",

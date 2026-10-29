@@ -33,17 +33,17 @@ export default async function Home() {
 
   return (
     <>
-      {/* 1. Requirement 2: Latest Mixed Category Published Section */}
+
       <LatestMixedSection dbArticles={dbArticles} />
 
-      {/* 2. Handpicked News Section (বাছাইকৃত সংবাদ) - Column ratio 2:1 */}
+
       <HandpickedNewsSection
         newsList={handpickedArticles}
         dbArticles={dbArticles}
         mostReadList={mostReadArticles}
       />
 
-      {/* 3. Requirement 3: Categorized news showcase sections */}
+
       <CategoryScrollSection dbArticles={dbArticles} categories={dynamicCats} />
     </>
   );

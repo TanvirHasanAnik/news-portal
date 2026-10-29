@@ -3,11 +3,8 @@ import { mapDbArticleToFrontend } from "./articleRepository";
 import { handpickedNewsList } from "@/data/handpickedNewsData";
 import { breakingNews as fallbackBreakingNews } from "@/data/newsData";
 
-/**
- * Curation Repository
- * Raw MySQL (mysql2/promise) data layer for Cloudflare Workers (workerd) & TiDB.
- * Manages handpicked and breaking news collections in curated_news table.
- */
+
+
 
 export async function getCuratedNews(type) {
   let sql = `
@@ -30,7 +27,7 @@ export async function getCuratedNews(type) {
 
 export async function addCuratedNews({ type, articleId, customTitle = "", customUrl = "", priority }) {
   return await withTransaction(async (tx) => {
-    // Prevent duplicate article from being curated in the same type
+
     if (articleId) {
       const existing = await tx.queryOne(
         "SELECT id FROM curated_news WHERE type = ? AND article_id = ?",
@@ -43,7 +40,7 @@ export async function addCuratedNews({ type, articleId, customTitle = "", custom
 
     const id = `cur_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
 
-    // If no priority specified, place it at the very top (highest priority + 10)
+
     let resolvedPriority = Number(priority);
     if (isNaN(resolvedPriority) || resolvedPriority === 0) {
       const maxRow = await tx.queryOne(
@@ -59,7 +56,7 @@ export async function addCuratedNews({ type, articleId, customTitle = "", custom
       [id, type, articleId || null, customTitle || null, customUrl || null, resolvedPriority]
     );
 
-    // Keep articles table flags in sync
+
     if (articleId) {
       if (type === "handpicked") {
         await tx.query("UPDATE articles SET is_handpicked = 1 WHERE id = ?", [articleId]);
@@ -77,7 +74,7 @@ export async function removeCuratedNews(id) {
     const existing = await tx.queryOne("SELECT * FROM curated_news WHERE id = ?", [id]);
     await tx.query("DELETE FROM curated_news WHERE id = ?", [id]);
 
-    // If this was an article reference, check if it's still in another active curated entry
+
     if (existing?.article_id) {
       if (existing.type === "handpicked") {
         const remaining = await tx.queryOne(
@@ -124,9 +121,8 @@ export async function toggleCuratedNews(id, currentActive) {
   });
 }
 
-/**
- * Reorders items by updating their priority values based on array position
- */
+
+
 export async function updateCuratedNewsPriorities(orderedIds = []) {
   if (!Array.isArray(orderedIds) || orderedIds.length === 0) return;
 
@@ -142,26 +138,23 @@ export async function updateCuratedNewsPriorities(orderedIds = []) {
   });
 }
 
-/**
- * Saves a full batch of curated items for a type (handpicked or breaking).
- * Updates priority based on array order, persists active states,
- * and synchronizes article flags within a single atomic transaction.
- */
+
+
 export async function saveCuratedNewsBatch(type, items = []) {
   if (!type) throw new Error("কিউরেশন ধরন আবশ্যক।");
 
   return await withTransaction(async (tx) => {
-    // 1. Get existing curated article IDs for this type
+
     const existingRows = await tx.query(
       "SELECT article_id FROM curated_news WHERE type = ? AND article_id IS NOT NULL",
       [type]
     );
     const previousArticleIds = new Set((existingRows || []).map((r) => r.article_id).filter(Boolean));
 
-    // 2. Clear current curated_news entries for this type
+
     await tx.query("DELETE FROM curated_news WHERE type = ?", [type]);
 
-    // 3. Insert the new batch of items in order with priority = (items.length - i) * 10
+
     const activeArticleIds = new Set();
     const insertedArticleIds = new Set();
 
@@ -191,7 +184,7 @@ export async function saveCuratedNewsBatch(type, items = []) {
       }
     }
 
-    // 4. Synchronize article table flags (is_handpicked or is_breaking)
+
     const allAffected = new Set([...previousArticleIds, ...activeArticleIds]);
     const flagColumn = type === "handpicked" ? "is_handpicked" : (type === "breaking" ? "is_breaking" : null);
 
@@ -209,145 +202,142 @@ export async function saveCuratedNewsBatch(type, items = []) {
   });
 }
 
-/**
- * Returns active handpicked news for public homepage & handpicked category showcase
- */
+
+
 export async function getActiveHandpickedArticles(limit = 4) {
-  const safeLimit = Math.min(Math.max(1, Number(limit) || 4), 50);
-
-  // 1. Fetch active handpicked items from curated_news join articles
-  const curatedRows = await query(
-    `SELECT c.id as curation_id, c.custom_title, c.custom_url, c.priority, c.article_id,
-            a.*
-     FROM curated_news c
-     LEFT JOIN articles a ON c.article_id = a.id
-     WHERE c.type = 'handpicked' 
-       AND c.is_active = 1 
-       AND (a.status = 'published' OR c.article_id IS NULL)
-     ORDER BY c.priority DESC, c.created_at DESC
-     LIMIT ?`,
-    [safeLimit]
-  );
-
-  const curatedArticles = (curatedRows || []).map((row) => {
-    if (row.id && row.status) {
-      const mapped = mapDbArticleToFrontend(row);
-      if (row.custom_title) {
-        mapped.headline = row.custom_title;
-      }
-      return {
-        ...mapped,
-        isHandpicked: true,
-        curationId: row.curation_id,
-      };
-    } else {
-      return {
-        id: row.curation_id,
-        dbId: row.curation_id,
-        slug: row.custom_url ? row.custom_url.replace(/^\//, "") : row.curation_id,
-        headline: row.custom_title || "বাছাইকৃত সংবাদ",
-        summary: "",
-        category: "বাছাইকৃত",
-        categorySlug: "handpicked",
-        image: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=800&auto=format&fit=crop",
-        isHandpicked: true,
-        curationId: row.curation_id,
-        author: "সম্পাদকীয় বিভাগ",
-        time: "বাছাইকৃত",
-      };
-    }
-  });
-
-  // 2. Also check if articles have is_handpicked = 1 that aren't already included
-  if (curatedArticles.length < safeLimit) {
-    const needed = safeLimit - curatedArticles.length;
-    const existingIds = new Set(curatedArticles.map((a) => a.dbId || a.id));
-
-    const directRows = await query(
-      `SELECT * FROM articles 
-       WHERE status = 'published' AND is_handpicked = 1 
-       ORDER BY created_at DESC 
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 4), 20);
+  try {
+    const curatedRows = await query(
+      `SELECT c.id as curation_id, c.custom_title, c.custom_url, c.priority,
+              a.*
+       FROM curated_news c
+       LEFT JOIN articles a ON c.article_id = a.id
+       WHERE c.type = 'handpicked' AND c.is_active = 1
+       ORDER BY c.priority DESC, c.created_at DESC
        LIMIT ?`,
-      [needed + 5]
+      [safeLimit]
     );
 
-    (directRows || []).forEach((row) => {
-      if (curatedArticles.length < safeLimit && !existingIds.has(row.id)) {
-        existingIds.add(row.id);
+    const curatedArticles = (curatedRows || []).map((row) => {
+      if (row.id && row.status) {
         const mapped = mapDbArticleToFrontend(row);
-        curatedArticles.push({ ...mapped, isHandpicked: true });
+        if (row.custom_title) {
+          mapped.headline = row.custom_title;
+        }
+        return {
+          ...mapped,
+          isHandpicked: true,
+          curationId: row.curation_id,
+        };
+      } else {
+        return {
+          id: row.curation_id,
+          dbId: row.curation_id,
+          slug: row.custom_url ? row.custom_url.replace(/^\//, "") : row.curation_id,
+          headline: row.custom_title || "বাছাইকৃত সংবাদ",
+          summary: "",
+          category: "বাছাইকৃত",
+          categorySlug: "handpicked",
+          image: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=800&auto=format&fit=crop",
+          isHandpicked: true,
+          curationId: row.curation_id,
+          author: "সম্পাদকীয় বিভাগ",
+          time: "বাছাইকৃত",
+        };
       }
     });
-  }
 
-  // 3. Fallback: if database has fewer than limit handpicked articles,
-  // supplement from static handpickedNewsList so the homepage grid layout doesn't break
-  if (curatedArticles.length < safeLimit) {
-    const existingTitles = new Set(curatedArticles.map((a) => a.headline));
-    const needed = safeLimit - curatedArticles.length;
-    const fallback = handpickedNewsList
-      .filter((item) => !existingTitles.has(item.headline))
-      .slice(0, needed);
-    curatedArticles.push(...fallback);
-  }
+    if (curatedArticles.length < safeLimit) {
+      const needed = safeLimit - curatedArticles.length;
+      const existingIds = new Set(curatedArticles.map((a) => a.dbId || a.id));
 
-  return curatedArticles.slice(0, safeLimit);
+      const directRows = await query(
+        `SELECT * FROM articles 
+         WHERE status = 'published' AND is_handpicked = 1 
+         ORDER BY created_at DESC 
+         LIMIT ?`,
+        [needed + 5]
+      );
+
+      (directRows || []).forEach((row) => {
+        if (curatedArticles.length < safeLimit && !existingIds.has(row.id)) {
+          existingIds.add(row.id);
+          const mapped = mapDbArticleToFrontend(row);
+          curatedArticles.push({ ...mapped, isHandpicked: true });
+        }
+      });
+    }
+
+    if (curatedArticles.length < safeLimit) {
+      const existingTitles = new Set(curatedArticles.map((a) => a.headline));
+      const needed = safeLimit - curatedArticles.length;
+      const fallback = handpickedNewsList
+        .filter((item) => !existingTitles.has(item.headline))
+        .slice(0, needed);
+      curatedArticles.push(...fallback);
+    }
+
+    return curatedArticles.slice(0, safeLimit);
+  } catch (error) {
+    console.error("[Curation] Error loading active handpicked articles:", error?.message || error);
+    return handpickedNewsList.slice(0, safeLimit);
+  }
 }
 
-/**
- * Returns active breaking news for public header ticker, synced with database
- */
+
+
 export async function getActiveBreakingNews(limit = 10) {
   const safeLimit = Math.min(Math.max(1, Number(limit) || 10), 50);
-
-  // 1. Fetch active breaking items from curated_news
-  const curatedRows = await query(
-    `SELECT c.id, c.custom_title, c.custom_url, c.priority, c.article_id,
-            a.headline as article_headline, a.slug as article_slug
-     FROM curated_news c
-     LEFT JOIN articles a ON c.article_id = a.id
-     WHERE c.type = 'breaking' AND c.is_active = 1
-     ORDER BY c.priority DESC, c.created_at DESC
-     LIMIT ?`,
-    [safeLimit]
-  );
-
-  const breakingItems = (curatedRows || []).map((row) => ({
-    id: row.id,
-    headline: row.custom_title || row.article_headline || "জরুরি সংবাদ",
-    url: row.custom_url || (row.article_slug ? `/article/${row.article_slug}` : (row.article_id ? `/article/${row.article_id}` : "#")),
-    articleId: row.article_id,
-  }));
-
-  // 2. Also check published articles where is_breaking = 1 that aren't already included
-  if (breakingItems.length < safeLimit) {
-    const existingArticleIds = new Set(breakingItems.map((b) => b.articleId).filter(Boolean));
-    const needed = safeLimit - breakingItems.length;
-
-    const directRows = await query(
-      `SELECT id, headline, slug FROM articles
-       WHERE status = 'published' AND is_breaking = 1
-       ORDER BY created_at DESC 
+  try {
+    const curatedRows = await query(
+      `SELECT c.id, c.custom_title, c.custom_url, c.priority, c.article_id,
+              a.headline as article_headline, a.slug as article_slug
+       FROM curated_news c
+       LEFT JOIN articles a ON c.article_id = a.id
+       WHERE c.type = 'breaking' AND c.is_active = 1
+       ORDER BY c.priority DESC, c.created_at DESC
        LIMIT ?`,
-      [needed + 5]
+      [safeLimit]
     );
 
-    (directRows || []).forEach((art) => {
-      if (breakingItems.length < safeLimit && !existingArticleIds.has(art.id)) {
-        existingArticleIds.add(art.id);
-        breakingItems.push({
-          id: `art_${art.id}`,
-          headline: art.headline,
-          url: `/article/${art.slug || art.id}`,
-        });
-      }
-    });
-  }
+    const breakingItems = (curatedRows || []).map((row) => ({
+      id: row.id,
+      headline: row.custom_title || row.article_headline || "জরুরি সংবাদ",
+      url: row.custom_url || (row.article_slug ? `/article/${row.article_slug}` : (row.article_id ? `/article/${row.article_id}` : "#")),
+      articleId: row.article_id,
+    }));
 
-  // 3. Fallback to static breakingNews if nothing is in DB yet
-  if (breakingItems.length === 0) {
+    if (breakingItems.length < safeLimit) {
+      const existingArticleIds = new Set(breakingItems.map((b) => b.articleId).filter(Boolean));
+      const needed = safeLimit - breakingItems.length;
+
+      const directRows = await query(
+        `SELECT id, headline, slug FROM articles
+         WHERE status = 'published' AND is_breaking = 1
+         ORDER BY created_at DESC 
+         LIMIT ?`,
+        [needed + 5]
+      );
+
+      (directRows || []).forEach((art) => {
+        if (breakingItems.length < safeLimit && !existingArticleIds.has(art.id)) {
+          existingArticleIds.add(art.id);
+          breakingItems.push({
+            id: `art_${art.id}`,
+            headline: art.headline,
+            url: `/article/${art.slug || art.id}`,
+          });
+        }
+      });
+    }
+
+    if (breakingItems.length === 0) {
+      return fallbackBreakingNews;
+    }
+
+    return breakingItems.slice(0, safeLimit);
+  } catch (error) {
+    console.error("[Curation] Error loading active breaking news:", error?.message || error);
     return fallbackBreakingNews;
   }
-
-  return breakingItems.slice(0, safeLimit);
 }

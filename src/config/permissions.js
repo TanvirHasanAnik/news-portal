@@ -1,11 +1,7 @@
 import { USER_ROLES } from "./roles.js";
 
-/**
- * Granular Permissions Definition
- * Covers UI tabs and functional operations across the entire admin panel.
- */
 export const PERMISSIONS = {
-  // Tabs Access
+
   TAB_ANALYTICS: "tabs:analytics",
   TAB_CREATE_ARTICLE: "tabs:create-article",
   TAB_ARTICLE_LIST: "tabs:article-list",
@@ -16,13 +12,10 @@ export const PERMISSIONS = {
   TAB_NOTIFICATIONS: "tabs:notifications",
   TAB_PROFILE: "tabs:profile",
 
-  // Profile Operations
   PROFILE_EDIT_OWN: "profile:edit_own",
 
-  // Analytics Operations
   ANALYTICS_VIEW: "analytics:view",
 
-  // Article Operations
   ARTICLE_CREATE: "article:create",
   ARTICLE_VIEW_ALL: "article:view_all",
   ARTICLE_VIEW_OWN: "article:view_own",
@@ -35,55 +28,20 @@ export const PERMISSIONS = {
   ARTICLE_ARCHIVE: "article:archive",
   ARTICLE_DELETE: "article:delete",
 
-  // Curation Operations (Handpicked, Breaking)
   CURATION_MANAGE: "curation:manage",
 
-  // Category & Subcategory Operations
   CATEGORIES_MANAGE: "categories:manage",
 
-  // User Management Operations
   USERS_VIEW: "users:view",
   USERS_CREATE: "users:create",
   USERS_EDIT_ROLE: "users:edit_role",
   USERS_DISABLE: "users:disable",
 
-  // Request Management Operations
   REQUESTS_VIEW: "requests:view",
   REQUESTS_CREATE: "requests:create",
   REQUESTS_REVIEW: "requests:review",
 };
 
-/**
- * Centralized Roles to Granular Permissions Mapping
- * Directly mapped from admin_panel_features.md:
- *
- * 1. Super Admin:
- *    - All tabs (Categories, Users management, Admin requests review)
- *    - Full permissions (*)
- *
- * 2. Admin:
- *    - Analytics Dashboard
- *    - Request New User, Request Disable User, Request User role change
- *    - Notified about User & curation changes by admin
- *    - Publish, Approve, Edit, Archive Articles
- *    - Handpicked News, Breaking News
- *    - Can see user list but CANNOT edit directly (view only)
- *    - Additional request tab for requesting changes to Super Admin
- *
- * 3. Editor in chief:
- *    - Handpicked News, Breaking News
- *    - Post, Approve, Edit, Archive Articles
- *
- * 4. Editor:
- *    - Post, Approve, Edit, Archive Articles
- *
- * 5. Sub editor:
- *    - Edit or pass Article from reporter and submit for publishing
- *    - Write Articles and Submit
- *
- * 6. Reporter:
- *    - Write Articles and Submit
- */
 export const ROLE_PERMISSIONS = {
   [USER_ROLES.SUPER_ADMIN]: ["*"],
 
@@ -109,9 +67,9 @@ export const ROLE_PERMISSIONS = {
     PERMISSIONS.ARTICLE_ARCHIVE,
     PERMISSIONS.ARTICLE_DELETE,
     PERMISSIONS.CURATION_MANAGE,
-    PERMISSIONS.USERS_VIEW, // Can view user list, but cannot edit / disable directly
+    PERMISSIONS.USERS_VIEW, 
     PERMISSIONS.REQUESTS_VIEW,
-    PERMISSIONS.REQUESTS_CREATE, // Can submit requests to Super Admin
+    PERMISSIONS.REQUESTS_CREATE, 
     PERMISSIONS.PROFILE_EDIT_OWN,
   ],
 
@@ -179,9 +137,6 @@ export const ROLE_PERMISSIONS = {
   ],
 };
 
-/**
- * Tab ID to Tab Permission Mapping
- */
 export const TAB_PERMISSION_MAP = {
   analytics: PERMISSIONS.TAB_ANALYTICS,
   "create-article": PERMISSIONS.TAB_CREATE_ARTICLE,
@@ -194,9 +149,6 @@ export const TAB_PERMISSION_MAP = {
   profile: PERMISSIONS.TAB_PROFILE,
 };
 
-/**
- * Checks if a given role possesses a specific permission
- */
 export function hasPermission(role, permission) {
   if (!role || !permission) return false;
   if (role === USER_ROLES.SUPER_ADMIN) return true;
@@ -206,9 +158,6 @@ export function hasPermission(role, permission) {
   return permissions.includes(permission);
 }
 
-/**
- * Checks if a role is authorized to access a specific admin tab
- */
 export function canRoleAccessTab(role, tabId) {
   if (!role || !tabId) return false;
   if (role === USER_ROLES.SUPER_ADMIN) return true;
@@ -217,9 +166,6 @@ export function canRoleAccessTab(role, tabId) {
   return hasPermission(role, requiredPermission);
 }
 
-/**
- * Retrieves all permissions granted to a role
- */
 export function getPermissionsForRole(role) {
   if (!role) return [];
   if (role === USER_ROLES.SUPER_ADMIN) {

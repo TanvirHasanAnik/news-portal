@@ -17,15 +17,15 @@ export default function MobileDrawer({ isOpen, onClose, categories: propCategori
 
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
-      {/* Backdrop */}
+
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300"
         onClick={onClose}
       />
 
-      {/* Slide-in Drawer */}
+
       <div className="fixed inset-y-0 left-0 w-full max-w-xs sm:max-w-sm bg-white shadow-2xl flex flex-col z-10 transform transition-transform duration-300 overflow-hidden">
-        {/* Drawer Header */}
+
         <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
           <div>
             <Link href="/" onClick={onClose} className="inline-block bg-white px-2.5 py-1.5 rounded-lg shadow-sm">
@@ -46,7 +46,7 @@ export default function MobileDrawer({ isOpen, onClose, categories: propCategori
           </button>
         </div>
 
-        {/* Navigation Categories List */}
+
         <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
           <div className="px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
             প্রধান বিভাগসমূহ
@@ -83,7 +83,7 @@ export default function MobileDrawer({ isOpen, onClose, categories: propCategori
           })}
         </div>
 
-        {/* Drawer Footer */}
+
         <div className="p-4 bg-slate-100 border-t border-slate-200 text-center text-xs text-slate-500">
           <p className="font-serif-bangla text-slate-700 font-medium">আলো আসবে অনলাইন সংস্করণ</p>
         </div>

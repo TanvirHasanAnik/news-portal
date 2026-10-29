@@ -8,12 +8,6 @@ import NewsCard, {
   EmphasizedNewsCard,
 } from "./NewsCard";
 
-/**
- * NewsArticleCard (Compatibility Wrapper)
- * 
- * Re-exports and wraps the unified `NewsCard` component.
- * Maps legacy `variant="standard"` to `variant="vertical"`.
- */
 export default function NewsArticleCard({
   news,
   variant = "standard",

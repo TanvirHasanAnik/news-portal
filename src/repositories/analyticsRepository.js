@@ -1,12 +1,6 @@
 import { getDb, query, queryOne, withTransaction } from "@/lib/db";
 import { getMostReadArticles } from "./articleRepository";
 
-/**
- * Analytics Repository
- * Raw MySQL (mysql2/promise) data layer for Cloudflare Workers (workerd) & TiDB.
- * Handles authentic manual view counting, category traffic aggregates, top pages, and audit logs.
- */
-
 export async function getAnalyticsSummary() {
   const today = new Date().toISOString().slice(0, 10);
 
@@ -26,10 +20,6 @@ export async function getAnalyticsSummary() {
   };
 }
 
-/**
- * Returns views and article counts for dynamic content categories
- * (Permanent categories 'latest' and 'handpicked' are excluded from dynamic category breakdown)
- */
 export async function getCategoryViewsStats() {
   const rows = await query(
     `SELECT c.name as category_name, 
@@ -46,16 +36,10 @@ export async function getCategoryViewsStats() {
   return rows || [];
 }
 
-/**
- * Top articles wrapper delegating to reusable getMostReadArticles function
- */
 export async function getTopArticles(limit = 10) {
   return await getMostReadArticles(limit);
 }
 
-/**
- * Records an authentic article page view in the database with atomic transaction
- */
 export async function recordArticleView(articleId, { categorySlug = "", subcategoryName = "", path = "" } = {}) {
   if (!articleId) return;
   try {
@@ -63,13 +47,12 @@ export async function recordArticleView(articleId, { categorySlug = "", subcateg
     const id = `pv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     await withTransaction(async (tx) => {
-      // 1. Increment article total view_count
+
       await tx.query(
         "UPDATE articles SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?",
         [articleId]
       );
 
-      // 2. Insert into analytics_page_views for date & category tracking
       await tx.query(
         `INSERT INTO analytics_page_views (id, path, article_id, category_slug, subcategory_name, viewed_date, created_at)
          VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,

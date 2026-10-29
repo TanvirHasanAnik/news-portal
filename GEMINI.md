@@ -1,5 +1,8 @@
 # Antigravity Workspace Rules for News Portal
-Crucial rule: Never display internal feature names, technical acronyms or prompt instructions anywhere in the user-facing UI text or placeholders.
+1. Crucial rule: Never display internal feature names, technical acronyms or prompt instructions anywhere in the user-facing UI text or placeholders.
+2. Don't put code comments inside application code files
+3. Robust error handling and loading shall be implemented with every feature.
+4. Maintain code reusability and manageability whenever possible.
 
 ## 1. UI/UX Minimalism & Zero Technical Clutter
 - All user-facing components (editors, upload forms, modals, dashboards) must be clean, minimalist, and consumer-grade.

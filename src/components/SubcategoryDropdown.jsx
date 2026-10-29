@@ -4,10 +4,6 @@ import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { ChevronDown, Check } from "lucide-react";
 
-/**
- * Subcategory Dropdown for Mobile View
- * Displays beside the category title on smaller screens with smooth interactive menu.
- */
 export default function SubcategoryDropdown({
   slug,
   subcategories = [],
@@ -16,7 +12,6 @@ export default function SubcategoryDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close dropdown when tapping or clicking outside
   useEffect(() => {
     const handleOutsideClick = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -35,7 +30,6 @@ export default function SubcategoryDropdown({
     };
   }, [isOpen]);
 
-  // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (event) => {
       if (event.key === "Escape") {
@@ -53,7 +47,7 @@ export default function SubcategoryDropdown({
 
   return (
     <div className="relative inline-block" ref={dropdownRef}>
-      {/* Dropdown Toggle Icon Button */}
+
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
@@ -72,7 +66,6 @@ export default function SubcategoryDropdown({
         />
       </button>
 
-      {/* Floating Dropdown Menu */}
       {isOpen && (
         <div className="absolute right-0 top-full mt-1.5 w-48 sm:w-56 bg-white rounded-xl shadow-xl border border-slate-200 py-1.5 z-50 divide-y divide-slate-100 animate-in fade-in zoom-in-95 duration-150">
           <div className="px-3 py-1.5 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
@@ -80,7 +73,7 @@ export default function SubcategoryDropdown({
           </div>
 
           <div className="py-1 max-h-64 overflow-y-auto">
-            {/* All / সকল option */}
+
             <Link
               href={`/category/${slug}`}
               onClick={() => setIsOpen(false)}
@@ -94,7 +87,6 @@ export default function SubcategoryDropdown({
               {!selectedSub && <Check className="w-4 h-4 text-red-600 shrink-0" />}
             </Link>
 
-            {/* Individual subcategory items */}
             {subcategories.map((sub, index) => {
               const isSelected = selectedSub === sub;
               return (

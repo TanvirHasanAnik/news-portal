@@ -1,10 +1,5 @@
 import { query, queryOne, withTransaction } from "@/lib/db";
 
-/**
- * Notifications Repository
- * Zero-ORM, TiDB/MySQL direct repository for system & workflow notifications.
- */
-
 export async function createNotification({
   userId,
   type,
@@ -83,9 +78,6 @@ export async function markAllNotificationsAsRead(userId) {
   return true;
 }
 
-/**
- * Notifies all active sub-editors when a reporter submits a new article for review
- */
 export async function notifySubEditorsOfReporterArticle({
   articleId,
   headline,

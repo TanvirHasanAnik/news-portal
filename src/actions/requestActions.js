@@ -36,7 +36,7 @@ export async function createAdminRequestAction(prevState, formData) {
 
     const validated = createAdminRequestSchema.parse(rawData);
 
-    // Enforce single-user rule: cannot request creation of or promotion to super admin or admin
+
     if (validated.requestedRole && isSingleUserRole(validated.requestedRole)) {
       return {
         success: false,

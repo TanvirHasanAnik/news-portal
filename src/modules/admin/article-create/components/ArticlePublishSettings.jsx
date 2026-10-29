@@ -23,7 +23,7 @@ export default function ArticlePublishSettings({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
-        {/* Category Dropdown (Mandatory) */}
+
         <div className="space-y-1.5">
           <Label htmlFor="category" className="text-sm font-semibold text-slate-800">
             বিভাগ (Category) <span className="text-red-500">*</span>
@@ -77,7 +77,7 @@ export default function ArticlePublishSettings({
           )}
         </div>
 
-        {/* Subcategory Dropdown (Optional) */}
+
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <Label htmlFor="subcategory" className="text-sm font-semibold text-slate-800">

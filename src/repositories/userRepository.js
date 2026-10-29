@@ -1,16 +1,24 @@
 import { query, queryOne } from "@/lib/db";
 
-/**
- * User Repository
- * Raw MySQL (mysql2/promise) data layer for Cloudflare Workers (workerd) & TiDB.
- * Dictated by unique immutable `username`.
- */
+
+
 
 export async function getAllUsers() {
   const rows = await query(
     `SELECT id, username, full_name, COALESCE(full_name, name, username) as name, email, phone, role, status, must_change_password, avatar, bio, created_at 
      FROM users 
-     ORDER BY created_at ASC`
+     ORDER BY 
+       CASE role
+         WHEN 'super_admin' THEN 1
+         WHEN 'superadmin' THEN 1
+         WHEN 'admin' THEN 2
+         WHEN 'editor_in_chief' THEN 3
+         WHEN 'editor' THEN 4
+         WHEN 'sub_editor' THEN 5
+         WHEN 'reporter' THEN 6
+         ELSE 7
+       END ASC,
+       created_at ASC`
   );
   return rows || [];
 }
@@ -45,9 +53,8 @@ export async function getUserByEmail(email) {
   );
 }
 
-/**
- * Finds user by username or email (username takes priority)
- */
+
+
 export async function getUserByUsernameOrEmail(identifier) {
   if (!identifier) return null;
   const clean = identifier.trim().toLowerCase();
@@ -60,9 +67,8 @@ export async function getUserByUsernameOrEmail(identifier) {
   );
 }
 
-/**
- * Creates a new staff user with unique username, role, password, and optional details
- */
+
+
 export async function createUser({
   username,
   fullName = "",
@@ -109,10 +115,8 @@ export async function createUser({
   };
 }
 
-/**
- * Updates a user's personal profile (full_name, email, phone, bio, avatar).
- * Username and role are strictly immutable and cannot be changed here.
- */
+
+
 export async function updateUserProfile(id, { fullName, email, phone, bio = "", avatar = null }) {
   const cleanName = (fullName || "").trim();
   const cleanEmail = (email || "").trim().toLowerCase();
@@ -128,9 +132,8 @@ export async function updateUserProfile(id, { fullName, email, phone, bio = "", 
   return { id, full_name: cleanName, email: cleanEmail, phone: cleanPhone, bio };
 }
 
-/**
- * Updates a user's role
- */
+
+
 export async function updateUserRole(id, role) {
   if (role === "super_admin" || role === "admin") {
     throw new Error("কাউকে সুপার অ্যাডমিন বা অ্যাডমিন পদে পরিবর্তন করা যাবে না।");
@@ -148,9 +151,8 @@ export async function updateUserRole(id, role) {
   return { id, role };
 }
 
-/**
- * Updates a user's status (active / disabled)
- */
+
+
 export async function updateUserStatus(id, status) {
   const target = await getUserById(id);
   if (target && (target.role === "super_admin" || target.role === "admin")) {
@@ -164,9 +166,8 @@ export async function updateUserStatus(id, status) {
   return { id, status };
 }
 
-/**
- * Updates a user's password and clears must_change_password flag
- */
+
+
 export async function updateUserPassword(id, password) {
   await query(
     "UPDATE users SET password = ?, must_change_password = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?",

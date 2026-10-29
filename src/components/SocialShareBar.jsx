@@ -16,12 +16,6 @@ function WhatsAppIcon({ className = "w-4 h-4" }) {
   );
 }
 
-/**
- * Reusable SocialShareBar Component
- * 
- * Provides social sharing (Facebook, X/Twitter, WhatsApp, LinkedIn)
- * and a link copy button with visual confirmation.
- */
 export default function SocialShareBar({
   title = "",
   url = "",
@@ -79,7 +73,7 @@ export default function SocialShareBar({
       aria-label="সামাজিক যোগাযোগ মাধ্যম ও শেয়ার অপশন"
       className={`flex items-center gap-1.5 sm:gap-2 flex-wrap ${className}`}
     >
-      {/* Facebook */}
+
       <button
         type="button"
         onClick={() => handleShare("facebook")}
@@ -90,7 +84,6 @@ export default function SocialShareBar({
         <FacebookIcon className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
       </button>
 
-      {/* X (Twitter) */}
       <button
         type="button"
         onClick={() => handleShare("twitter")}
@@ -101,7 +94,6 @@ export default function SocialShareBar({
         <TwitterXIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
       </button>
 
-      {/* WhatsApp */}
       <button
         type="button"
         onClick={() => handleShare("whatsapp")}
@@ -112,7 +104,6 @@ export default function SocialShareBar({
         <WhatsAppIcon className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
       </button>
 
-      {/* LinkedIn */}
       <button
         type="button"
         onClick={() => handleShare("linkedin")}
@@ -123,7 +114,6 @@ export default function SocialShareBar({
         <LinkedinIcon className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
       </button>
 
-      {/* Copy Link Button */}
       <div className="relative">
         <button
           type="button"

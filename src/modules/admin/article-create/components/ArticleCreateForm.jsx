@@ -32,14 +32,12 @@ export default function ArticleCreateForm({
     categories[0]?.slug ||
     "national";
 
-  // Normalize initial images
   const initialImages = Array.isArray(initialArticle?.images)
     ? initialArticle.images
     : initialArticle?.image
     ? [initialArticle.image]
     : [];
 
-  // Initialize React Hook Form paired with centralized Zod Article Schema
   const {
     register,
     handleSubmit,
@@ -63,16 +61,13 @@ export default function ArticleCreateForm({
     },
   });
 
-  // Watch values for dynamic dependent UI
   const categorySlug = watch("categorySlug") || defaultCategorySlug;
   const images = watch("images") || [];
   const youtubeUrl = watch("youtubeUrl") || "";
 
-  // Selected Category's subcategories
   const selectedCategory = categories.find((c) => c.slug === categorySlug);
   const availableSubcategories = selectedCategory?.subcategories || [];
 
-  // Update images and immediately delete any removed ones from Cloudflare R2
   const handleImagesChange = (newImages) => {
     newImages.forEach((img) => uncommittedImagesRef.current.add(img));
 
@@ -90,7 +85,6 @@ export default function ArticleCreateForm({
     setValue("images", newImages, { shouldValidate: true });
   };
 
-  // Reset form
   const handleReset = () => {
     const toDelete = Array.from(uncommittedImagesRef.current);
     if (toDelete.length > 0) {
@@ -115,7 +109,6 @@ export default function ArticleCreateForm({
     setResult(null);
   };
 
-  // Cleanup uncommitted images on navigation
   useEffect(() => {
     const handleBeforeUnload = () => {
       const pending = Array.from(uncommittedImagesRef.current);
@@ -295,12 +288,11 @@ export default function ArticleCreateForm({
   return (
     <>
       <form onSubmit={handleFormSubmit} className="space-y-6">
-        {/* Success / Error Notification Alert */}
+
         <ArticleFormFeedback result={result} onReset={requestReset} />
 
-        {/* Main 2-Column Responsive Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column (2 spans): Primary Content & Media */}
+
           <div className="lg:col-span-2 space-y-6">
             <ArticleContentFields
               register={register}
@@ -320,7 +312,6 @@ export default function ArticleCreateForm({
             />
           </div>
 
-          {/* Right Column (1 span): Category & Publishing Controls */}
           <div className="space-y-6">
             <ArticlePublishSettings
               register={register}
@@ -349,7 +340,6 @@ export default function ArticleCreateForm({
         </div>
       </form>
 
-      {/* Re-confirmation Modal */}
       <ConfirmModal
         isOpen={Boolean(confirmConfig)}
         onClose={() => setConfirmConfig(null)}

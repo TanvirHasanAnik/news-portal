@@ -24,10 +24,8 @@ import { getFallbackPasswordForRole } from "@/lib/db/bootstrap";
 
 const BCRYPT_SALT_ROUNDS = 12;
 
-/**
- * Server Action for User Login (TiDB + bcryptjs)
- * User identity is dictated primarily by unique username, with email fallback.
- */
+
+
 export async function loginAction(prevState, formData) {
   try {
     const rawData = {
@@ -37,7 +35,7 @@ export async function loginAction(prevState, formData) {
 
     const validated = loginSchema.parse(rawData);
 
-    // 1. Fetch user from TiDB repository by username or email
+
     const user = await getUserByUsernameOrEmail(validated.username);
     if (!user || !user.password) {
       return {
@@ -54,7 +52,7 @@ export async function loginAction(prevState, formData) {
       };
     }
 
-    // 2. Verify password with bcryptjs
+
     let isMatch = false;
     const isBcryptHash =
       user.password.startsWith("$2a$") ||
@@ -64,7 +62,7 @@ export async function loginAction(prevState, formData) {
     if (isBcryptHash) {
       isMatch = await bcrypt.compare(validated.password, user.password);
     } else {
-      // Legacy plaintext comparison fallback -> auto-upgrade to bcrypt (salt rounds: 12)
+
       if (user.password === validated.password) {
         isMatch = true;
         const newHash = await bcrypt.hash(validated.password, BCRYPT_SALT_ROUNDS);
@@ -79,7 +77,7 @@ export async function loginAction(prevState, formData) {
       };
     }
 
-    // 3. Create Edge-compliant JWT Token
+
     const token = await createJwtToken({
       sub: user.id,
       username: user.username,
@@ -90,10 +88,10 @@ export async function loginAction(prevState, formData) {
       mustChangePassword: Boolean(user.must_change_password),
     });
 
-    // 4. Store in HTTP-only Cookie
+
     await setAuthCookie(token);
 
-    // 5. Audit Log
+
     try {
       await recordAuditLog({
         userId: user.id,
@@ -103,7 +101,7 @@ export async function loginAction(prevState, formData) {
         details: { username: user.username, role: user.role },
       });
     } catch (_auditErr) {
-      // Non-blocking
+
     }
 
     return {
@@ -118,18 +116,15 @@ export async function loginAction(prevState, formData) {
   }
 }
 
-/**
- * Server Action for User Logout
- */
+
+
 export async function logoutAction() {
   await removeAuthCookie();
   redirect("/admin/login");
 }
 
-/**
- * Server Action for updating personal profile (name, email, phone, bio)
- * Available to all authenticated roles. Username and role are immutable.
- */
+
+
 export async function updateProfileAction(prevState, formData) {
   try {
     const currentUser = await getCurrentUser();
@@ -165,7 +160,7 @@ export async function updateProfileAction(prevState, formData) {
         details: { fullName: validated.fullName, email: validated.email, phone: validated.phone },
       });
     } catch (_err) {
-      // Non-blocking
+
     }
 
     revalidatePath("/admin");
@@ -181,10 +176,8 @@ export async function updateProfileAction(prevState, formData) {
   }
 }
 
-/**
- * Server Action for Super Admin & Admin to change their own password.
- * Requires verification with current password.
- */
+
+
 export async function changeAdminPasswordAction(prevState, formData) {
   try {
     const currentUser = await getCurrentUser();
@@ -207,7 +200,7 @@ export async function changeAdminPasswordAction(prevState, formData) {
 
     const validated = changeAdminPasswordSchema.parse(rawData);
 
-    // Verify current password against database
+
     const dbUser = await getUserByUsernameOrEmail(currentUser.username);
     if (!dbUser || !dbUser.password) {
       return { success: false, message: "ব্যবহারকারীর তথ্য পাওয়া যায়নি।" };
@@ -230,7 +223,7 @@ export async function changeAdminPasswordAction(prevState, formData) {
         details: { role: currentUser.role },
       });
     } catch (_err) {
-      // Non-blocking
+
     }
 
     revalidatePath("/admin");
@@ -246,9 +239,8 @@ export async function changeAdminPasswordAction(prevState, formData) {
   }
 }
 
-/**
- * Server Action for Super Admin to reset the password of any staff member (editor, reporter, etc.)
- */
+
+
 export async function adminResetStaffPasswordAction(prevState, formData) {
   try {
     const currentUser = await getCurrentUser();
@@ -290,7 +282,7 @@ export async function adminResetStaffPasswordAction(prevState, formData) {
         details: { targetUsername: targetUser.username, targetRole: targetUser.role },
       });
     } catch (_err) {
-      // Non-blocking
+
     }
 
     revalidatePath("/admin");

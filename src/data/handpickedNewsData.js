@@ -1,7 +1,6 @@
-/**
- * Handpicked News Data (বাছাইকৃত সংবাদ)
- * 4 filler news items handpicked for the editorial showcase.
- */
+
+
+
 
 export const handpickedNewsList = [
   {

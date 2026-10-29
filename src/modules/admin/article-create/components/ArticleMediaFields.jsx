@@ -1,25 +1,23 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import {
-  Image as ImageIcon,
-  UploadCloud,
-  CheckCircle2,
-  AlertCircle,
-  RefreshCw,
-  Trash2,
-  Video,
-  FileCheck,
-  Star,
-  ArrowLeftRight,
-} from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { convertImageToWebP } from "@/utils/imageConverter";
+import {
+    AlertCircle,
+    ArrowLeftRight,
+    CheckCircle2,
+    Image as ImageIcon,
+    RefreshCw,
+    Star,
+    Trash2,
+    UploadCloud,
+    Video
+} from "lucide-react";
+import { useRef, useState } from "react";
 import ImageCropperModal from "./ImageCropperModal";
 
 const MAX_IMAGES = 3;
@@ -41,11 +39,11 @@ export default function ArticleMediaFields({
   const [uploadSuccess, setUploadSuccess] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // 16:9 Cropper Queue State
+
   const [cropQueue, setCropQueue] = useState([]);
   const [currentCropIndex, setCurrentCropIndex] = useState(0);
 
-  // Normalize image list (supports both new 'images' array and legacy 'imageUrl' prop)
+
   const imageList = Array.isArray(images)
     ? images
     : imageUrl
@@ -62,9 +60,8 @@ export default function ArticleMediaFields({
     }
   };
 
-  /**
-   * Receives user selected files and queues them into the 16:9 cropper
-   */
+
+
   const handleFilesSelected = (files) => {
     if (!files || files.length === 0) return;
 
@@ -76,7 +73,7 @@ export default function ArticleMediaFields({
 
     const filesToQueue = Array.from(files).slice(0, remainingSlots);
 
-    // Validation
+
     for (const file of filesToQueue) {
       if (!file.type.startsWith("image/")) {
         setUploadError("অনুগ্রহ করে শুধুমাত্র ছবি ফাইল (JPEG, PNG, WebP, AVIF) নির্বাচন করুন।");
@@ -94,9 +91,8 @@ export default function ArticleMediaFields({
     setCurrentCropIndex(0);
   };
 
-  /**
-   * Uploads a 16:9 cropped WebP file to Cloudflare R2 bucket
-   */
+
+
   const handleCroppedFileComplete = async (croppedWebpFile) => {
     setIsUploading(true);
     setUploadStatus(`ছবি #${currentCropIndex + 1} আপলোড করা হচ্ছে...`);
@@ -208,7 +204,7 @@ export default function ArticleMediaFields({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Hidden File Input */}
+
         <input
           type="file"
           ref={fileInputRef}
@@ -219,7 +215,7 @@ export default function ArticleMediaFields({
           id="r2-image-upload-multi"
         />
 
-        {/* Upload Dropzone (Visible only if fewer than 3 images) */}
+
         {remainingCount > 0 ? (
           <div
             onDragOver={(e) => {
@@ -267,7 +263,7 @@ export default function ArticleMediaFields({
           </div>
         )}
 
-        {/* Status Alerts */}
+
         {uploadError && (
           <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
             <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
@@ -282,7 +278,7 @@ export default function ArticleMediaFields({
           </div>
         )}
 
-        {/* Uploaded Images Grid (Max 3) */}
+
         {imageList.length > 0 && (
           <div className="space-y-2">
             <p className="text-xs font-semibold text-slate-700">সংযুক্ত ছবিসমূহ:</p>
@@ -295,7 +291,7 @@ export default function ArticleMediaFields({
                     key={index}
                     className="relative group rounded-lg border border-slate-200 bg-white overflow-hidden shadow-xs hover:border-slate-300 transition-all"
                   >
-                    {/* Badge */}
+
                     <div className="absolute top-2 left-2 z-10 flex items-center gap-1">
                       {isPrimary ? (
                         <Badge className="bg-indigo-600 text-white text-[10px] px-1.5 py-0.5 gap-1 font-semibold shadow-xs">
@@ -311,9 +307,9 @@ export default function ArticleMediaFields({
                       )}
                     </div>
 
-                    {/* Image Aspect Box */}
+
                     <div className="relative aspect-video w-full bg-slate-100 overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
+
                       <img
                         src={imgSrc}
                         alt={`সংবাদের ছবি ${index + 1}`}
@@ -324,7 +320,7 @@ export default function ArticleMediaFields({
                       />
                     </div>
 
-                    {/* Actions bar */}
+
                     <div className="p-2 flex items-center justify-end bg-slate-50 border-t border-slate-100">
                       <div className="flex items-center gap-1">
                         {!isPrimary && (
@@ -360,7 +356,7 @@ export default function ArticleMediaFields({
 
         <Separator />
 
-        {/* YouTube Video URL */}
+
         <div className="space-y-1.5">
           <Label htmlFor="youtubeUrl" className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
             <Video className="w-4 h-4 text-red-600" /> ইউটিউব ভিডিও লিঙ্ক (ঐচ্ছিক)
@@ -368,7 +364,7 @@ export default function ArticleMediaFields({
           {register ? (
             <Input
               id="youtubeUrl"
-              placeholder="যেমন: https://www.youtube.com/watch?v=dQw4w9WgXcQ অথবা https://youtu.be/..."
+              placeholder="ইউটিউব ভিডিওর সম্পূর্ণ লিংক প্রবেশ করান"
               value={youtubeUrl}
               {...register("youtubeUrl")}
               className={`transition-colors ${
@@ -380,7 +376,7 @@ export default function ArticleMediaFields({
           ) : (
             <Input
               id="youtubeUrl"
-              placeholder="যেমন: https://www.youtube.com/watch?v=dQw4w9WgXcQ অথবা https://youtu.be/..."
+              placeholder="ইউটিউব ভিডিওর সম্পূর্ণ লিংক প্রবেশ করান"
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl && setYoutubeUrl(e.target.value)}
             />
@@ -399,7 +395,7 @@ export default function ArticleMediaFields({
         </div>
       </CardContent>
 
-      {/* 16:9 Locked Image Cropper Modal */}
+
       {cropQueue.length > 0 && currentCropIndex < cropQueue.length && (
         <ImageCropperModal
           isOpen={true}

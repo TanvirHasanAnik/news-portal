@@ -33,7 +33,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [alertConfig, setAlertConfig] = useState(null);
 
-  // Initialize React Hook Form with real-time validation via Zod
+
   const {
     handleSubmit,
     setValue,
@@ -54,12 +54,12 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
   const articleId = watch("articleId") || "";
   const customTitle = watch("customTitle") || "";
 
-  // Local-only addition to browser state on valid form submit
+
   const onAddItem = (data) => {
     const selectedArt = articles.find((a) => String(a.id) === String(data.articleId));
     const customTitleTrimmed = (data.customTitle || "").trim();
 
-    // Check if article is already in the breaking news list
+
     if (data.articleId) {
       const isAlreadyAdded = items.some(
         (item) => item.article_id && String(item.article_id) === String(data.articleId)
@@ -89,7 +89,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
     clearErrors(["articleId", "customTitle"]);
   };
 
-  // Re-confirmation before toggling active/inactive
+
   const requestToggle = (item) => {
     const willHide = item.is_active === 1;
     setConfirmConfig({
@@ -106,7 +106,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
     });
   };
 
-  // Re-confirmation before removing item from list
+
   const requestRemove = (id, headline) => {
     setConfirmConfig({
       message: `আপনি কি নিশ্চিতভাবে "${headline || "এই জরুরি সংবাদটি"}" ব্রেকিং তালিকা থেকে বাদ দিতে চান?`,
@@ -119,7 +119,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
     });
   };
 
-  // Local-only move up
+
   const handleMoveUp = (index) => {
     if (index === 0) return;
     const newItems = [...items];
@@ -130,7 +130,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
     setIsDirty(true);
   };
 
-  // Local-only move down
+
   const handleMoveDown = (index) => {
     if (index === items.length - 1) return;
     const newItems = [...items];
@@ -141,7 +141,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
     setIsDirty(true);
   };
 
-  // Re-confirmation before discarding local changes
+
   const requestDiscard = () => {
     setConfirmConfig({
       message: "আপনি কি নিশ্চিত যে সকল অসংরক্ষিত পরিবর্তন বাতিল করতে চান?",
@@ -155,7 +155,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
     });
   };
 
-  // Re-confirmation before saving batch changes to database & trigger on-demand ISR
+
   const requestSave = () => {
     setConfirmConfig({
       message: "আপনি কি নিশ্চিতভাবে ব্রেকিং সংবাদের সকল পরিবর্তন সংরক্ষণ করতে চান?",
@@ -177,7 +177,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
 
   return (
     <div className="space-y-6">
-      {/* Save Action & Status Bar */}
+
       <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           {isDirty ? (
@@ -237,7 +237,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
         </div>
       </div>
 
-      {/* Feedback banner */}
+
       {feedback && (
         <div
           className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between transition-all ${
@@ -266,7 +266,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
         </div>
       )}
 
-      {/* Add New Breaking Item Box with React Hook Form Real-time Validation */}
+
       <form
         onSubmit={handleSubmit(onAddItem)}
         className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4"
@@ -282,7 +282,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-          {/* Article selection dropdown */}
+
           <div className="sm:col-span-6">
             <label htmlFor="breaking-article-select" className="block text-xs font-semibold text-slate-700 mb-1">
               প্রকাশিত সংবাদ নির্বাচন করুন
@@ -320,7 +320,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
             )}
           </div>
 
-          {/* Custom title override with real-time error display */}
+
           <div className="sm:col-span-6">
             <label htmlFor="breaking-custom-title" className="block text-xs font-semibold text-slate-700 mb-1">
               জরুরি শিরোনাম / টিকার টেক্সট (ঐচ্ছিক)
@@ -362,7 +362,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
         </div>
       </form>
 
-      {/* Active Breaking List */}
+
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -392,7 +392,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
                   className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors"
                 >
                   <div className="min-w-0 flex items-center gap-3">
-                    {/* Up / Down Reorder Buttons */}
+
                     <div className="flex flex-col items-center gap-0.5 shrink-0 bg-slate-100/90 rounded-md p-0.5 border border-slate-200/60">
                       <button
                         type="button"
@@ -417,7 +417,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
                       </button>
                     </div>
 
-                    {/* Content details */}
+
                     <div className="min-w-0">
                       <p className="text-xs sm:text-sm font-semibold text-slate-900 line-clamp-1">
                         {item.custom_title || item.article_headline || "শিরোনামহীন সংবাদ"}
@@ -438,7 +438,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
                     </div>
                   </div>
 
-                  {/* Actions */}
+
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
@@ -469,7 +469,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
         </div>
       </div>
 
-      {/* Re-confirmation Modal */}
+
       <ConfirmModal
         isOpen={Boolean(confirmConfig)}
         onClose={() => setConfirmConfig(null)}
@@ -478,7 +478,7 @@ export function BreakingCurationTab({ initialItems = [], articles = [] }) {
         confirmVariant={confirmConfig?.confirmVariant || "default"}
       />
 
-      {/* Alert / Warning Modal */}
+
       <AlertModal
         isOpen={Boolean(alertConfig)}
         onClose={() => setAlertConfig(null)}

@@ -32,7 +32,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [alertConfig, setAlertConfig] = useState(null);
 
-  // Initialize React Hook Form with real-time validation via Zod
+
   const {
     handleSubmit,
     setValue,
@@ -50,12 +50,12 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
 
   const articleId = watch("articleId") || "";
 
-  // Local-only addition to browser state on valid form submit
+
   const onAddItem = (data) => {
     const selectedArt = articles.find((a) => String(a.id) === String(data.articleId));
     if (!selectedArt) return;
 
-    // Check if article is already in the handpicked list
+
     const isAlreadyAdded = items.some(
       (item) => item.article_id && String(item.article_id) === String(data.articleId)
     );
@@ -83,7 +83,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
     clearErrors("articleId");
   };
 
-  // Re-confirmation before toggling active/inactive
+
   const requestToggle = (item) => {
     const willHide = item.is_active === 1;
     setConfirmConfig({
@@ -100,7 +100,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
     });
   };
 
-  // Re-confirmation before removing item from list
+
   const requestRemove = (id, headline) => {
     setConfirmConfig({
       message: `আপনি কি নিশ্চিতভাবে "${headline || "এই সংবাদটি"}" বাছাই তালিকা থেকে বাদ দিতে চান?`,
@@ -113,7 +113,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
     });
   };
 
-  // Local-only move up
+
   const handleMoveUp = (index) => {
     if (index === 0) return;
     const newItems = [...items];
@@ -124,7 +124,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
     setIsDirty(true);
   };
 
-  // Local-only move down
+
   const handleMoveDown = (index) => {
     if (index === items.length - 1) return;
     const newItems = [...items];
@@ -135,7 +135,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
     setIsDirty(true);
   };
 
-  // Re-confirmation before discarding local changes
+
   const requestDiscard = () => {
     setConfirmConfig({
       message: "আপনি কি নিশ্চিত যে সকল অসংরক্ষিত পরিবর্তন বাতিল করতে চান?",
@@ -149,7 +149,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
     });
   };
 
-  // Re-confirmation before saving batch changes to database & trigger on-demand ISR
+
   const requestSave = () => {
     setConfirmConfig({
       message: "আপনি কি নিশ্চিতভাবে বাছাইকৃত সংবাদের সকল পরিবর্তন সংরক্ষণ করতে চান?",
@@ -171,7 +171,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
 
   return (
     <div className="space-y-6">
-      {/* Save Action & Status Bar */}
+
       <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           {isDirty ? (
@@ -231,7 +231,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
         </div>
       </div>
 
-      {/* Feedback banner */}
+
       {feedback && (
         <div
           className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between transition-all ${
@@ -260,7 +260,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
         </div>
       )}
 
-      {/* Add New Handpicked Item Box with React Hook Form Real-time Validation */}
+
       <form
         onSubmit={handleSubmit(onAddItem)}
         className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs space-y-4"
@@ -276,7 +276,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 items-end">
-          {/* Article selection dropdown */}
+
           <div className="flex-1 w-full">
             <label htmlFor="handpicked-article-select" className="block text-xs font-semibold text-slate-700 mb-1">
               প্রকাশিত সংবাদ নির্বাচন করুন <span className="text-red-500">*</span>
@@ -328,7 +328,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
         </div>
       </form>
 
-      {/* Active Handpicked List */}
+
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="p-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -358,7 +358,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
                   className="p-3.5 flex items-center justify-between gap-3 hover:bg-slate-50/80 transition-colors"
                 >
                   <div className="min-w-0 flex items-center gap-3">
-                    {/* Up / Down Reorder Buttons */}
+
                     <div className="flex flex-col items-center gap-0.5 shrink-0 bg-slate-100/90 rounded-md p-0.5 border border-slate-200/60">
                       <button
                         type="button"
@@ -383,7 +383,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
                       </button>
                     </div>
 
-                    {/* Content details */}
+
                     <div className="min-w-0">
                       <p className="text-xs sm:text-sm font-semibold text-slate-900 line-clamp-1">
                         {item.custom_title || item.article_headline || "শিরোনামহীন সংবাদ"}
@@ -404,7 +404,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
                     </div>
                   </div>
 
-                  {/* Actions */}
+
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       type="button"
@@ -435,7 +435,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
         </div>
       </div>
 
-      {/* Re-confirmation Modal */}
+
       <ConfirmModal
         isOpen={Boolean(confirmConfig)}
         onClose={() => setConfirmConfig(null)}
@@ -444,7 +444,7 @@ export function HandpickedCurationTab({ initialItems = [], articles = [] }) {
         confirmVariant={confirmConfig?.confirmVariant || "default"}
       />
 
-      {/* Alert / Warning Modal */}
+
       <AlertModal
         isOpen={Boolean(alertConfig)}
         onClose={() => setAlertConfig(null)}

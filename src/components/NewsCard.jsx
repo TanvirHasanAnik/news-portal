@@ -4,17 +4,6 @@ import NewsImage from "./NewsImage";
 import ArticleActions from "./ArticleActions";
 import { DEFAULT_NEWS_IMAGE, getNewsImageUrl, getOptimizedNewsImage, getYouTubeThumbnail } from "../utils/imageUtils";
 
-/**
- * Reusable NewsCard Component
- * 
- * Supports multiple editorial layouts via the `variant` prop:
- * - 'vertical': Classic editorial card (Image on top, headline, summary below).
- * - 'horizontal': Media object card (Side-by-side thumbnail and content).
- * - 'hero': Lead / flagship story card (Spacious split view on desktop).
- * - 'compact': Minimalist image + headline card (Ideal for multi-column grids).
- * - 'row-summary': Hybrid card (Row 1: thumbnail + headline, Row 2: full summary).
- * - 'emphasized': Featured visual card with badge overlays and action buttons.
- */
 export default function NewsCard({
   news,
   variant = "vertical",
@@ -36,7 +25,7 @@ export default function NewsCard({
   summarySize,
   summaryClassName = "",
   showCategory = false,
-  categoryPlacement = "badge", // "badge" | "bottom"
+  categoryPlacement = "badge", 
   showSubcategory = false,
   showTime = false,
   showAuthor = false,
@@ -71,7 +60,6 @@ export default function NewsCard({
     : DEFAULT_NEWS_IMAGE;
   const imageLoading = loading || (imagePriority ? "eager" : "lazy");
 
-  // Cosmetic play button for video thumbnails
   const hasVideoThumbnail = Boolean(
     news.youtubeUrl ||
     (finalImageSrc && (finalImageSrc.includes("img.youtube.com") || finalImageSrc.includes("i.ytimg.com") || finalImageSrc.includes("youtube.com")))
@@ -91,25 +79,22 @@ export default function NewsCard({
           } h-auto drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)] transition-transform duration-300 ease-out group-hover:scale-110`}
           aria-hidden="true"
         >
-          {/* Authentic YouTube brand shape */}
+
           <path
             d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55C3.97 2.33 2.27 4.81 1.48 7.74.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42-6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z"
             fill="#FF0000"
           />
-          {/* Authentic play triangle */}
+
           <path d="M45 24 27 14v20z" fill="#FFFFFF" />
         </svg>
       </div>
     );
   };
 
-  // Determine semantic heading tag
   const HeadingTag =
     headlineTag ||
     (variant === "hero" ? "h2" : variant === "horizontal" ? "h4" : "h3");
 
-  // Resolve headline line clamp class:
-  // Allows callers to pass headlineClamp="" or false to completely disable line-clamp
   const getHeadlineClampClass = (defaultClamp = "line-clamp-2") => {
     if (headlineClamp !== undefined) {
       if (
@@ -125,15 +110,12 @@ export default function NewsCard({
     return defaultClamp;
   };
 
-  // =========================================================================
-  // 1. EMPHASIZED VARIANT (Hero visual card with badges & interactive actions)
-  // =========================================================================
   if (variant === "emphasized") {
     return (
       <article
         className={`group relative flex flex-col justify-between overflow-hidden rounded-xl bg-white border border-slate-200/90 shadow-sm hover:shadow-md transition-all duration-300 ${className}`}
       >
-        {/* Featured Image */}
+
         <div
           className={`relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-100 ${
             imageAspect || ""
@@ -151,7 +133,6 @@ export default function NewsCard({
           {renderPlayButton()}
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity pointer-events-none" />
 
-          {/* Badges Overlay */}
           <div className="absolute top-3 left-3 flex flex-wrap gap-2 items-center z-10">
             {showCategory && category && (
               categorySlug ? (
@@ -189,13 +170,11 @@ export default function NewsCard({
             )}
           </div>
 
-          {/* Interactive actions (Bookmark & Share) */}
           <div className="absolute top-3 right-3 z-10">
             <ArticleActions />
           </div>
         </div>
 
-        {/* Content Body */}
         <div className={`p-4 sm:p-5 flex flex-col flex-1 justify-between ${contentWrapperClassName}`}>
           <div>
             <HeadingTag
@@ -219,7 +198,6 @@ export default function NewsCard({
             )}
           </div>
 
-          {/* Metadata Footer */}
           <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-500">
             <div className="flex items-center gap-2 flex-wrap">
               {author && (
@@ -245,9 +223,6 @@ export default function NewsCard({
     );
   }
 
-  // =========================================================================
-  // 2. HERO / LEAD STORY VARIANT (Desktop horizontal split / mobile stack)
-  // =========================================================================
   if (variant === "hero") {
     const isGridLayout = className.includes("grid");
     const hasCustomGap = className.includes("gap-");
@@ -266,7 +241,7 @@ export default function NewsCard({
               }`
         } ${className}`}
       >
-        {/* Featured Image */}
+
         <div
           className={`${
             isGridLayout
@@ -290,7 +265,6 @@ export default function NewsCard({
           {renderPlayButton()}
         </div>
 
-        {/* Content Area */}
         <div
           className={`${
             isGridLayout
@@ -324,9 +298,6 @@ export default function NewsCard({
     );
   }
 
-  // =========================================================================
-  // 3. HORIZONTAL VARIANT (Side-by-side thumbnail & headline, e.g. Most Read)
-  // =========================================================================
   if (variant === "horizontal") {
     const hasCustomAlignment = className.includes("items-");
     return (
@@ -335,7 +306,7 @@ export default function NewsCard({
           hasCustomAlignment ? "" : "items-start"
         } ${className}`}
       >
-        {/* Left Side Thumbnail */}
+
         <div
           className={`relative shrink-0 overflow-hidden bg-slate-100 ${
             imageAspect || ""
@@ -353,7 +324,6 @@ export default function NewsCard({
           {renderPlayButton("small")}
         </div>
 
-        {/* Right Side Content */}
         <div
           className={`flex flex-col ${
             contentWrapperClassName.includes("justify-") ? "" : "justify-between"
@@ -379,7 +349,6 @@ export default function NewsCard({
             </p>
           )}
 
-          {/* Category link at bottom (Prothom Alo style for most read news) */}
           {showCategory && category && categoryPlacement === "bottom" && (
             <div className="mt-1.5 flex items-center">
               {categorySlug ? (
@@ -410,16 +379,13 @@ export default function NewsCard({
     );
   }
 
-  // =========================================================================
-  // 4. ROW-SUMMARY VARIANT (Image left + headline right, summary below)
-  // =========================================================================
   if (variant === "row-summary") {
     return (
       <article
         className={`group flex flex-col justify-between ${className}`}
       >
         <div>
-          {/* First row: image on left, headline on right */}
+
           <div className="flex flex-row gap-3 items-start">
             <div
               className={`relative shrink-0 overflow-hidden bg-slate-100 ${
@@ -449,7 +415,6 @@ export default function NewsCard({
             </HeadingTag>
           </div>
 
-          {/* Second row: full summary */}
           {showSummary && summary && (
             <p
               className={`text-slate-600 leading-relaxed font-normal ${
@@ -466,13 +431,10 @@ export default function NewsCard({
     );
   }
 
-  // =========================================================================
-  // 5. COMPACT VARIANT (Minimal image + headline, e.g. square mobile grids)
-  // =========================================================================
   if (variant === "compact") {
     return (
       <article className={`group flex flex-col ${className}`}>
-        {/* Image */}
+
         <div
           className={`relative w-full overflow-hidden bg-slate-100 ${
             imageAspect || "aspect-square"
@@ -490,7 +452,6 @@ export default function NewsCard({
           {renderPlayButton("small")}
         </div>
 
-        {/* Headline */}
         <HeadingTag
           className={`font-serif-bangla font-bold ${headlineColor} leading-snug ${
             headlineHoverColor || "group-hover:text-red-600"
@@ -506,9 +467,6 @@ export default function NewsCard({
     );
   }
 
-  // =========================================================================
-  // 6. VERTICAL VARIANT (Standard Editorial: Image on top, headline, summary)
-  // =========================================================================
   const imageElement = (
     <div
       className={`relative w-full overflow-hidden bg-slate-100 ${
@@ -578,9 +536,6 @@ export default function NewsCard({
   );
 }
 
-/**
- * Convenience Subcomponents / Named Exports
- */
 export function VerticalNewsCard(props) {
   return <NewsCard variant="vertical" {...props} />;
 }

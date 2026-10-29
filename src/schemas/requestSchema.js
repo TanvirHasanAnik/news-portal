@@ -17,6 +17,9 @@ export const createAdminRequestSchema = z.object({
     required: false,
     allowEmpty: true,
   })
+    .refine((val) => !val || /^[a-zA-Z\s.-]+$/.test(val), {
+      message: "ব্যবহারকারীর পূর্ণ নাম শুধুমাত্র ইংরেজি অক্ষরে হতে হবে।",
+    })
     .optional()
     .nullable(),
   requestedEmail: safeEmail({
@@ -56,3 +59,5 @@ export const updateAdminRequestStatusSchema = z.object({
     .optional()
     .default(""),
 });
+
+export const reviewAdminRequestSchema = updateAdminRequestStatusSchema;

@@ -1,11 +1,5 @@
 import { getDb, query, queryOne, withTransaction } from "@/lib/db";
 
-/**
- * Admin Requests Repository
- * Raw MySQL (mysql2/promise) data layer for Cloudflare Workers (workerd) & TiDB.
- * Handles workflow requests from Admin to Super Admin (new users, disable user, role change, curation)
- */
-
 export async function getAllAdminRequests({ status } = {}) {
   let sql = `
     SELECT r.*, 
@@ -57,7 +51,6 @@ export async function updateAdminRequestStatus(id, { status, reviewedBy = "usr_s
       [status, reviewedBy, reviewerNote, id]
     );
 
-    // If approved and was a user action, apply change within the same atomic transaction
     const req = await tx.queryOne("SELECT * FROM admin_requests WHERE id = ?", [id]);
     if (req) {
       if (status === "approved") {
@@ -76,11 +69,10 @@ export async function updateAdminRequestStatus(id, { status, reviewedBy = "usr_s
             );
           }
         } catch (_parseErr) {
-          // payload parsing error
+
         }
       }
 
-      // Create workflow notification for requester
       if (req.requester_id) {
         const isApproved = status === "approved";
         const typeLabels = {

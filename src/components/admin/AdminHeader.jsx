@@ -12,9 +12,9 @@ export default function AdminHeader({ onMenuToggle }) {
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/95 backdrop-blur">
       <div className="flex h-16 items-center justify-between px-4 sm:px-6">
-        {/* Left: Mobile Toggle + Branding with Main Logo SVG */}
+
         <div className="flex items-center gap-2.5 sm:gap-3">
-          {/* Mobile Hamburger toggle */}
+
           <button
             type="button"
             onClick={onMenuToggle}
@@ -25,7 +25,7 @@ export default function AdminHeader({ onMenuToggle }) {
           </button>
 
           <Link href="/admin" className="flex items-center gap-2.5 group focus:outline-none">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+
             <img
               src="/brand-logo.svg"
               alt="আমাদের সংবাদ"
@@ -37,7 +37,6 @@ export default function AdminHeader({ onMenuToggle }) {
           </Link>
         </div>
 
-        {/* Right: User Role Info, Notifications, Live Site Link & Quick Logout */}
         <div className="flex items-center gap-2.5 sm:gap-3">
           {user && (
             <>

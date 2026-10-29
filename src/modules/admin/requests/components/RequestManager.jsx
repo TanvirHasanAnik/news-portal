@@ -1,30 +1,30 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  CheckCircle,
-  XCircle,
-  Clock,
-  Plus,
-  X,
-  UserPlus,
-  UserX,
-  ShieldAlert,
-  Send,
-} from "lucide-react";
+    createAdminRequestAction,
+    updateAdminRequestStatusAction,
+} from "@/actions/requestActions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  createAdminRequestAction,
-  updateAdminRequestStatusAction,
-} from "@/actions/requestActions";
-import { ROLE_LABELS, USER_ROLES, ASSIGNABLE_ROLE_LABELS, isSingleUserRole } from "@/lib/auth";
 import { usePermissions } from "@/contexts/AuthContext";
-import { formatTimeAgo } from "@/utils/dateUtils";
+import { ASSIGNABLE_ROLE_LABELS, isSingleUserRole, ROLE_LABELS, USER_ROLES } from "@/lib/auth";
 import { createAdminRequestSchema } from "@/schemas/requestSchema";
+import { formatTimeAgo } from "@/utils/dateUtils";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+    CheckCircle,
+    Clock,
+    Plus,
+    Send,
+    ShieldAlert,
+    UserPlus,
+    UserX,
+    X,
+    XCircle,
+} from "lucide-react";
+import { useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 
 export function RequestManager({
   initialRequests = [],
@@ -34,7 +34,7 @@ export function RequestManager({
 }) {
   const { can } = usePermissions();
 
-  // Policy-based RBAC permission checks (overridable via props)
+
   const canReviewRequests = propCanReview !== undefined ? propCanReview : can("requests:review");
   const canCreateRequest = propCanCreate !== undefined ? propCanCreate : can("requests:create");
 
@@ -44,7 +44,7 @@ export function RequestManager({
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
 
-  // Initialize React Hook Form with real-time validation via Zod
+
   const {
     register,
     handleSubmit,
@@ -131,7 +131,7 @@ export function RequestManager({
 
   return (
     <div className="space-y-6">
-      {/* Feedback banner */}
+
       {feedback && (
         <div
           className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between transition-all ${
@@ -145,9 +145,9 @@ export function RequestManager({
         </div>
       )}
 
-      {/* Action Header & Tabs */}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        {/* Filter Badges */}
+
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg">
           <button
             onClick={() => setActiveStatus("all")}
@@ -205,7 +205,7 @@ export function RequestManager({
         )}
       </div>
 
-      {/* Requests List */}
+
       <div className="space-y-3">
         {filteredRequests.length === 0 ? (
           <div className="p-12 text-center text-slate-400 text-xs bg-white rounded-xl border border-slate-200">
@@ -284,7 +284,7 @@ export function RequestManager({
                   </div>
                 </div>
 
-                {/* Status & Review Buttons */}
+
                 <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
                   {req.status === "pending" ? (
                     canReviewRequests ? (
@@ -332,7 +332,7 @@ export function RequestManager({
         )}
       </div>
 
-      {/* New Request Modal with React Hook Form Real-time Validation */}
+
       {showCreateModal && canCreateRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden">
@@ -371,12 +371,10 @@ export function RequestManager({
               {requestType === "new_user" && (
                 <>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      প্রস্তাবিত সদস্যের নাম
-                    </label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">প্রস্তাবিত সদস্যের নাম (ইংরেজি)</label>
                     <Input
                       type="text"
-                      placeholder="নাম লিখুন"
+                      placeholder="প্রস্তাবিত ব্যবহারকারীর পূর্ণ ইংরেজি নাম লিখুন"
                       {...register("requestedName")}
                       className={`text-xs h-9 ${errors.requestedName ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                     />
@@ -391,7 +389,7 @@ export function RequestManager({
                     </label>
                     <Input
                       type="email"
-                      placeholder="email@example.com"
+                      placeholder="প্রস্তাবিত ব্যবহারকারীর ইমেইল লিখুন"
                       {...register("requestedEmail")}
                       className={`text-xs h-9 ${errors.requestedEmail ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                     />
@@ -463,7 +461,7 @@ export function RequestManager({
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="আবেদনের কারণ বা মন্তব্য লিখুন..."
+                  placeholder="প্রশাসনিক এই আবেদনের উদ্দেশ্য ও বিবরণ লিখুন..."
                   {...register("note")}
                   className={`w-full rounded-md border bg-white p-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 ${
                     errors.note ? "border-red-400 focus:ring-red-400" : "border-slate-200 focus:ring-slate-900"

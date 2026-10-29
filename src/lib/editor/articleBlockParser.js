@@ -1,16 +1,14 @@
 import DOMPurify from "dompurify";
 
-/**
- * Allowed HTML tags and attributes for strict journalistic formatting
- */
+
+
 const SANITIZE_CONFIG = {
   ALLOWED_TAGS: ["b", "strong", "i", "em", "u", "h2", "h3", "ul", "li", "p", "a", "br"],
   ALLOWED_ATTR: ["href", "target", "rel"],
 };
 
-/**
- * Universal HTML Sanitizer (DOMPurify client-safe, regex fallback for SSR)
- */
+
+
 export function sanitizeHtml(dirtyHtml) {
   if (!dirtyHtml || typeof dirtyHtml !== "string") return "";
 
@@ -18,7 +16,7 @@ export function sanitizeHtml(dirtyHtml) {
     return DOMPurify.sanitize(dirtyHtml, SANITIZE_CONFIG);
   }
 
-  // Basic fallback for server environments
+
   return dirtyHtml
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
@@ -26,14 +24,13 @@ export function sanitizeHtml(dirtyHtml) {
     .replace(/javascript:/gi, "");
 }
 
-/**
- * Sanitizes inline content for paragraphs, headings, and list items
- */
+
+
 function sanitizeInline(html) {
   if (!html) return "";
   let clean = sanitizeHtml(html);
 
-  // Ensure all anchor links have safe target and rel attributes
+
   if (typeof window !== "undefined") {
     const temp = document.createElement("div");
     temp.innerHTML = clean;
@@ -41,7 +38,7 @@ function sanitizeInline(html) {
     links.forEach((link) => {
       link.setAttribute("target", "_blank");
       link.setAttribute("rel", "noopener noreferrer");
-      // Prevent javascript: hrefs
+
       if (/^\s*javascript:/i.test(link.getAttribute("href") || "")) {
         link.removeAttribute("href");
       }
@@ -52,26 +49,15 @@ function sanitizeInline(html) {
   return clean;
 }
 
-/**
- * Converts rich text HTML from contentEditable into a structured JSON block schema
- *
- * Schema:
- * {
- *   "version": 1,
- *   "blocks": [
- *     { "type": "heading", "level": 2 | 3, "text": string, "html": string },
- *     { "type": "paragraph", "text": string, "html": string },
- *     { "type": "list", "format": "bullet", "items": [{ "text": string, "html": string }] }
- *   ]
- * }
- */
+
+
 export function htmlToArticleBlocks(htmlString) {
   if (!htmlString || typeof htmlString !== "string" || !htmlString.trim()) {
     return { version: 1, blocks: [] };
   }
 
   if (typeof window === "undefined") {
-    // If called on server without DOM, wrap into a basic paragraph block
+
     return {
       version: 1,
       blocks: [
@@ -120,7 +106,7 @@ export function htmlToArticleBlocks(htmlString) {
     if (node.nodeType === Node.ELEMENT_NODE) {
       const tagName = node.tagName.toLowerCase();
 
-      // Heading 2
+
       if (tagName === "h2") {
         flushInlineGroup();
         const text = node.textContent.trim();
@@ -135,7 +121,7 @@ export function htmlToArticleBlocks(htmlString) {
         continue;
       }
 
-      // Heading 3
+
       if (tagName === "h3") {
         flushInlineGroup();
         const text = node.textContent.trim();
@@ -150,7 +136,7 @@ export function htmlToArticleBlocks(htmlString) {
         continue;
       }
 
-      // Bullet List (UL)
+
       if (tagName === "ul") {
         flushInlineGroup();
         const liNodes = Array.from(node.querySelectorAll("li"));
@@ -171,11 +157,11 @@ export function htmlToArticleBlocks(htmlString) {
         continue;
       }
 
-      // Paragraph or Div container
+
       if (tagName === "p" || tagName === "div") {
         flushInlineGroup();
 
-        // Check for nested block elements (sometimes produced by browsers in contentEditable)
+
         const nestedBlocks = node.querySelectorAll("h2, h3, ul, p");
         if (nestedBlocks.length > 0) {
           const innerDoc = htmlToArticleBlocks(node.innerHTML);
@@ -194,7 +180,7 @@ export function htmlToArticleBlocks(htmlString) {
         continue;
       }
 
-      // Inline elements placed directly at root (b, i, u, a, span)
+
       inlineGroup.push(node);
     }
   }
@@ -207,20 +193,18 @@ export function htmlToArticleBlocks(htmlString) {
   };
 }
 
-/**
- * Reconstructs HTML from structured article JSON blocks
- * Used to rehydrate the contentEditable container on initial load or reset.
- */
+
+
 export function articleBlocksToHtml(blocksDoc) {
   if (!blocksDoc) return "";
 
-  // If passed as raw JSON string, parse it
+
   let doc = blocksDoc;
   if (typeof blocksDoc === "string") {
     try {
       doc = JSON.parse(blocksDoc);
     } catch {
-      // Legacy plain text fallback
+
       return blocksDoc
         .split("\n\n")
         .map((p) => `<p>${sanitizeHtml(p.trim())}</p>`)
@@ -253,9 +237,8 @@ export function articleBlocksToHtml(blocksDoc) {
     .join("");
 }
 
-/**
- * Helper to safely extract raw plain text from article blocks or string
- */
+
+
 export function extractPlainTextFromBlocks(content) {
   if (!content) return "";
 
@@ -266,7 +249,7 @@ export function extractPlainTextFromBlocks(content) {
         return extractPlainTextFromBlocks(parsed);
       }
     } catch {
-      // It's a standard text string
+
       return content.replace(/<[^>]*>?/gm, "").trim();
     }
   }

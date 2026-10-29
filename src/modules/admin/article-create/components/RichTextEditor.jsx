@@ -30,7 +30,7 @@ export default function RichTextEditor({
   const isUpdatingFromProps = useRef(false);
   const savedSelectionRange = useRef(null);
 
-  // Active formatting state for toolbar highlights
+
   const [activeFormats, setActiveFormats] = useState({
     bold: false,
     italic: false,
@@ -41,13 +41,12 @@ export default function RichTextEditor({
     link: false,
   });
 
-  // Link dialog state
+
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
 
-  /**
-   * Updates toolbar active button states based on current selection
-   */
+
+
   const checkActiveFormats = useCallback(() => {
     if (typeof window === "undefined") return;
     const selection = window.getSelection();
@@ -83,18 +82,17 @@ export default function RichTextEditor({
         link,
       });
     } catch {
-      // Fallback if queryCommandState is unavailable
+
     }
   }, []);
 
-  /**
-   * Serializes current innerHTML to JSON blocks and invokes parent onChange
-   */
+
+
   const handleContentChange = useCallback(() => {
     if (!editorRef.current) return;
     const rawHtml = editorRef.current.innerHTML;
 
-    // Convert to JSON block schema
+
     const blocksDoc = htmlToArticleBlocks(rawHtml);
     const jsonString = JSON.stringify(blocksDoc);
 
@@ -105,13 +103,12 @@ export default function RichTextEditor({
     checkActiveFormats();
   }, [onChange, checkActiveFormats]);
 
-  /**
-   * Sync external value changes (e.g. form reset or initial load)
-   */
+
+
   useEffect(() => {
     if (!editorRef.current) return;
 
-    // Handle empty / reset state
+
     if (!value) {
       if (editorRef.current.innerHTML !== "") {
         editorRef.current.innerHTML = "";
@@ -119,11 +116,11 @@ export default function RichTextEditor({
       return;
     }
 
-    // Convert value (JSON or HTML) to editor HTML
+
     const targetHtml = articleBlocksToHtml(value);
     const currentHtml = editorRef.current.innerHTML;
 
-    // Avoid overwriting and disrupting active user typing
+
     if (targetHtml !== currentHtml && !editorRef.current.contains(document.activeElement)) {
       isUpdatingFromProps.current = true;
       editorRef.current.innerHTML = targetHtml;
@@ -131,9 +128,8 @@ export default function RichTextEditor({
     }
   }, [value]);
 
-  /**
-   * Listen for selection changes to update toolbar active states
-   */
+
+
   useEffect(() => {
     const handleSelectionChange = () => {
       checkActiveFormats();
@@ -145,9 +141,8 @@ export default function RichTextEditor({
     };
   }, [checkActiveFormats]);
 
-  /**
-   * Safe command execution wrapper
-   */
+
+
   const executeCommand = (command, val = null) => {
     if (!editorRef.current) return;
     editorRef.current.focus();
@@ -155,9 +150,8 @@ export default function RichTextEditor({
     handleContentChange();
   };
 
-  /**
-   * Heading 2 toggle
-   */
+
+
   const toggleH2 = () => {
     if (activeFormats.h2) {
       executeCommand("formatBlock", "<p>");
@@ -166,9 +160,8 @@ export default function RichTextEditor({
     }
   };
 
-  /**
-   * Heading 3 toggle
-   */
+
+
   const toggleH3 = () => {
     if (activeFormats.h3) {
       executeCommand("formatBlock", "<p>");
@@ -177,16 +170,14 @@ export default function RichTextEditor({
     }
   };
 
-  /**
-   * Bullet list toggle
-   */
+
+
   const toggleBulletList = () => {
     executeCommand("insertUnorderedList");
   };
 
-  /**
-   * Saves current cursor/selection range before dialog opens
-   */
+
+
   const saveSelection = () => {
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
@@ -194,9 +185,8 @@ export default function RichTextEditor({
     }
   };
 
-  /**
-   * Restores saved selection range
-   */
+
+
   const restoreSelection = () => {
     if (savedSelectionRange.current) {
       const sel = window.getSelection();
@@ -205,12 +195,11 @@ export default function RichTextEditor({
     }
   };
 
-  /**
-   * Hyperlink dialog opener
-   */
+
+
   const handleOpenLinkDialog = () => {
     if (activeFormats.link) {
-      // If already on a link, simply unlink
+
       executeCommand("unlink");
       setShowLinkDialog(false);
       return;
@@ -221,9 +210,8 @@ export default function RichTextEditor({
     setShowLinkDialog(true);
   };
 
-  /**
-   * Insert sanitized link
-   */
+
+
   const handleApplyLink = (e) => {
     e?.preventDefault();
     if (!linkUrl.trim()) {
@@ -239,7 +227,7 @@ export default function RichTextEditor({
     restoreSelection();
     executeCommand("createLink", url);
 
-    // Ensure target="_blank" on the newly created link
+
     if (editorRef.current) {
       const links = editorRef.current.querySelectorAll("a");
       links.forEach((a) => {
@@ -255,10 +243,8 @@ export default function RichTextEditor({
     handleContentChange();
   };
 
-  /**
-   * Strict paste sanitization:
-   * Strips all inline styles, font sizes, colors, and disallowed tags.
-   */
+
+
   const handlePaste = (e) => {
     e.preventDefault();
     const clipboardData = e.clipboardData || window.clipboardData;
@@ -283,9 +269,9 @@ export default function RichTextEditor({
           : "border-slate-300 focus-within:border-slate-800"
       } ${className}`}
     >
-      {/* 1. Restricted Minimal Toolbar */}
+
       <div className="flex flex-wrap items-center gap-1 p-2 bg-slate-50/90 border-b border-slate-200 rounded-t-lg">
-        {/* Bold */}
+
         <button
           type="button"
           onClick={() => executeCommand("bold")}
@@ -299,7 +285,7 @@ export default function RichTextEditor({
           <Bold className="w-4 h-4" />
         </button>
 
-        {/* Italic */}
+
         <button
           type="button"
           onClick={() => executeCommand("italic")}
@@ -313,7 +299,7 @@ export default function RichTextEditor({
           <Italic className="w-4 h-4" />
         </button>
 
-        {/* Underline */}
+
         <button
           type="button"
           onClick={() => executeCommand("underline")}
@@ -329,7 +315,7 @@ export default function RichTextEditor({
 
         <span className="w-px h-5 bg-slate-200 mx-1" />
 
-        {/* Heading 2 */}
+
         <button
           type="button"
           onClick={toggleH2}
@@ -346,7 +332,7 @@ export default function RichTextEditor({
           </div>
         </button>
 
-        {/* Heading 3 */}
+
         <button
           type="button"
           onClick={toggleH3}
@@ -365,7 +351,7 @@ export default function RichTextEditor({
 
         <span className="w-px h-5 bg-slate-200 mx-1" />
 
-        {/* Bulleted List */}
+
         <button
           type="button"
           onClick={toggleBulletList}
@@ -379,7 +365,7 @@ export default function RichTextEditor({
           <List className="w-4 h-4" />
         </button>
 
-        {/* Hyperlink */}
+
         <button
           type="button"
           onClick={handleOpenLinkDialog}
@@ -394,13 +380,13 @@ export default function RichTextEditor({
         </button>
       </div>
 
-      {/* 2. Inline Link Inserter Bar */}
+
       {showLinkDialog && (
         <div className="flex items-center gap-2 p-2 bg-slate-100 border-b border-slate-200 animate-slide-in">
           <Link2 className="w-3.5 h-3.5 text-slate-500 shrink-0" />
           <input
             type="url"
-            placeholder="লিংক URL লিখুন (যেমন: https://example.com)..."
+            placeholder="ওয়েবসাইটের সম্পূর্ণ লিংক প্রবেশ করান..."
             value={linkUrl}
             onChange={(e) => setLinkUrl(e.target.value)}
             onKeyDown={(e) => {
@@ -427,7 +413,7 @@ export default function RichTextEditor({
         </div>
       )}
 
-      {/* 3. Native contentEditable Main Editor Area */}
+
       <div
         ref={editorRef}
         contentEditable

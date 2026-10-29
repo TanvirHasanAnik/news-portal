@@ -1,20 +1,5 @@
 import { getDb, query, queryOne, withTransaction } from "@/lib/db";
 
-/**
- * Article Repository
- * Raw MySQL (mysql2/promise) data layer designed for Cloudflare Workers (workerd) & TiDB.
- *
- * Guardrails:
- * 1. Zero SQL Injection: Strict parameterization for all dynamic arguments.
- * 2. UTF-8 (utf8mb4) & Timezone (UTC) compliance.
- * 3. Prepared Statement Safety: No unparameterized concatenations.
- * 4. TiDB RU optimization: Compound indexed lookups, covered scans, and structured pagination.
- * 5. Robust Transactions: Multi-step mutations execute within atomic transaction blocks.
- */
-
-/**
- * Normalizes SQL timestamp/date to valid UTC ISO string for consistent parsing and frontend rendering
- */
 function normalizeTimestamp(ts) {
   if (!ts) return new Date().toISOString();
   if (ts instanceof Date) return ts.toISOString();
@@ -25,13 +10,9 @@ function normalizeTimestamp(ts) {
   return str.replace(" ", "T") + "Z";
 }
 
-/**
- * Maps a database row from MySQL/TiDB to the standard frontend article schema
- */
 export function mapDbArticleToFrontend(dbRow) {
   if (!dbRow) return null;
 
-  // Normalize images array (max 3)
   let imagesArray = [];
   if (Array.isArray(dbRow.images)) {
     imagesArray = dbRow.images.filter(Boolean).slice(0, 3);
@@ -114,16 +95,11 @@ export function mapDbArticleToFrontend(dbRow) {
   };
 }
 
-/**
- * Creates an article with atomic revision history and audit logging inside a transaction
- */
 export async function createArticle(data) {
   const id = data.id || `art_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const slug = data.slug || `${Date.now()}`;
   const isPublished = data.status === "published";
-  const publishedAt = isPublished ? new Date() : null;
 
-  // Parse images: ensure array format and maximum 3 images
   let imagesJson = null;
   let primaryImage = data.image || null;
 
@@ -171,7 +147,7 @@ export async function createArticle(data) {
       ?, ?, ?, ?,
       ?, ?, ?, ?,
       ?, ?,
-      0, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+      0, CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE NULL END, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )
   `;
 
@@ -199,14 +175,13 @@ export async function createArticle(data) {
     data.isHandpicked ? 1 : 0,
     createdBy,
     lastEditedBy,
-    publishedAt,
+    isPublished ? 1 : 0,
   ];
 
   await withTransaction(async (tx) => {
-    // 1. Insert article
+
     await tx.query(insertSql, bindParams);
 
-    // 2. Insert revision log
     await tx.query(
       `INSERT INTO article_revisions (id, article_id, editor_id, headline, summary, content, change_summary, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
@@ -221,7 +196,6 @@ export async function createArticle(data) {
       ]
     );
 
-    // 3. Record audit log
     await tx.query(
       `INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, created_at)
        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
@@ -239,9 +213,6 @@ export async function createArticle(data) {
   return { id, slug };
 }
 
-/**
- * Updates an existing article with atomic revision logging and automatic audit tracking (last_edited_by)
- */
 export async function updateArticle(id, data) {
   const current = await getArticleById(id);
   if (!current) {
@@ -251,7 +222,6 @@ export async function updateArticle(id, data) {
   const editorUsername = data.lastEditedBy || data.editorUsername || "admin";
   const editorId = data.editorId || current.author_id || "usr_editor";
 
-  // Parse images if provided
   let imagesJson = current.images;
   let primaryImage = current.image;
 
@@ -283,13 +253,10 @@ export async function updateArticle(id, data) {
 
   const newStatus = data.status || current.status;
   const isNowPublished = newStatus === "published";
-  const publishedAt = isNowPublished ? (current.published_at || new Date()) : current.published_at;
 
   const isPassedToUpper = data.passToUpper ? 1 : (data.isPassedToUpper !== undefined ? (data.isPassedToUpper ? 1 : 0) : (current.is_passed_to_upper || 0));
   const passedBy = data.passToUpper ? editorUsername : (data.passedBy || current.passed_by || null);
-  const passedAt = data.passToUpper ? new Date() : (current.passed_at || null);
 
-  // Helper normalizers to accurately detect whether any content was actually modified
   const normalizeStr = (val) => (val === null || val === undefined ? "" : String(val).trim());
   const normalizeJson = (val) => {
     if (!val) return "[]";
@@ -323,9 +290,7 @@ export async function updateArticle(id, data) {
     youtubeChanged ||
     locationChanged;
 
-  // STRICT RULE: Only update last_edited_by and last_edited_at if content was actually changed
   const lastEditedBy = hasContentChanged ? editorUsername : (current.last_edited_by || null);
-  const lastEditedAt = hasContentChanged ? new Date() : (current.last_edited_at || null);
 
   const updateSql = `
     UPDATE articles SET
@@ -347,11 +312,11 @@ export async function updateArticle(id, data) {
       is_lead = ?,
       is_handpicked = ?,
       last_edited_by = ?,
-      last_edited_at = ?,
+      last_edited_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE last_edited_at END,
       is_passed_to_upper = ?,
       passed_by = ?,
-      passed_at = ?,
-      published_at = ?,
+      passed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE passed_at END,
+      published_at = CASE WHEN ? = 1 THEN COALESCE(published_at, CURRENT_TIMESTAMP) ELSE published_at END,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `;
@@ -375,19 +340,18 @@ export async function updateArticle(id, data) {
     data.isLead !== undefined ? (data.isLead ? 1 : 0) : current.is_lead,
     data.isHandpicked !== undefined ? (data.isHandpicked ? 1 : 0) : current.is_handpicked,
     lastEditedBy,
-    lastEditedAt,
+    hasContentChanged ? 1 : 0,
     isPassedToUpper,
     passedBy,
-    passedAt,
-    publishedAt,
+    data.passToUpper ? 1 : 0,
+    isNowPublished ? 1 : 0,
     id,
   ];
 
   await withTransaction(async (tx) => {
-    // 1. Update article record
+
     await tx.query(updateSql, bindParams);
 
-    // 2. Insert revision log ONLY if content actually changed
     if (hasContentChanged) {
       await tx.query(
         `INSERT INTO article_revisions (id, article_id, editor_id, headline, summary, content, change_summary, created_at)
@@ -403,7 +367,6 @@ export async function updateArticle(id, data) {
       );
     }
 
-    // 3. Record audit log
     await tx.query(
       `INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, created_at)
        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
@@ -423,7 +386,6 @@ export async function updateArticle(id, data) {
       ]
     );
 
-    // 4. Create notification for author if status changed to published or rejected
     if (newStatus !== current.status && current.author_id && current.author_id !== editorId) {
       if (newStatus === "published") {
         await tx.query(
@@ -454,7 +416,6 @@ export async function updateArticle(id, data) {
       }
     }
 
-    // 5. Notify sub-editor if this article was passed forward by them
     if (
       newStatus !== current.status &&
       (current.is_passed_to_upper || isPassedToUpper) &&
@@ -521,9 +482,6 @@ export async function getArticleBySlug(slug) {
   );
 }
 
-/**
- * Robust article lookup supporting both raw and URL-decoded slugs and IDs
- */
 export async function findArticleBySlugOrId(identifier) {
   if (!identifier) return null;
   const raw = String(identifier).trim();
@@ -534,7 +492,6 @@ export async function findArticleBySlugOrId(identifier) {
     decoded = raw;
   }
 
-  // 1. Try slug by decoded and raw
   let row = await queryOne("SELECT * FROM articles WHERE slug = ?", [decoded]);
   if (row) return row;
 
@@ -543,7 +500,6 @@ export async function findArticleBySlugOrId(identifier) {
     if (row) return row;
   }
 
-  // 2. Try id by raw and decoded
   row = await queryOne("SELECT * FROM articles WHERE id = ?", [raw]);
   if (row) return row;
 
@@ -555,38 +511,36 @@ export async function findArticleBySlugOrId(identifier) {
   return null;
 }
 
-/**
- * Fetch published articles ordered newest first with parameterized pagination.
- * Reduces TiDB Request Units (RU) by utilizing covered composite indexes (status, category_slug, created_at).
- */
 export async function getPublishedArticles({ categorySlug, limit = 20, offset = 0 } = {}) {
-  const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 100);
-  const safeOffset = Math.max(0, Number(offset) || 0);
+  try {
+    const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 100);
+    const safeOffset = Math.max(0, Number(offset) || 0);
 
-  // 1. Permanent Category 'handpicked': Query articles marked as handpicked
-  if (categorySlug === "handpicked") {
+    if (categorySlug === "handpicked") {
+      const rows = await query(
+        "SELECT * FROM articles WHERE status = 'published' AND is_handpicked = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        [safeLimit, safeOffset]
+      );
+      return rows || [];
+    }
+
+    if (!categorySlug || categorySlug === "all" || categorySlug === "latest") {
+      const rows = await query(
+        "SELECT * FROM articles WHERE status = 'published' ORDER BY created_at DESC LIMIT ? OFFSET ?",
+        [safeLimit, safeOffset]
+      );
+      return rows || [];
+    }
+
     const rows = await query(
-      "SELECT * FROM articles WHERE status = 'published' AND is_handpicked = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
-      [safeLimit, safeOffset]
+      "SELECT * FROM articles WHERE status = 'published' AND category_slug = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
+      [categorySlug, safeLimit, safeOffset]
     );
     return rows || [];
+  } catch (error) {
+    console.error("[Article] Error in getPublishedArticles:", error?.message || error);
+    return [];
   }
-
-  // 2. Permanent Category 'latest' or 'all': Query all latest published articles across all categories
-  if (!categorySlug || categorySlug === "all" || categorySlug === "latest") {
-    const rows = await query(
-      "SELECT * FROM articles WHERE status = 'published' ORDER BY created_at DESC LIMIT ? OFFSET ?",
-      [safeLimit, safeOffset]
-    );
-    return rows || [];
-  }
-
-  // 3. Dynamic Category (e.g. 'national', 'politics', 'sports', etc.)
-  const rows = await query(
-    "SELECT * FROM articles WHERE status = 'published' AND category_slug = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-    [categorySlug, safeLimit, safeOffset]
-  );
-  return rows || [];
 }
 
 export async function getRecentArticles({ authorId, createdBy, limit = 10 } = {}) {
@@ -672,7 +626,6 @@ export async function deleteArticle(id, editorId = "usr_superadmin", editorUsern
     const existing = await tx.query("SELECT headline FROM articles WHERE id = ?", [id]);
     const headline = existing && existing[0]?.headline ? existing[0].headline : "সংবাদ";
 
-    // Cascade-delete dependent revisions and curated references
     await tx.query("DELETE FROM article_revisions WHERE article_id = ?", [id]);
     await tx.query("DELETE FROM curated_news WHERE article_id = ?", [id]);
     await tx.query("DELETE FROM analytics_page_views WHERE article_id = ?", [id]);
@@ -693,10 +646,6 @@ export async function deleteArticle(id, editorId = "usr_superadmin", editorUsern
   });
 }
 
-/**
- * Retrieves audit logs specifically for article operations (create, edit, status change, delete)
- * Available for Upper Roles: super admin, admin, chief editor, editor
- */
 export async function getArticleAuditLogs(limit = 100) {
   const safeLimit = Math.min(Math.max(1, Number(limit) || 100), 200);
   const rows = await query(
@@ -718,13 +667,9 @@ export async function getArticleAuditLogs(limit = 100) {
   return rows || [];
 }
 
-/**
- * Updates an article's publishing status (published, draft, pending, rejected, archived)
- * Strictly preserves author and last_edited_by (does NOT overwrite last_edited_by or edit date with publisher)
- */
 export async function updateArticleStatus(id, status, editorId = "usr_superadmin", editorUsername = "admin") {
   return await withTransaction(async (tx) => {
-    // Lookup article before update to get author details and headline
+
     const targetArticle = await tx.queryOne(
       "SELECT id, headline, slug, status, author_id, is_passed_to_upper, passed_by FROM articles WHERE id = ?",
       [id]
@@ -739,7 +684,6 @@ export async function updateArticleStatus(id, status, editorId = "usr_superadmin
       [status, status, id]
     );
 
-    // Insert revision log for state transition
     const statusLabels = {
       published: "প্রকাশিত",
       draft: "খসড়া",
@@ -773,7 +717,6 @@ export async function updateArticleStatus(id, status, editorId = "usr_superadmin
       ]
     );
 
-    // Create workflow notification for author if status is approved/published or rejected
     if (targetArticle && targetArticle.author_id && targetArticle.author_id !== editorId) {
       if (status === "published") {
         await tx.query(
@@ -804,7 +747,6 @@ export async function updateArticleStatus(id, status, editorId = "usr_superadmin
       }
     }
 
-    // Notify sub-editor if this article was passed forward by them
     if (targetArticle && targetArticle.is_passed_to_upper && targetArticle.passed_by) {
       const subUser = await tx.queryOne(
         "SELECT id, username FROM users WHERE username = ?",
@@ -846,9 +788,6 @@ export async function updateArticleStatus(id, status, editorId = "usr_superadmin
   });
 }
 
-/**
- * Sub-editor passes a reporter's submitted article forward to upper roles without editing content
- */
 export async function passArticleToUpper(id, subEditorUsername = "sub_editor") {
   return await query(
     `UPDATE articles 
@@ -860,9 +799,6 @@ export async function passArticleToUpper(id, subEditorUsername = "sub_editor") {
   );
 }
 
-/**
- * Toggles a boolean flag on an article (is_breaking, is_lead, is_handpicked)
- */
 export async function toggleArticleFlag(id, flagName) {
   const allowedFlags = ["is_breaking", "is_lead", "is_handpicked"];
   if (!allowedFlags.includes(flagName)) {
@@ -883,9 +819,6 @@ export async function toggleArticleFlag(id, flagName) {
   return { [flagName]: newVal === 1 };
 }
 
-/**
- * Fetch revisions / content history for a given article
- */
 export async function getArticleRevisions(articleId) {
   const rows = await query(
     `SELECT r.*, u.name as editor_name, u.username as editor_username
@@ -898,9 +831,6 @@ export async function getArticleRevisions(articleId) {
   return rows || [];
 }
 
-/**
- * Return counts of articles grouped by their status, optionally filtered by author
- */
 export async function getArticleStatusCounts({ authorId, createdBy } = {}) {
   const hasAuthorFilter = Boolean(authorId || createdBy);
   const sql = hasAuthorFilter
@@ -931,10 +861,6 @@ export async function getArticleStatusCounts({ authorId, createdBy } = {}) {
   return counts;
 }
 
-/**
- * Returns total count of articles awaiting upper-role review/approval
- * (i.e. submitted directly by reporters or sub-editors, or passed forward by sub-editor)
- */
 export async function getPendingArticlesCountForUpperRoles() {
   const row = await queryOne(
     "SELECT COUNT(*) as count FROM articles WHERE status = 'pending' OR status = 'pending_approval'"
@@ -942,22 +868,6 @@ export async function getPendingArticlesCountForUpperRoles() {
   return Number(row?.count || 0);
 }
 
-/**
- * Reusable Business Logic for Most Read News (সর্বাধিক পঠিত সংবাদ):
- *
- * 1. Individual News 7-Day Validity:
- *    - Each news article is considered fresh/valid for 7 days from its published date:
- *      COALESCE(a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY).
- *    - Active 7-day news are prioritized and ranked primarily by views during that 7-day window.
- *
- * 2. Latest News as Fillers:
- *    - If there are fewer than `limit` articles within 7-day validity, latest published news
- *      are retained as fillers, sorted newest to oldest up to `limit` items.
- *
- * 3. Authentic Database Only:
- *    - Replaces SQLite datetime() with standard MySQL DATE_SUB(NOW(), INTERVAL 7 DAY).
- *    - Uses MySQL scalar GREATEST() for row-level maximum between direct views and logged views.
- */
 export async function getMostReadArticles(limit = 10) {
   const safeLimit = Math.min(Math.max(1, Number(limit) || 10), 50);
   let dbRows = [];

@@ -4,12 +4,12 @@ import { Flame, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export function TopArticlesTable({ articles = [] }) {
-  // Always display top 10 items
+
   const displayArticles = articles.slice(0, 10);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
-      {/* Header */}
+
       <div className="flex items-center justify-between pb-4 border-b border-slate-100 shrink-0">
         <div className="flex items-center gap-2">
           <Flame className="w-4 h-4 text-amber-500" />
@@ -17,7 +17,7 @@ export function TopArticlesTable({ articles = [] }) {
         </div>
       </div>
 
-      {/* Scrollable container with consistent component space */}
+
       <div className="divide-y divide-slate-100 mt-2 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar flex-1">
         {displayArticles.length === 0 ? (
           <p className="text-xs text-slate-400 py-12 text-center">কোনো প্রকাশিত সংবাদ পাওয়া যায়নি।</p>

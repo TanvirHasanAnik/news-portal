@@ -1,4 +1,4 @@
-// Authentic Bangladeshi News Data & Categories
+
 
 export const banglaDate = {
   day: "সোমবার",
@@ -9,7 +9,7 @@ export const banglaDate = {
   weather: "৩১° সে., রৌদ্রোজ্জ্বল",
 };
 
-// Permanent categories that are always anchored in navigation
+
 export const permanentCategories = [
   {
     id: "latest",
@@ -25,7 +25,7 @@ export const permanentCategories = [
   },
 ];
 
-// Remaining dynamic categories that can adapt/overflow
+
 export const dynamicCategories = [
   {
     id: "national",
@@ -83,7 +83,7 @@ export const dynamicCategories = [
   },
 ];
 
-// All categories list combining permanent and dynamic categories
+
 export const categories = [
   ...permanentCategories,
   ...dynamicCategories,
@@ -116,7 +116,7 @@ export const breakingNews = [
   },
 ];
 
-// General Top Headlines for Sliding Headline (শিরোনাম) Section
+
 export const topHeadlines = [
   {
     id: "h1",
@@ -168,7 +168,7 @@ export const topHeadlines = [
   },
 ];
 
-// Featured Lead News for Hero Area
+
 export const leadStory = {
   id: "lead-1",
   category: "জাতীয়",
@@ -212,7 +212,7 @@ export const secondaryLeads = [
   },
 ];
 
-// Requirement 2: Latest Mixed Category Published Section (Latest 3 news emphasizing most recent one with see more)
+
 export const latestMixedNews = [
   {
     id: "mix-1",
@@ -255,7 +255,7 @@ export const latestMixedNews = [
   },
 ];
 
-// Requirement 3: Category-specific news (Latest 3 news emphasizing most recent one with see more for each main category)
+
 export const categoryNewsData = {
   national: [
     {
@@ -498,7 +498,7 @@ export const categoryNewsData = {
       subcategory: "ক্রিকেট",
       headline: "টাইগার্সদের স্মরণীয় জয়ের বিশেষ ভিডিও মুহূর্ত ও ধারাভাষ্যকারের বিশ্লেষণ",
       summary: "শেষ বলের বাউন্ডারিতে শ্বাসরুদ্ধকর জয়ের রোমাঞ্চকর ভিডিও ফুটেজ ও আন্তর্জাতিক ধারাভাষ্যকারদের ম্যাচ পরবর্তী বিশ্লেষণ।",
-      // No image uploaded: automatically chooses YouTube thumbnail across the site
+
       youtubeUrl: "https://www.youtube.com/watch?v=ScMzIvxBSi4",
       publishedAt: "১২ অক্টোবর ২০২৬, সকাল ০৯:৩০",
       author: "ক্রীড়া প্রতিবেদক",
@@ -554,7 +554,7 @@ export const categoryNewsData = {
       subcategory: "চলচ্চিত্র",
       headline: "আন্তর্জাতিক পুরস্কারজয়ী বাংলা সিনেমার বিশেষ ট্রেইলার ও ভিডিও ঝলক",
       summary: "আন্তর্জাতিক চলচ্চিত্র উৎসবে প্রদর্শিত বাংলাদেশি নির্মাতার বহুল প্রতীক্ষিত সিনেমার এক্সক্লুসিভ অফিশিয়াল ভিডিও ট্রেইলার।",
-      // No image uploaded: automatically uses YouTube thumbnail
+
       youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
       publishedAt: "১২ অক্টোবর ২০২৬, সকাল ০৮:৪০",
       author: "বিনোদন ডেস্ক",
@@ -609,7 +609,7 @@ export const categoryNewsData = {
       subcategory: "গ্যাজেটস",
       headline: "আগামীর কোয়ান্টাম প্রসেসিং: ল্যাব টেস্ট ও লাইভ সুপারকম্পিউটিং ভিডিও ডেমো",
       summary: "সুপারকন্ডাক্টিং কিউবিট প্রযুক্তির সাহায্যে জটিল সমীকরণ সমাধানের অবিশ্বাস্য গতির পরীক্ষামূলক ভিডিও প্রদর্শনী ও পর্যালোচনা।",
-      // No image uploaded: only YouTube embed
+
       youtubeUrl: "https://www.youtube.com/watch?v=JhHMJCUmq28",
       publishedAt: "১২ অক্টোবর ২০২৬, সকাল ১০:১৫",
       author: "বিজ্ঞান ও প্রযুক্তি ডেস্ক",
@@ -619,7 +619,7 @@ export const categoryNewsData = {
   ],
 };
 
-// Trending / Most Read News (সর্বাধিক পঠিত)
+
 export const trendingNews = [
   {
     id: "tr-1",
@@ -723,7 +723,7 @@ export const trendingNews = [
   },
 ];
 
-// Opinion / Editorial Columns (সম্পাদকীয় ও মতামত)
+
 export const opinionArticles = [
   {
     id: "op-1",
@@ -751,7 +751,7 @@ export const opinionArticles = [
   },
 ];
 
-// Re-export temporary news objects and handpicked news
+
 export { temporaryNewsList, getSortedNewsByTime } from "./temporaryNewsData";
 export { handpickedNewsList } from "./handpickedNewsData";
 

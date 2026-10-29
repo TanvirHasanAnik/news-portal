@@ -3,19 +3,11 @@ import NewsCard from "./NewsCard";
 import { trendingNews } from "../data/newsData";
 import { getOptimizedNewsImage } from "../utils/imageUtils";
 
-/**
- * Pre-optimized most read news list at module scope
- */
 const staticMostReadNews = trendingNews.map((item) => ({
   ...item,
   image: getOptimizedNewsImage(item.image, 240, 70),
 }));
 
-/**
- * Reusable MostReadSection (সর্বাধিক পঠিত) Component
- * 
- * Reused between Homepage HandpickedNewsSection and Single Article Reading Page.
- */
 export default function MostReadSection({
   newsList = staticMostReadNews,
   className = "",
@@ -26,7 +18,7 @@ export default function MostReadSection({
 
   return (
     <div className={`flex flex-col ${className}`}>
-      {/* Section Header */}
+
       <div className="flex items-center gap-2.5 border-b-2 border-slate-900 pb-3 mb-3 shrink-0">
         <span className="w-2.5 h-6 bg-red-600 inline-block"></span>
         <h3 className="font-serif-bangla text-2xl font-bold text-slate-900 tracking-tight">
@@ -34,7 +26,6 @@ export default function MostReadSection({
         </h3>
       </div>
 
-      {/* Scrollable News List */}
       <div className={listClassName}>
         {newsList.map((item) => (
           <NewsCard

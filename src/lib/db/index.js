@@ -1,25 +1,7 @@
 import mysql from "mysql2/promise";
 
-/**
- * Universal MySQL Data Layer for Next.js App Router, Cloudflare Workers (workerd) & TiDB.
- *
- * Edge & Worker Architecture:
- * 1. Cloudflare Workers (`workerd`) isolate freeze:
- *    - Cloudflare freezes V8 isolates between requests. Persistent connection pools keep idle TCP
- *      sockets and timer handles open, causing workerd to detect a hung request and terminate with
- *      `net::ERR_INCOMPLETE_CHUNKED_ENCODING` (The Workers runtime canceled this request because it hung).
- *    - To prevent this, in worker runtimes each operation acquires a clean connection with a strict
- *      timeout (`connectTimeout: 5000`) and immediately releases (`conn.end()`) in a `finally` block.
- * 2. Node.js runtime (`next dev`):
- *    - Retains high-performance connection pooling via `mysql.createPool()`.
- * 3. Configuration fallback:
- *    - Seamlessly extracts environment variables from Cloudflare context (`cfContext.env`)
- *      and standard `process.env`, defaulting `DB_HOST` to `127.0.0.1` and `DB_PORT` to `3307`.
- * 4. V8 Isolate Safety:
- *    - `disableEval: true` avoids dynamic code evaluation in workerd.
- * 5. Strict Unicode & Timezone:
- *    - `charset: 'utf8mb4'` and `timezone: 'Z'`.
- */
+
+
 
 let globalNodePool = null;
 let isDbBootstrapped = false;
@@ -41,7 +23,7 @@ export async function getDbConfig() {
       cfEnv = ctx.env;
     }
   } catch (_e) {
-    // Cloudflare context unavailable in pure Node.js
+
   }
 
   const host =
@@ -99,10 +81,8 @@ export async function getDbConfig() {
   };
 }
 
-/**
- * Returns a connection handle tailored for the current execution runtime.
- * Automatically handles cleanup: ends socket in Worker, releases to pool in Node.
- */
+
+
 export async function getConnectionHandle() {
   const config = await getDbConfig();
 
@@ -119,7 +99,7 @@ export async function getConnectionHandle() {
     };
   }
 
-  // Node.js development runtime
+
   if (!globalNodePool) {
     globalNodePool = mysql.createPool({
       ...config,
@@ -141,9 +121,8 @@ export async function getConnectionHandle() {
   };
 }
 
-/**
- * Ensures all database tables and seed records are auto-initialized on first use
- */
+
+
 export async function ensureDbInitialized() {
   if (isDbBootstrapped) return;
   if (bootstrapPromise) return await bootstrapPromise;
@@ -172,9 +151,8 @@ export async function ensureDbInitialized() {
   return await bootstrapPromise;
 }
 
-/**
- * Executes a clean parameterized query with guaranteed connection cleanup and auto-initialization
- */
+
+
 export async function query(sql, params = []) {
   if (
     !isDbBootstrapped &&
@@ -189,6 +167,9 @@ export async function query(sql, params = []) {
   try {
     const [rows] = await handle.query(sql, params);
     return rows;
+  } catch (error) {
+    console.error("[Database Query Error]:", error?.message || error);
+    throw error;
   } finally {
     if (typeof handle.release === "function") {
       await handle.release();
@@ -196,9 +177,8 @@ export async function query(sql, params = []) {
   }
 }
 
-/**
- * Parameterized single-row query runner
- */
+
+
 export async function queryOne(sql, params = []) {
   const rows = await query(sql, params);
   if (!rows || !Array.isArray(rows) || rows.length === 0) {
@@ -207,10 +187,8 @@ export async function queryOne(sql, params = []) {
   return rows[0];
 }
 
-/**
- * Robust Transaction Management:
- * Executes callback within an explicit transaction with guaranteed cleanup.
- */
+
+
 export async function withTransaction(callback) {
   const handle = await getConnectionHandle();
   const conn = handle.connection;
@@ -241,6 +219,7 @@ export async function withTransaction(callback) {
     await conn.commit();
     return result;
   } catch (error) {
+    console.error("[Database Transaction Error]:", error?.message || error);
     try {
       await conn.rollback();
     } catch (_rollbackErr) {}
@@ -252,9 +231,8 @@ export async function withTransaction(callback) {
   }
 }
 
-/**
- * Universal Database Adapter for Next.js App Router and Cloudflare Worker / OpenNext.
- */
+
+
 export async function getDb() {
   return {
     query,

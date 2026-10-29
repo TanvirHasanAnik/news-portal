@@ -94,10 +94,8 @@ export async function deleteSubcategoryAction(subcategoryId) {
   }
 }
 
-/**
- * Server Action: Saves the batch of categories & subcategories from browser state,
- * synchronizes with database, and triggers On-Demand ISR for all affected pages.
- */
+
+
 export async function saveCategoriesBatchAction(categories) {
   try {
     const validatedCategories = categoryBatchSchema.parse(categories);
@@ -110,10 +108,10 @@ export async function saveCategoriesBatchAction(categories) {
       details: { count: validatedCategories.length },
     });
 
-    // On-Demand Incremental Static Regeneration (ISR)
-    revalidatePath("/", "layout"); // Revalidates layout tree (Header & Footer) across all pages
-    revalidatePath("/"); // Revalidates homepage (CategoryScrollSection)
-    revalidatePath("/admin"); // Revalidates admin categories tab
+
+    revalidatePath("/", "layout"); 
+    revalidatePath("/"); 
+    revalidatePath("/admin"); 
     revalidatePath("/category/[category]", "page");
 
     const slugsToRevalidate = res?.affectedSlugs || validatedCategories.map((c) => c.slug);

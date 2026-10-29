@@ -111,7 +111,7 @@ export function ArticleAuditLogsSection({ logs = [] }) {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-      {/* Header & Controls */}
+
       <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -129,7 +129,6 @@ export function ArticleAuditLogsSection({ logs = [] }) {
         </div>
       </div>
 
-      {/* Filter and Search Bar */}
       <div className="p-4 bg-slate-50/60 border-b border-slate-100 flex flex-col sm:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -155,7 +154,6 @@ export function ArticleAuditLogsSection({ logs = [] }) {
         </select>
       </div>
 
-      {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
@@ -182,14 +180,13 @@ export function ArticleAuditLogsSection({ logs = [] }) {
 
                 return (
                   <tr key={log.id} className="hover:bg-slate-50/70 transition-colors">
-                    {/* 1. Action Badge */}
+
                     <td className="py-3 px-4 whitespace-nowrap">
                       <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${badge.color}`}>
                         {badge.label}
                       </span>
                     </td>
 
-                    {/* 2. Article Headline */}
                     <td className="py-3 px-3 max-w-xs sm:max-w-md">
                       <div className="flex items-center gap-1.5">
                         <span className="font-semibold text-slate-900 line-clamp-1" title={headline}>
@@ -207,17 +204,14 @@ export function ArticleAuditLogsSection({ logs = [] }) {
                       </div>
                     </td>
 
-                    {/* 3. Editor / Username */}
                     <td className="py-3 px-3 whitespace-nowrap font-medium text-slate-900">
                       @{log.user_name || "admin"}
                     </td>
 
-                    {/* 4. Details Summary */}
                     <td className="py-3 px-3 text-slate-600 font-medium">
                       {getDetailsSummary(log)}
                     </td>
 
-                    {/* 5. Actual Event Time */}
                     <td className="py-3 px-4 text-right whitespace-nowrap text-slate-500 font-mono text-[11px]">
                       {formatStaticDateTime(log.created_at)}
                     </td>

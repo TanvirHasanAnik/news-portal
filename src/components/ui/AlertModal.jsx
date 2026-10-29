@@ -4,10 +4,8 @@ import React, { useEffect } from "react";
 import { X, AlertCircle } from "lucide-react";
 import { Button } from "./button";
 
-/**
- * Reusable clean warning/error prompt.
- * Only displays the rule/error message, an OK button, and a close button.
- */
+
+
 export function AlertModal({
   isOpen,
   onClose,
@@ -35,7 +33,7 @@ export function AlertModal({
         role="alertdialog"
         aria-modal="true"
       >
-        {/* Close Button */}
+
         <button
           type="button"
           onClick={onClose}
@@ -45,7 +43,7 @@ export function AlertModal({
           <X className="w-4 h-4" />
         </button>
 
-        {/* Message with alert icon */}
+
         <div className="flex items-start gap-3 pr-6 pt-1">
           <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <p className="text-xs font-medium text-slate-700 leading-relaxed">
@@ -53,7 +51,7 @@ export function AlertModal({
           </p>
         </div>
 
-        {/* Action Button: OK */}
+
         <div className="flex justify-end pt-1">
           <Button
             type="button"

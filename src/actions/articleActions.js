@@ -16,9 +16,6 @@ import { articleCreateSchema } from "@/schemas/articleSchema";
 import { getCurrentUser } from "@/lib/auth/server";
 import { isUpperRole, isLowerRole } from "@/config/roles";
 
-/**
- * Helper to calculate estimated read time in Bengali
- */
 function calculateReadTime(text) {
   if (!text) return "১ মিনিট পাঠ";
   let plainText = text;
@@ -41,12 +38,9 @@ function calculateReadTime(text) {
   return `${bnMinutes} মিনিট পাঠ`;
 }
 
-/**
- * Generates an SEO friendly slug with fallback to random id
- */
 function generateSlug(headline) {
   if (!headline) return `news-${Date.now()}`;
-  // Clean special characters while retaining Bengali and alphanumeric characters
+
   const cleaned = headline
     .trim()
     .replace(/[^\p{L}\p{N}\s-]/gu, "")
@@ -57,10 +51,6 @@ function generateSlug(headline) {
   return cleaned ? `${cleaned}-${suffix}` : `news-${Date.now()}-${suffix}`;
 }
 
-/**
- * Server Action: Create a new article
- * Catches user input from form, validates via Zod schema, maps data, and passes to Repository.
- */
 export async function createArticleAction(prevState, formData) {
   try {
     const currentUser = await getCurrentUser();
@@ -76,8 +66,7 @@ export async function createArticleAction(prevState, formData) {
     const content = formData.get("content")?.toString() || "";
     const categorySlug = formData.get("categorySlug")?.toString() || "";
     const subcategoryName = formData.get("subcategoryName")?.toString() || "";
-    
-    // Parse images array (max 3 images)
+
     let images = [];
     const rawImages = formData.get("images");
     if (rawImages) {
@@ -96,18 +85,17 @@ export async function createArticleAction(prevState, formData) {
     if (images.length === 0 && singleImage) {
       images = [singleImage];
     }
-    // Restrict strictly to maximum 3 images
+
     images = images.slice(0, 3);
     const primaryImage = images[0] || null;
 
     const youtubeUrl = formData.get("youtubeUrl")?.toString() || "";
     const authorName = formData.get("authorName")?.toString().trim() || currentUser.fullName || currentUser.name || "নিজস্ব প্রতিবেদক";
     const location = formData.get("location")?.toString().trim() || "ঢাকা";
-    
-    // Workflow State resolution based on role
+
     let requestedStatus = formData.get("status")?.toString().trim() || "published";
     if (isLowerRole(currentUser.role)) {
-      // Lower roles (Reporter / Sub-Editor) can only save as draft or submit for review (pending)
+
       if (requestedStatus === "published") {
         requestedStatus = "pending";
       }
@@ -117,7 +105,6 @@ export async function createArticleAction(prevState, formData) {
     const isLead = (formData.get("isLead") === "true" || formData.get("isLead") === "on") && isUpperRole(currentUser.role);
     const isHandpicked = (formData.get("isHandpicked") === "true" || formData.get("isHandpicked") === "on") && isUpperRole(currentUser.role);
 
-    // Validate inputs via centralized Zod Article Schema
     const validationResult = articleCreateSchema.safeParse({
       headline,
       summary,
@@ -150,12 +137,10 @@ export async function createArticleAction(prevState, formData) {
 
     const validated = validationResult.data;
 
-    // Resolve category details from Repository
     const category = await getCategoryBySlug(validated.categorySlug);
     const categoryName = category ? category.name : validated.categorySlug;
     const categoryId = category ? category.id : null;
 
-    // Resolve subcategory ID if available
     let subcategoryId = null;
     if (category && validated.subcategoryName) {
       const allCats = await getAllCategoriesWithSubcategories();
@@ -169,7 +154,6 @@ export async function createArticleAction(prevState, formData) {
     const slug = generateSlug(validated.headline);
     const readTime = calculateReadTime(validated.content);
 
-    // Call Repository to write to Database
     const result = await createArticle({
       headline: validated.headline,
       slug,
@@ -195,12 +179,10 @@ export async function createArticleAction(prevState, formData) {
       isHandpicked: validated.isHandpicked,
     });
 
-    // Revalidate paths
     revalidatePath("/admin");
     revalidatePath("/");
     revalidatePath(`/category/${validated.categorySlug}`);
 
-    // If submitted by reporter for approval, notify sub-editors
     if (currentUser.role === "reporter" && (validated.status === "pending" || validated.status === "pending_approval")) {
       try {
         await notifySubEditorsOfReporterArticle({
@@ -240,11 +222,6 @@ export async function createArticleAction(prevState, formData) {
   }
 }
 
-/**
- * Server Action: Update an existing article
- * Upper roles can edit any article in any state; lower roles can only edit their own.
- * Updates last_edited_by automatically on success.
- */
 export async function updateArticleAction(prevState, formData) {
   try {
     const currentUser = await getCurrentUser();
@@ -265,10 +242,6 @@ export async function updateArticleAction(prevState, formData) {
       return { success: false, message: "আর্টিকেলটি ডাটাবেজে খুঁজে পাওয়া যায়নি।" };
     }
 
-    // RBAC Check:
-    // Upper roles: full permission to edit any article in any state authored by anyone
-    // Sub-editor: can edit own articles, or reporter submitted articles (pending review)
-    // Reporter: can ONLY edit their own articles
     const isAuthor =
       existingArticle.author_id === currentUser.id ||
       existingArticle.created_by === currentUser.username;
@@ -299,7 +272,6 @@ export async function updateArticleAction(prevState, formData) {
     const categorySlug = formData.get("categorySlug")?.toString() || "";
     const subcategoryName = formData.get("subcategoryName")?.toString() || "";
 
-    // Parse images
     let images = [];
     const rawImages = formData.get("images");
     if (rawImages) {
@@ -324,10 +296,9 @@ export async function updateArticleAction(prevState, formData) {
     const youtubeUrl = formData.get("youtubeUrl")?.toString() || "";
     const location = formData.get("location")?.toString().trim() || existingArticle.location || "ঢাকা";
 
-    // Workflow state resolution
     let targetStatus = formData.get("status")?.toString().trim() || existingArticle.status;
     if (isLowerRole(currentUser.role)) {
-      // Lower roles can only transition to draft or pending review
+
       if (targetStatus !== "draft") {
         targetStatus = "pending";
       }
@@ -417,7 +388,6 @@ export async function updateArticleAction(prevState, formData) {
     revalidatePath(`/category/${validated.categorySlug}`);
     revalidatePath(`/article/${existingArticle.slug}`);
 
-    // If reporter transitions draft to pending review, notify sub-editors
     if (
       currentUser.role === "reporter" &&
       targetStatus === "pending" &&
@@ -479,9 +449,6 @@ export async function updateArticleAction(prevState, formData) {
   }
 }
 
-/**
- * Server Action: Sub-editor passes a reporter's submitted article to upper roles
- */
 export async function passArticleToUpperAction(articleId) {
   try {
     const currentUser = await getCurrentUser();
@@ -518,11 +485,6 @@ export async function passArticleToUpperAction(articleId) {
   }
 }
 
-/**
- * Server Action: Update article status (published, draft, pending, rejected, archived)
- * Upper roles can approve, publish, reject, or archive any article.
- * Lower roles can only change their own articles between draft and pending review.
- */
 export async function updateArticleStatusAction(articleId, newStatus) {
   try {
     const currentUser = await getCurrentUser();
@@ -539,7 +501,6 @@ export async function updateArticleStatusAction(articleId, newStatus) {
       return { success: false, message: "আর্টিকেলটি ডাটাবেজে পাওয়া যায়নি।" };
     }
 
-    // Role-based status transition checks:
     const isAuthor =
       article.author_id === currentUser.id ||
       article.created_by === currentUser.username;
@@ -558,7 +519,7 @@ export async function updateArticleStatusAction(articleId, newStatus) {
         if (!isReporterSubmitted) {
           return { success: false, message: "অন্য কারো সংবাদের স্ট্যাটাস পরিবর্তনের অধিকার আপনার নেই।" };
         }
-        // Sub-editor can only pass forward to upper roles with pending status (cannot publish/reject)
+
         if (newStatus !== "pending") {
           return {
             success: false,
@@ -585,7 +546,6 @@ export async function updateArticleStatusAction(articleId, newStatus) {
       revalidatePath(`/article/${article.slug}`);
     }
 
-    // If reporter transitions article to pending review, notify sub-editors
     if (
       currentUser.role === "reporter" &&
       newStatus === "pending" &&
@@ -621,9 +581,6 @@ export async function updateArticleStatusAction(articleId, newStatus) {
   }
 }
 
-/**
- * Server Action: Toggle article flag (is_breaking, is_lead, is_handpicked)
- */
 export async function toggleArticleFlagAction(articleId, flagName) {
   try {
     const res = await toggleArticleFlag(articleId, flagName);
@@ -636,9 +593,6 @@ export async function toggleArticleFlagAction(articleId, flagName) {
   }
 }
 
-/**
- * Server Action: Delete an article
- */
 export async function deleteArticleAction(articleId) {
   try {
     if (!articleId) {

@@ -1,9 +1,7 @@
 import { getR2Bucket } from "@/lib/r2";
 
-/**
- * GET /api/images/[...key]
- * Streams image objects from Cloudflare R2 bucket (NEWS_IMAGES_BUCKET)
- */
+
+
 export async function GET(request, { params }) {
   try {
     const { key } = await params;

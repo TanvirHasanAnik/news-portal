@@ -14,9 +14,11 @@ export const createUserSchema = z.object({
   fullName: z
     .string()
     .trim()
+    .min(1, { message: "ব্যবহারকারীর পূর্ণ ইংরেজি নাম আবশ্যক।" })
     .max(100, { message: "নাম সর্বোচ্চ ১০০ অক্ষরের হতে হবে।" })
-    .optional()
-    .default(""),
+    .regex(/^[a-zA-Z\s.-]+$/, {
+      message: "ব্যবহারকারীর পূর্ণ নাম শুধুমাত্র ইংরেজি অক্ষরে হতে হবে।",
+    }),
   email: z
     .string()
     .trim()

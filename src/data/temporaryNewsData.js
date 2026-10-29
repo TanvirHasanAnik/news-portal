@@ -1,16 +1,12 @@
-/**
- * Temporary News Objects Data Source
- * 
- * Each news item is organized with a random category and timestamp ('time').
- * Note: 'time' is stored internally for sorting purposes and is not displayed in the UI.
- * This list can be imported and accessed from any section across the application.
- */
+
+
+
 
 export const temporaryNewsList = [
-  // =========================================================================
-  // EXAMPLE 1: YouTube embed AND also image (Latest News)
-  // Shows custom image in cards, and on article page shows image + embedded video under it + detailed text
-  // =========================================================================
+
+
+
+
   {
     id: "latest-yt-image",
     category: "অর্থনীতি",
@@ -19,9 +15,9 @@ export const temporaryNewsList = [
     time: "2026-10-17T15:45:00Z",
     headline: "অর্থনৈতিক করিডোর ও বিশ্ববাণিজ্য পরিস্থিতি: যমুনা টিভি বিশেষ ভিডিও বিশ্লেষণ",
     summary: "আন্তর্জাতিক মুদ্রা তহবিল ও অর্থনৈতিক অংশীদারদের নতুন চুক্তি এবং বিশ্ব বাণিজ্যের সাম্প্রতিক গতিধারা নিয়ে যমুনা টিভির বিশদ প্রতিবেদন ও আলোকপাত।",
-    // Has custom image:
+
     image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?q=80&w=800&auto=format&fit=crop",
-    // Real Bangladeshi News Channel (Jamuna TV):
+
     youtubeUrl: "https://www.youtube.com/watch?v=HMwKzs-fhEE",
     author: "অর্থনৈতিক ব্যুরো",
     location: "ঢাকা",
@@ -36,10 +32,10 @@ export const temporaryNewsList = [
     ],
   },
 
-  // =========================================================================
-  // EXAMPLE 2: ONLY YouTube video AND detailed text (NO image uploaded)
-  // Cards automatically choose YouTube thumbnail, article page shows video + detailed text
-  // =========================================================================
+
+
+
+
   {
     id: "latest-yt-text",
     category: "আন্তর্জাতিক",
@@ -48,9 +44,9 @@ export const temporaryNewsList = [
     time: "2026-10-17T15:30:00Z",
     headline: "একনজরে বিশ্বের আলোচিত সব তাজা খবর: যমুনা টিভি আন্তর্জাতিক বুলেটিন",
     summary: "মধ্যপ্রাচ্য পরিস্থিতি ও বৈশ্বিক কূটনীতির গুরুত্বপূর্ণ সব ঘটনা নিয়ে যমুনা টিভির বিশেষ আন্তর্জাতিক নিউজ বুলেটিন ও মাঠপর্যায়ের তথ্য।",
-    // NO image uploaded: Card automatically chooses YouTube thumbnail!
+
     image: null,
-    // Real Bangladeshi News Channel (Jamuna TV Bulletin):
+
     youtubeUrl: "https://www.youtube.com/watch?v=1ad4I3Wtob4",
     author: "আন্তর্জাতিক ডেস্ক",
     location: "নিউইয়র্ক",
@@ -62,10 +58,10 @@ export const temporaryNewsList = [
     ],
   },
 
-  // =========================================================================
-  // EXAMPLE 3: ONLY YouTube video NO detailed text (NO image, NO detailed text)
-  // Cards use YouTube thumbnail; article page shows ONLY title + video and NOTHING else!
-  // =========================================================================
+
+
+
+
   {
     id: "latest-yt-only",
     category: "জাতীয়",
@@ -74,11 +70,11 @@ export const temporaryNewsList = [
     time: "2026-10-17T15:15:00Z",
     headline: "যমুনা নিউজ স্পেশাল বুলেটিন: দিনের শীর্ষ সংবাদের সরাসরি ভিডিও সম্প্রচার",
     summary: "সরাসরি মাঠপর্যায়ের ভিডিও চিত্র ও দিনের গুরুত্বপূর্ণ সব সংবাদের তাজা ভিডিও ফুটেজ।",
-    // NO image uploaded: Card automatically uses YouTube thumbnail!
+
     image: null,
-    // Real Bangladeshi News Channel (Jamuna TV):
+
     youtubeUrl: "https://www.youtube.com/watch?v=HMwKzs-fhEE",
-    // NO detailed text:
+
     content: [],
     hasDetailedText: false,
     author: "যমুনা নিউজ রুম",
@@ -147,7 +143,7 @@ export const temporaryNewsList = [
     time: "2026-10-15T17:10:00Z",
     headline: "মেট্রোরেলের নতুন সম্প্রসারিত রুটের ট্রায়াল রান সফল, উদ্বোধনের জোর প্রস্তুতি",
     summary: "রাজধানীর যোগাযোগ ব্যবস্থার যুগান্তকারী অগ্রগতি হিসেবে নতুন রুটে শুরু হয়েছে পরীক্ষামূলক চলাচল। দ্রুতই এটি সর্বসাধারণের জন্য উন্মুক্ত করা হবে।",
-    // No image uploaded: card automatically uses YouTube thumbnail
+
     youtubeUrl: "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
     author: "নিজস্ব প্রতিবেদক",
     location: "ঢাকা",
@@ -226,7 +222,7 @@ export const temporaryNewsList = [
     time: "2026-10-15T11:00:00Z",
     headline: "রোমাঞ্চকর শেষ ওভারের জয়: ম্যাচ বিশ্লেষণ ও বিশেষ ভিডিও হাইলাইটস",
     summary: "শেষ দুই বলে দরকার ছিল ৮ রান। চার ও ছক্কার দুর্দান্ত সমাপনীতে শ্বাসরুদ্ধকর জয় তুলে নেওয়ার রোমাঞ্চকর ভিডিও মুহূর্ত।",
-    // No image uploaded: automatically uses YouTube thumbnail in cards
+
     youtubeUrl: "https://www.youtube.com/watch?v=ScMzIvxBSi4",
     author: "ক্রীড়া প্রতিবেদক",
     location: "মিরপুর",
@@ -240,7 +236,7 @@ export const temporaryNewsList = [
     time: "2026-10-15T10:15:00Z",
     headline: "আসছে বছরের সবচেয়ে আলোচিত বাংলা সিনেমার অফিসিয়াল ভিডিও ট্রেইলার",
     summary: "স্টার কাস্ট ও চোখধাঁধানো ভিএফএক্সে সাজানো নতুন অ্যাকশন থ্রিলার চলচ্চিত্রের এক্সক্লুসিভ ভিডিও ঝলক ইউটিউবে দর্শকদের মাঝে আলোড়ন তৈরি করেছে।",
-    // No image uploaded: only YouTube embed
+
     youtubeUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     author: "বিনোদন ডেস্ক",
     location: "ঢাকা",
@@ -268,7 +264,7 @@ export const temporaryNewsList = [
     time: "2026-10-15T08:45:00Z",
     headline: "বঙ্গবন্ধু টানেল ঘিরে অর্থনৈতিক করিডোর: ড্রোন ফুটেজ ও ড্রাইভ-থ্রু ভিডিও প্রতিবেদন",
     summary: "কর্ণফুলী নদীর তলদেশের টানেল সংযোগ সড়ক সম্প্রসারণ ও এর আশপাশের শিল্পাঞ্চলের সাম্প্রতিক উন্নয়ন চিত্রের অনন্য ড্রোন ভিডিও দৃশ্য।",
-    // No image uploaded: only YouTube embed
+
     youtubeUrl: "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
     author: "চট্টগ্রাম প্রতিনিধি",
     location: "চট্টগ্রাম",
@@ -276,9 +272,8 @@ export const temporaryNewsList = [
   },
 ];
 
-/**
- * Utility helper to sort any news array by time descending (latest first).
- */
+
+
 export const getSortedNewsByTime = (list = temporaryNewsList) => {
   return [...list].sort(
     (a, b) => new Date(b.time).getTime() - new Date(a.time).getTime()

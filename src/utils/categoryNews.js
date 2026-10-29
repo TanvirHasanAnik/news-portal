@@ -11,9 +11,6 @@ import { temporaryNewsList, getSortedNewsByTime } from "../data/temporaryNewsDat
 import { handpickedNewsList } from "../data/handpickedNewsData";
 import { getYouTubeThumbnail } from "./imageUtils";
 
-/**
- * Standard category accent color themes
- */
 export const categoryAccentMap = {
   national: "from-red-600 to-rose-700 bg-red-600 border-red-600 text-red-600",
   politics: "from-blue-600 to-indigo-700 bg-blue-600 border-blue-600 text-blue-600",
@@ -28,17 +25,11 @@ export const categoryAccentMap = {
   handpicked: "from-red-600 to-rose-700 bg-red-600 border-red-600 text-red-600",
 };
 
-/**
- * Normalizes an article to a standard format for rendering.
- * Automatically chooses YouTube video thumbnail when a YouTube video is present
- * but no images were uploaded.
- */
 export function normalizeArticle(item, defaultCategory = "জাতীয়", defaultSlug = "national") {
   const youtubeUrl = item.youtubeUrl || item.youtubeEmbed || item.videoUrl || item.youtube || null;
   const youtubeThumb = youtubeUrl ? getYouTubeThumbnail(youtubeUrl) : null;
   const hasCustomImage = Boolean(item.image && typeof item.image === "string" && item.image.trim());
 
-  // Rule: If YouTube video exists but no images were uploaded, choose YouTube thumbnail
   const resolvedImage = hasCustomImage
     ? item.image
     : (youtubeThumb || item.avatar || "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?q=80&w=800&auto=format&fit=crop");
@@ -68,9 +59,6 @@ export function normalizeArticle(item, defaultCategory = "জাতীয়", d
   };
 }
 
-/**
- * Returns category metadata and news list for any slug
- */
 export function getCategoryNews(categorySlug) {
   if (!categorySlug) {
     return {
@@ -84,14 +72,12 @@ export function getCategoryNews(categorySlug) {
 
   const decodedSlug = decodeURIComponent(categorySlug).toLowerCase();
 
-  // Find predefined category if exists
   const matchedCategory = categories.find(
     (c) => c.slug.toLowerCase() === decodedSlug || c.id.toLowerCase() === decodedSlug
   );
 
   let categoryName = matchedCategory ? matchedCategory.name : "";
 
-  // Check if any articles in temporary or handpicked have this category name
   if (!categoryName) {
     const tempMatch = temporaryNewsList.find((i) => i.categorySlug === decodedSlug);
     if (tempMatch) categoryName = tempMatch.category;
@@ -108,7 +94,7 @@ export function getCategoryNews(categorySlug) {
   const seenIds = new Set();
 
   if (decodedSlug === "latest") {
-    // 1. All latest news sorted by time
+
     const sortedTemp = getSortedNewsByTime(temporaryNewsList);
     sortedTemp.forEach((item) => {
       if (!seenIds.has(item.id)) {
@@ -117,7 +103,6 @@ export function getCategoryNews(categorySlug) {
       }
     });
 
-    // Also include latest mixed news
     latestMixedNews.forEach((item) => {
       if (!seenIds.has(item.id)) {
         articles.push(normalizeArticle(item, item.category || "সর্বশেষ", "latest"));
@@ -125,7 +110,6 @@ export function getCategoryNews(categorySlug) {
       }
     });
 
-    // Also include from each category's first item
     Object.entries(categoryNewsData).forEach(([slug, list]) => {
       if (list && list[0] && !seenIds.has(list[0].id)) {
         articles.push(normalizeArticle(list[0], list[0].category || "সর্বশেষ", slug));
@@ -133,8 +117,7 @@ export function getCategoryNews(categorySlug) {
       }
     });
   } else if (decodedSlug === "handpicked") {
-    // Handpicked news showcase (বাছাইকৃত সংবাদ)
-    // The subcategory dynamically comes from the individual handpicked news's main category
+
     handpickedNewsList.forEach((item) => {
       if (!seenIds.has(item.id)) {
         const article = normalizeArticle(item, "বাছাইকৃত সংবাদ", "handpicked");
@@ -149,7 +132,7 @@ export function getCategoryNews(categorySlug) {
       }
     });
   } else if (decodedSlug === "opinion") {
-    // Category news for opinion if available
+
     if (categoryNewsData.opinion) {
       categoryNewsData.opinion.forEach((item) => {
         if (!seenIds.has(item.id)) {
@@ -159,7 +142,6 @@ export function getCategoryNews(categorySlug) {
       });
     }
 
-    // Also adapt opinionArticles
     opinionArticles.forEach((op) => {
       if (!seenIds.has(op.id)) {
         articles.push({
@@ -181,8 +163,7 @@ export function getCategoryNews(categorySlug) {
       }
     });
   } else {
-    // Standard category
-    // 1. From categoryNewsData
+
     const catList = categoryNewsData[decodedSlug] || [];
     catList.forEach((item) => {
       if (!seenIds.has(item.id)) {
@@ -191,7 +172,6 @@ export function getCategoryNews(categorySlug) {
       }
     });
 
-    // 2. From temporaryNewsList
     temporaryNewsList.forEach((item) => {
       if (item.categorySlug === decodedSlug && !seenIds.has(item.id)) {
         articles.push(normalizeArticle(item, categoryName, decodedSlug));
@@ -199,7 +179,6 @@ export function getCategoryNews(categorySlug) {
       }
     });
 
-    // 3. From handpickedNewsList
     handpickedNewsList.forEach((item) => {
       if (item.categorySlug === decodedSlug && !seenIds.has(item.id)) {
         articles.push(normalizeArticle(item, categoryName, decodedSlug));
@@ -208,12 +187,10 @@ export function getCategoryNews(categorySlug) {
     });
   }
 
-  // Dynamically extract all unique subcategories present in this category's news objects
   const dynamicSubcategories = Array.from(
     new Set(articles.map((a) => a.subcategory).filter(Boolean))
   );
 
-  // Combine dynamic subcategories from actual news data with any defined category subcategories (omit for latest)
   const subcategories =
     decodedSlug === "latest"
       ? []
@@ -230,9 +207,6 @@ export function getCategoryNews(categorySlug) {
   };
 }
 
-/**
- * Returns all available category slugs for static generation
- */
 export function getAllCategorySlugs() {
   const slugs = new Set(categories.map((c) => c.slug));
   temporaryNewsList.forEach((item) => {
@@ -244,9 +218,6 @@ export function getAllCategorySlugs() {
   return Array.from(slugs);
 }
 
-/**
- * Returns all articles aggregated from every section across the news portal
- */
 export function getAllArticles() {
   const articles = [];
   const seenIds = new Set();
@@ -260,28 +231,23 @@ export function getAllArticles() {
     }
   };
 
-  // 1. Lead and secondary lead stories
   if (leadStory) addArticle(leadStory, leadStory.category || "জাতীয়", leadStory.categorySlug || "national");
   if (Array.isArray(secondaryLeads)) {
     secondaryLeads.forEach((item) => addArticle(item, item.category, item.categorySlug));
   }
 
-  // 2. Latest mixed news
   if (Array.isArray(latestMixedNews)) {
     latestMixedNews.forEach((item) => addArticle(item, item.category, item.categorySlug));
   }
 
-  // 3. Handpicked news
   if (Array.isArray(handpickedNewsList)) {
     handpickedNewsList.forEach((item) => addArticle(item, item.category, item.categorySlug));
   }
 
-  // 4. Temporary news list
   if (Array.isArray(temporaryNewsList)) {
     temporaryNewsList.forEach((item) => addArticle(item, item.category, item.categorySlug));
   }
 
-  // 5. Category news data
   if (categoryNewsData) {
     Object.entries(categoryNewsData).forEach(([slug, list]) => {
       if (Array.isArray(list)) {
@@ -290,7 +256,6 @@ export function getAllArticles() {
     });
   }
 
-  // 6. Trending news
   if (Array.isArray(trendingNews)) {
     trendingNews.forEach((item) => addArticle(item, item.category, item.categorySlug));
   }
@@ -298,9 +263,6 @@ export function getAllArticles() {
   return articles;
 }
 
-/**
- * Look up a single article by ID across all sources
- */
 export function getArticleById(id) {
   if (!id) return null;
   const strId = String(id).toLowerCase();
@@ -308,9 +270,6 @@ export function getArticleById(id) {
   return all.find((item) => String(item.id).toLowerCase() === strId) || null;
 }
 
-/**
- * Returns related articles for the same category, excluding current article
- */
 export function getRelatedArticles(categorySlug, currentArticleId, limit = 4) {
   const all = getAllArticles();
   const filtered = all.filter(
@@ -323,7 +282,6 @@ export function getRelatedArticles(categorySlug, currentArticleId, limit = 4) {
     return filtered.slice(0, limit);
   }
 
-  // If category has fewer than limit, backfill with other articles
   const otherArticles = all.filter(
     (item) =>
       String(item.id) !== String(currentArticleId) &&
@@ -333,13 +291,9 @@ export function getRelatedArticles(categorySlug, currentArticleId, limit = 4) {
   return [...filtered, ...otherArticles].slice(0, limit);
 }
 
-/**
- * Generates realistic detailed journalistic Bengali paragraphs for an article
- */
 export function getArticleContent(article) {
   if (!article) return [];
 
-  // If explicitly designated to have no detailed text or empty content array
   if (article.hasDetailedText === false || article.noDetailedText === true) {
     return [];
   }
@@ -354,7 +308,6 @@ export function getArticleContent(article) {
   const loc = location || "ঢাকা";
   const sub = subcategory ? `${subcategory} বিষয়ক ` : "";
 
-  // Standard multi-paragraph journalistic report
   return [
     `${loc} থেকে প্রাপ্ত তথ্যানুযায়ী, ${summary} এ ঘটনায় সংশ্লিষ্ট মহলে ব্যাপক আগ্রহ ও চাঞ্চল্যের সৃষ্টি হয়েছে। সংশ্লিষ্ট দায়িত্বশীল কর্তৃপক্ষ বিষয়টির সার্বিক অগ্রগতি নিবিড়ভাবে পর্যবেক্ষণ করছেন।`,
     `সংশ্লিষ্ট বিভাগের ঊর্ধ্বতন কর্মকর্তারা জানিয়েছেন, ${sub}এই উদ্যোগ ও উন্নয়ন কার্যক্রম দেশের সামগ্রিক উন্নয়ন ও জনস্বার্থে গুরুত্বপূর্ণ ভূমিকা রাখবে। প্রয়োজনীয় নীতিগত সহায়তা এবং প্রাতিষ্ঠানিক তদারকি নিশ্চিত করার মাধ্যমে এর সুফল সাধারণ মানুষের দোরগোড়ায় পৌঁছে দিতে সরকার ও সংশ্লিষ্ট অংশীজনরা একযোগে কাজ করছেন।`,

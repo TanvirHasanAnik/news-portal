@@ -35,6 +35,25 @@ import {
 import { usePermissions, useAuth } from "@/contexts/AuthContext";
 import { createUserSchema } from "@/schemas/userSchema";
 
+const ROLE_HIERARCHY_ORDER = {
+  super_admin: 1,
+  superadmin: 1,
+  admin: 2,
+  editor_in_chief: 3,
+  editor: 4,
+  sub_editor: 5,
+  reporter: 6,
+};
+
+function sortUsersByRole(userList = []) {
+  return [...userList].sort((a, b) => {
+    const orderA = ROLE_HIERARCHY_ORDER[a.role] || 99;
+    const orderB = ROLE_HIERARCHY_ORDER[b.role] || 99;
+    if (orderA !== orderB) return orderA - orderB;
+    return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+  });
+}
+
 export function UserManager({
   initialUsers = [],
   canCreate: propCanCreate,
@@ -46,18 +65,18 @@ export function UserManager({
 
   const isSuperAdmin = currentUser?.role === "super_admin";
 
-  // Policy-based RBAC permission checks (overridable via props)
+
   const canCreateUser = propCanCreate !== undefined ? propCanCreate : can("users:create");
   const canChangeRole = propCanEditRole !== undefined ? propCanEditRole : can("users:edit_role");
   const canToggleUser = propCanDisable !== undefined ? propCanDisable : can("users:disable");
 
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState(() => sortUsersByRole(initialUsers));
   const [showAddModal, setShowAddModal] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
 
-  // Staff Password Reset Modal State (Super Admin exclusive)
+
   const [resetTargetUser, setResetTargetUser] = useState(null);
   const [resetNewPassword, setResetNewPassword] = useState("");
   const [resetConfirmPassword, setResetConfirmPassword] = useState("");
@@ -65,7 +84,7 @@ export function UserManager({
   const [resetError, setResetError] = useState("");
   const [isResetPending, startResetTransition] = useTransition();
 
-  // Initialize React Hook Form for new user creation
+
   const {
     register,
     handleSubmit,
@@ -102,7 +121,7 @@ export function UserManager({
 
       const res = await createUserAction(null, formData);
       if (res.success) {
-        setUsers((prev) => [
+        setUsers((prev) => sortUsersByRole([
           ...prev,
           {
             id: `usr_${Date.now()}`,
@@ -116,7 +135,7 @@ export function UserManager({
             bio: "",
             created_at: new Date().toISOString(),
           },
-        ]);
+        ]));
         setFeedback({ type: "success", message: res.message });
         reset({
           username: "",
@@ -134,7 +153,7 @@ export function UserManager({
     });
   };
 
-  // Re-confirmation modal on role selection
+
   const onRoleSelectChange = (usr, newRole) => {
     if (isSingleUserRole(usr.role) || isSingleUserRole(newRole)) return;
     if (newRole === usr.role) return;
@@ -149,7 +168,7 @@ export function UserManager({
           const res = await updateUserRoleAction(usr.id, newRole);
           if (res.success) {
             setUsers((prev) =>
-              prev.map((u) => (u.id === usr.id ? { ...u, role: newRole } : u))
+              sortUsersByRole(prev.map((u) => (u.id === usr.id ? { ...u, role: newRole } : u)))
             );
             setFeedback({ type: "success", message: res.message });
           } else {
@@ -185,7 +204,7 @@ export function UserManager({
     });
   };
 
-  // Handle Staff Password Reset Submission by Super Admin
+
   const handleResetStaffPasswordSubmit = (e) => {
     e.preventDefault();
     setResetError("");
@@ -222,7 +241,7 @@ export function UserManager({
 
   return (
     <div className="space-y-6">
-      {/* Feedback banner */}
+
       {feedback && (
         <div
           className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between transition-all ${
@@ -236,7 +255,7 @@ export function UserManager({
         </div>
       )}
 
-      {/* Action Header */}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-bold text-slate-900">
@@ -278,7 +297,7 @@ export function UserManager({
         )}
       </div>
 
-      {/* Users Table */}
+
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -299,7 +318,7 @@ export function UserManager({
 
                 return (
                   <tr key={usr.id} className="hover:bg-slate-50/70 transition-colors">
-                    {/* Name & Bio */}
+
                     <td className="py-3 px-4">
                       <div className="font-semibold text-slate-900">
                         {usr.full_name || usr.name || usr.username}
@@ -309,14 +328,14 @@ export function UserManager({
                       </div>
                     </td>
 
-                    {/* Username */}
+
                     <td className="py-3 px-4">
                       <span className="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
                         @{usr.username}
                       </span>
                     </td>
 
-                    {/* Contact (Email & Phone) */}
+
                     <td className="py-3 px-4 text-slate-600 text-[11px]">
                       <div>{usr.email || <span className="text-slate-400">—</span>}</div>
                       {usr.phone && (
@@ -324,7 +343,7 @@ export function UserManager({
                       )}
                     </td>
 
-                    {/* Role Selector or Badge */}
+
                     <td className="py-3 px-4">
                       {isSingleUser || !canChangeRole ? (
                         <Badge className={`${roleBadge} text-[10px] py-0.5 px-2 font-semibold`}>
@@ -346,7 +365,7 @@ export function UserManager({
                       )}
                     </td>
 
-                    {/* Status Badge */}
+
                     <td className="py-3 px-4">
                       {usr.status === "active" ? (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700">
@@ -361,13 +380,13 @@ export function UserManager({
                       )}
                     </td>
 
-                    {/* Actions */}
+
                     <td className="py-3 px-4 text-right whitespace-nowrap">
                       {isSingleUser ? (
                         <span className="text-slate-400 font-mono text-xs">—</span>
                       ) : (
                         <div className="inline-flex items-center gap-1.5">
-                          {/* Super Admin Staff Password Reset Button */}
+
                           {isSuperAdmin && (
                             <button
                               type="button"
@@ -385,7 +404,7 @@ export function UserManager({
                             </button>
                           )}
 
-                          {/* Status Toggle */}
+
                           {canToggleUser ? (
                             <button
                               type="button"
@@ -429,7 +448,7 @@ export function UserManager({
         </div>
       </div>
 
-      {/* Add User Modal */}
+
       {showAddModal && canCreateUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden">
@@ -449,14 +468,14 @@ export function UserManager({
             </div>
 
             <form onSubmit={handleSubmit(onCreateUser)} className="p-5 space-y-3.5">
-              {/* Username */}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   ইউজারনেম (স্থায়ী পরিচয়) <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="text"
-                  placeholder="যেমন: anik_reporter (ইংরেজি অক্ষর ও সংখ্যা)"
+                  placeholder="ব্যবহারকারীর অনন্য ইউজারনেম লিখুন"
                   {...register("username")}
                   className={`text-xs h-9 font-mono ${errors.username ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                 />
@@ -465,14 +484,12 @@ export function UserManager({
                 )}
               </div>
 
-              {/* Full Name */}
+
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  পুরো নাম
-                </label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">পুরো নাম (ইংরেজি) <span className="text-red-500">*</span></label>
                 <Input
                   type="text"
-                  placeholder="যেমন: তানভীর আহমেদ"
+                  placeholder="ব্যবহারকারীর পূর্ণ ইংরেজি নাম লিখুন"
                   {...register("fullName")}
                   className={`text-xs h-9 ${errors.fullName ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                 />
@@ -481,14 +498,14 @@ export function UserManager({
                 )}
               </div>
 
-              {/* Email */}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   ইমেইল ঠিকানা (ঐচ্ছিক)
                 </label>
                 <Input
                   type="email"
-                  placeholder="name@example.com"
+                  placeholder="ব্যবহারকারীর কার্যকর ইমেইল লিখুন"
                   {...register("email")}
                   className={`text-xs h-9 ${errors.email ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                 />
@@ -497,14 +514,14 @@ export function UserManager({
                 )}
               </div>
 
-              {/* Phone */}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   ফোন নম্বর (ঐচ্ছিক)
                 </label>
                 <Input
                   type="tel"
-                  placeholder="০১৭xxxxxxxx"
+                  placeholder="ব্যবহারকারীর যোগাযোগ নম্বর লিখুন"
                   {...register("phone")}
                   className={`text-xs h-9 ${errors.phone ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                 />
@@ -513,14 +530,14 @@ export function UserManager({
                 )}
               </div>
 
-              {/* Password */}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   প্রাথমিক পাসওয়ার্ড <span className="text-red-500">*</span>
                 </label>
                 <Input
                   type="password"
-                  placeholder="কমপক্ষে ৬ অক্ষরের পাসওয়ার্ড"
+                  placeholder="অ্যাকাউন্টের প্রারম্ভিক পাসওয়ার্ড লিখুন"
                   {...register("password")}
                   className={`text-xs h-9 ${errors.password ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                 />
@@ -529,7 +546,7 @@ export function UserManager({
                 )}
               </div>
 
-              {/* Role */}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   দায়িত্ব ও পদবী (Role) <span className="text-red-500">*</span>
@@ -572,7 +589,7 @@ export function UserManager({
         </div>
       )}
 
-      {/* Super Admin Staff Password Reset Modal */}
+
       {resetTargetUser && isSuperAdmin && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-xl shadow-xl max-w-sm w-full border border-slate-200 overflow-hidden">
@@ -610,7 +627,7 @@ export function UserManager({
                 </div>
               )}
 
-              {/* New Password */}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   নতুন পাসওয়ার্ড <span className="text-red-500">*</span>
@@ -619,7 +636,7 @@ export function UserManager({
                   <Input
                     type={showResetPassword ? "text" : "password"}
                     required
-                    placeholder="কমপক্ষে ৬ অক্ষর"
+                    placeholder="কমপক্ষে ৬ অক্ষরের নতুন পাসওয়ার্ড লিখুন"
                     value={resetNewPassword}
                     onChange={(e) => setResetNewPassword(e.target.value)}
                     disabled={isResetPending}
@@ -636,7 +653,7 @@ export function UserManager({
                 </div>
               </div>
 
-              {/* Confirm Password */}
+
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   পাসওয়ার্ড নিশ্চিত করুন <span className="text-red-500">*</span>
@@ -644,7 +661,7 @@ export function UserManager({
                 <Input
                   type={showResetPassword ? "text" : "password"}
                   required
-                  placeholder="পুনরায় নতুন পাসওয়ার্ড দিন"
+                  placeholder="নতুন পাসওয়ার্ডটি নিশ্চিত করতে পুনরায় লিখুন"
                   value={resetConfirmPassword}
                   onChange={(e) => setResetConfirmPassword(e.target.value)}
                   disabled={isResetPending}
@@ -675,7 +692,7 @@ export function UserManager({
         </div>
       )}
 
-      {/* Re-confirmation Modal */}
+
       <ConfirmModal
         isOpen={Boolean(confirmConfig)}
         onClose={() => setConfirmConfig(null)}

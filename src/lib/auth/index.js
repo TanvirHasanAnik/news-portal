@@ -1,7 +1,4 @@
-/**
- * Centralized Role-Based Access Control (RBAC) Definitions & Helpers
- * Pure, universal, and client-safe (no Node native dependencies or Server Component headers).
- */
+
 
 import {
   ROLES,
@@ -57,17 +54,11 @@ export {
   getPermissionsForRole,
 };
 
-/**
- * Checks if a user has access to a specific module/tab
- */
 export function canUserAccessModule(user, moduleId) {
   if (!user || !user.role) return false;
   return canRoleAccessTab(user.role, moduleId);
 }
 
-/**
- * Checks if a user has any of the required roles
- */
 export function hasRole(user, allowedRoles = []) {
   if (!user || !user.role) return false;
   if (user.role === USER_ROLES.SUPER_ADMIN) return true;

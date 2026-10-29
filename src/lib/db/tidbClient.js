@@ -1,18 +1,13 @@
 import { connect } from "@tidbcloud/serverless";
 
-/**
- * Universal Serverless TiDB / MySQL Client for Cloudflare Workers (V8 Edge Runtime)
- *
- * Uses the HTTP-based `@tidbcloud/serverless` driver which operates over native fetch
- * requests without persistent TCP sockets or native Node.js C++ bindings.
- */
+
+
 
 let cachedConnection = null;
 let cachedConfigKey = null;
 
-/**
- * Resolves TiDB connection configuration from Worker `env` or Node `process.env`
- */
+
+
 export function getTiDbConfig(env = {}) {
   const databaseUrl =
     env.DATABASE_URL ||
@@ -68,9 +63,8 @@ export function getTiDbConfig(env = {}) {
   };
 }
 
-/**
- * Returns an HTTP connection instance optimized for Cloudflare Workers
- */
+
+
 export function getTiDbConnection(env = {}) {
   const config = getTiDbConfig(env);
   const configKey = config.url || `${config.host}:${config.port}:${config.username}:${config.database}`;
@@ -83,18 +77,15 @@ export function getTiDbConnection(env = {}) {
   return cachedConnection;
 }
 
-/**
- * Executes a parameterized SQL query via TiDB Serverless HTTP API.
- * All parameters are safely escaped by the driver to prevent SQL injection.
- */
+
+
 export async function executeQuery(sql, params = [], env = {}) {
   const conn = getTiDbConnection(env);
   return await conn.execute(sql, params);
 }
 
-/**
- * Executes a parameterized query and returns the first row or null
- */
+
+
 export async function executeQueryOne(sql, params = [], env = {}) {
   const rows = await executeQuery(sql, params, env);
   if (!rows || !Array.isArray(rows) || rows.length === 0) {

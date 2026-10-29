@@ -1,44 +1,38 @@
 import { z } from "zod";
 
-/**
- * Mother Zod Schema File for News Portal Admin Modules
- * Centralizes script injection rejection (Anti-XSS), common validation primitives,
- * and user-friendly natural Bengali error formatting without technical jargon.
- */
 
-/**
- * Comprehensive check for HTML tags, script execution, and code injection attempts.
- * Returns true if the text contains any scripting or dangerous markup.
- */
+
+
+
+
 export function hasScriptInjection(text) {
   if (!text || typeof text !== "string") return false;
 
-  // 1. Disallow HTML / XML / JSX angle brackets
+
   if (/[<>]/.test(text)) return true;
 
-  // 2. Disallow JavaScript pseudo-protocol (with any whitespace or casing, e.g. 'javascript :', 'jav&#x09;ascript:')
+
   if (/javascript\s*:/i.test(text) || /data\s*:\s*text\/html/i.test(text) || /vbscript\s*:/i.test(text)) {
     return true;
   }
 
-  // 3. Disallow inline DOM event handlers (e.g. onclick=, onerror=, onload=)
+
   if (/on\w+\s*=/i.test(text)) return true;
 
-  // 4. Disallow dangerous execution functions or dynamic code evaluation
+
   if (/(?:eval|Function|setTimeout|setInterval|alert|prompt|confirm)\s*\(/i.test(text)) {
     return true;
   }
 
-  // 5. Disallow console execution or script tokens (<? ... ?>, <% ... %>, -->, <script>)
+
   if (/\b(?:console\.(?:log|warn|error))\s*\(/i.test(text)) return true;
   if (/<\?|<\/|%\>|<!--|-->|=>/i.test(text)) return true;
 
   return false;
 }
 
-/**
- * Validates whether content contains scripts while allowing safe rich text / JSON
- */
+
+
 export function hasMaliciousScripts(text) {
   if (!text || typeof text !== "string") return false;
   if (/<\s*script\b/i.test(text)) return true;
@@ -49,10 +43,8 @@ export function hasMaliciousScripts(text) {
   return false;
 }
 
-/**
- * Formats Zod errors into a clean, respectful, natural Bengali message
- * without exposing technical symbols, paths, regexes, or schema internals.
- */
+
+
 export function formatZodError(error, defaultMessage = "অনুগ্রহ করে সঠিক তথ্য প্রদান করুন।") {
   if (!error) return defaultMessage;
   if (error instanceof z.ZodError) {
@@ -62,7 +54,7 @@ export function formatZodError(error, defaultMessage = "অনুগ্রহ �
     }
   }
   if (error.message && typeof error.message === "string") {
-    // If it looks like raw Zod / code JSON, return defaultMessage
+
     if (error.message.includes("[") || error.message.includes("{") || error.message.includes("ZodError")) {
       return defaultMessage;
     }
@@ -71,9 +63,8 @@ export function formatZodError(error, defaultMessage = "অনুগ্রহ �
   return defaultMessage;
 }
 
-/**
- * Helper to build a clean safe string field with automatic anti-scripting check
- */
+
+
 export function safeString({
   label = "তথ্য",
   min = 1,
@@ -100,9 +91,8 @@ export function safeString({
   });
 }
 
-/**
- * Helper for URL-friendly slugs (lowercase english letters, numbers, hyphens, underscores)
- */
+
+
 export function safeSlug({ label = "ইংরেজি স্লাগ", min = 2, max = 80, required = true } = {}) {
   let schema = z.string().trim().toLowerCase();
 
@@ -127,9 +117,8 @@ export function safeSlug({ label = "ইংরেজি স্লাগ", min = 2
     });
 }
 
-/**
- * Helper for safe integer inputs (sort order, priority, count, etc.)
- */
+
+
 export function safeInteger({
   label = "সংখ্যা",
   min = 0,
@@ -152,9 +141,8 @@ export function safeInteger({
     });
 }
 
-/**
- * Helper for safe email addresses
- */
+
+
 export function safeEmail({ label = "ইমেইল ঠিকানা", required = true } = {}) {
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
@@ -173,9 +161,8 @@ export function safeEmail({ label = "ইমেইল ঠিকানা", requir
     });
 }
 
-/**
- * Helper for safe URLs (relative internal paths or safe http/https URLs)
- */
+
+
 export function safeUrl({ label = "লিংক", required = false } = {}) {
   return z
     .string()
@@ -186,9 +173,9 @@ export function safeUrl({ label = "লিংক", required = false } = {}) {
     .refine(
       (val) => {
         if (!val) return !required;
-        // Internal relative paths like /article/slug or /category/politics
+
         if (val.startsWith("/") || val === "#") return true;
-        // Secure http / https
+
         try {
           const parsed = new URL(val);
           return parsed.protocol === "http:" || parsed.protocol === "https:";

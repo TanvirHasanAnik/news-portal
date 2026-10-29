@@ -16,10 +16,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
-/**
- * Prerenders all dynamic category routes at build time as recommended in
- * https://nextjs.org/docs/app/getting-started/linking-and-navigating#dynamic-segments-without-generatestaticparams
- */
+
+
 export async function generateStaticParams() {
   const staticSlugs = getAllCategorySlugs();
   const allSlugs = new Set(staticSlugs);
@@ -35,9 +33,8 @@ export async function generateStaticParams() {
   }));
 }
 
-/**
- * Dynamic metadata generation per category
- */
+
+
 export async function generateMetadata({ params }) {
   const { category } = await params;
   let categoryName = "";
@@ -61,9 +58,8 @@ export async function generateMetadata({ params }) {
   };
 }
 
-/**
- * Category Dynamic Page Component (Server Component / SSR)
- */
+
+
 export default async function CategoryPage({ params, searchParams }) {
   const { category } = await params;
   const resolvedSearchParams = (await searchParams) || {};
@@ -74,7 +70,7 @@ export default async function CategoryPage({ params, searchParams }) {
   const categoryData = getCategoryNews(category);
   let { name, articles, subcategories, slug } = categoryData;
 
-  // Fetch live category metadata and subcategories from database
+
   let dbSubcategories = [];
   try {
     const dbCat = await getCategoryBySlug(category);
@@ -87,7 +83,7 @@ export default async function CategoryPage({ params, searchParams }) {
     console.error("Error fetching db category details:", err);
   }
 
-  // Fetch live published articles from D1 for this category
+
   let dbArticles = [];
   try {
     if (category === "handpicked") {
@@ -100,7 +96,7 @@ export default async function CategoryPage({ params, searchParams }) {
     console.error("Error fetching db articles for category page:", err);
   }
 
-  // Prepend live db articles at the top of category news list, deduping by id / slug
+
   const baseArticles = [...dbArticles, ...articles];
   const seenKeys = new Set();
   const mergedArticles = [];
@@ -113,14 +109,14 @@ export default async function CategoryPage({ params, searchParams }) {
     }
   }
 
-  // Dynamically filter articles if a subcategory is selected
+
   const displayedArticles = selectedSub
     ? mergedArticles.filter(
         (a) => a.subcategory === selectedSub || a.originalCategory === selectedSub
       )
     : mergedArticles;
 
-  // Dynamically include subcategories present in database and live db articles
+
   const liveSubcategories = dbArticles.map((a) => a.subcategory).filter(Boolean);
   const combinedSubcategories = Array.from(
     new Set([...subcategories, ...dbSubcategories, ...liveSubcategories])
@@ -128,7 +124,7 @@ export default async function CategoryPage({ params, searchParams }) {
 
   const totalCount = displayedArticles.length;
 
-  // Single page limit news to 5 articles per page
+
   const PAGE_SIZE = 5;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const parsedPage = parseInt(resolvedSearchParams.page, 10);
@@ -142,7 +138,7 @@ export default async function CategoryPage({ params, searchParams }) {
   const leadStory = paginatedArticles.length > 0 ? paginatedArticles[0] : null;
   const remainingArticles = paginatedArticles.length > 1 ? paginatedArticles.slice(1) : [];
 
-  // Helper for pagination URLs preserving subcategory filter
+
   const getPageLink = (pageNumber) => {
     const queryParts = [];
     if (selectedSub) queryParts.push(`sub=${encodeURIComponent(selectedSub)}`);
@@ -152,7 +148,7 @@ export default async function CategoryPage({ params, searchParams }) {
       : `/category/${slug}`;
   };
 
-  // Bangla number converter helper
+
   const toBanglaNumber = (num) => {
     const banglaDigits = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
     return String(num).replace(/\d/g, (d) => banglaDigits[parseInt(d, 10)]);
@@ -167,7 +163,7 @@ export default async function CategoryPage({ params, searchParams }) {
     <div className="min-h-screen bg-slate-50 py-4 sm:py-6 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
 
-        {/* 2. Category Header Banner */}
+
         <header className="border-b-2 border-slate-200 pb-6">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
@@ -176,7 +172,7 @@ export default async function CategoryPage({ params, searchParams }) {
                 {name}
               </h1>
 
-              {/* Subcategory indicator if selected */}
+
               {selectedSub && (
                 <span className="font-serif-bangla text-xl sm:text-2xl font-bold text-red-600 shrink-0">
                   / {selectedSub}
@@ -184,7 +180,7 @@ export default async function CategoryPage({ params, searchParams }) {
               )}
             </div>
 
-            {/* Mobile View: Subcategory Dropdown option on the most right side */}
+
             {combinedSubcategories.length > 0 && (
               <div className="sm:hidden shrink-0 flex items-center">
                 <SubcategoryDropdown
@@ -196,11 +192,11 @@ export default async function CategoryPage({ params, searchParams }) {
             )}
           </div>
 
-          {/* Desktop Subcategories Selection (Dynamic from News, Bigger, Borderless Design) */}
+
           {combinedSubcategories.length > 0 && (
             <div className="hidden sm:flex mt-6 pt-2 items-center gap-3 sm:gap-4 flex-wrap">
               <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-                {/* All / সব option */}
+
                 <Link
                   href={`/category/${slug}`}
                   className={`px-4.5 sm:px-5 py-2 sm:py-2.5 rounded-none font-serif-bangla text-base sm:text-lg font-bold transition-all cursor-pointer whitespace-nowrap select-none bg-slate-100 hover:bg-slate-200 ${
@@ -212,7 +208,7 @@ export default async function CategoryPage({ params, searchParams }) {
                   সকল
                 </Link>
 
-                {/* Dynamically extracted subcategories from news data */}
+
                 {combinedSubcategories.map((sub, index) => {
                   const isSelected = selectedSub === sub;
                   return (
@@ -234,13 +230,13 @@ export default async function CategoryPage({ params, searchParams }) {
           )}
         </header>
 
-        {/* 3. Main Content Area: 2/3 News Showcase + 1/3 Ad Sidebar */}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Left 2/3 (8 cols on lg): News List (Limit 5 articles per page with Pagination) */}
+
+
           <div className="lg:col-span-8 space-y-8">
             {displayedArticles.length === 0 ? (
-              /* Empty State */
+
               <div className="bg-white rounded-none border border-slate-200 p-12 text-center space-y-4 max-w-2xl mx-auto shadow-2xs my-12">
                 <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                   <Newspaper className="w-8 h-8" />
@@ -268,7 +264,7 @@ export default async function CategoryPage({ params, searchParams }) {
               </div>
             ) : (
               <div className="space-y-8">
-                {/* 3.1 Featured / Lead Story (First of the 5 articles - Only Image, Heading, Summary) */}
+
                 {leadStory && (
                   <section aria-label="শীর্ষ সংবাদ">
                     <NewsArticleCard
@@ -285,14 +281,14 @@ export default async function CategoryPage({ params, searchParams }) {
                   </section>
                 )}
 
-                {/* Mobile In-feed Ad (Rendered after the first news in mobile view < lg) */}
+
                 {leadStory && (
                   <div className="lg:hidden pb-6 border-b border-slate-200">
                     <AdHolder size="300x250" />
                   </div>
                 )}
 
-                {/* 3.2 Remaining News (Remaining 4 articles on this page - Only Image, Heading, Summary) */}
+
                 {remainingArticles.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
                     {remainingArticles.map((story) => (
@@ -310,12 +306,12 @@ export default async function CategoryPage({ params, searchParams }) {
                   </div>
                 )}
 
-                {/* 3.3 Pagination Controls (Always visible) */}
+
                 <nav
                   aria-label="পৃষ্ঠা নেভিগেশন"
                   className="pt-6 border-t border-slate-200 flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap"
                 >
-                  {/* Previous Button */}
+
                   {currentPage > 1 ? (
                     <Link
                       href={getPageLink(currentPage - 1)}
@@ -329,7 +325,7 @@ export default async function CategoryPage({ params, searchParams }) {
                     </span>
                   )}
 
-                  {/* Page Numbers */}
+
                   {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
                     const isActive = p === currentPage;
                     return (
@@ -347,7 +343,7 @@ export default async function CategoryPage({ params, searchParams }) {
                     );
                   })}
 
-                  {/* Next Button */}
+
                   {currentPage < totalPages ? (
                     <Link
                       href={getPageLink(currentPage + 1)}
@@ -365,15 +361,15 @@ export default async function CategoryPage({ params, searchParams }) {
             )}
           </div>
 
-          {/* Right 1/3 (4 cols on lg): Ad Space (Desktop Sidebar) */}
+
           <aside
             aria-label="বিজ্ঞাপন এলাকা"
             className="hidden lg:block lg:col-span-4 space-y-6"
           >
-            {/* Medium Rectangle Ad (300 × 250) */}
+
             <AdHolder size="300x250" />
 
-            {/* Half-Page Skyscraper Ad (300 × 600) */}
+
             <AdHolder size="300x600" className="hidden sm:flex" />
           </aside>
 

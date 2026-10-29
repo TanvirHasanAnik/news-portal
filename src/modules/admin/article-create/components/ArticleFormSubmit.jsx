@@ -20,10 +20,10 @@ export default function ArticleFormSubmit({
   return (
     <Card className="border-slate-200 shadow-sm">
       <CardContent className="p-4 space-y-2.5">
-        {/* Main Action Buttons */}
+
         {isEditing ? (
           isSubEditorReview ? (
-            /* Sub-editor reviewing reporter's article: 2 distinct submission options */
+
             <div className="space-y-2">
               <Button
                 type="button"
@@ -53,7 +53,7 @@ export default function ArticleFormSubmit({
               </Button>
             </div>
           ) : (
-            /* Standard editing mode for author / upper roles */
+
             <Button
               type="submit"
               variant="success"
@@ -73,7 +73,7 @@ export default function ArticleFormSubmit({
             </Button>
           )
         ) : isLowerRole ? (
-          /* Creation Mode for Lower Roles: Submit for Review */
+
           <Button
             type="submit"
             variant="success"
@@ -92,7 +92,7 @@ export default function ArticleFormSubmit({
             )}
           </Button>
         ) : (
-          /* Creation Mode for Upper Roles: Publish Directly */
+
           <Button
             type="submit"
             variant="success"
@@ -112,7 +112,6 @@ export default function ArticleFormSubmit({
           </Button>
         )}
 
-        {/* Draft Action Button: strictly omitted in editing mode */}
         {!isEditing && onSaveDraft && (
           <Button
             type="button"
@@ -126,7 +125,6 @@ export default function ArticleFormSubmit({
           </Button>
         )}
 
-        {/* Upper Roles: Optional Reject Button when editing Pending / Published articles */}
         {!isLowerRole && isEditing && onReject && (currentStatus === "pending" || currentStatus === "published") && (
           <Button
             type="button"
@@ -140,7 +138,6 @@ export default function ArticleFormSubmit({
           </Button>
         )}
 
-        {/* Reset / Cancel Button */}
         <Button
           type="button"
           variant="ghost"

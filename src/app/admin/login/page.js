@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useTransition, Suspense } from "react";
+import { loginAction } from "@/actions/authActions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ArrowLeft, Eye, EyeOff, Lock, LogIn, ShieldCheck, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Lock, User, Eye, EyeOff, LogIn, ArrowLeft, ShieldCheck } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { loginAction } from "@/actions/authActions";
+import { Suspense, useState, useTransition } from "react";
 
 function LoginForm() {
   const router = useRouter();
@@ -65,7 +65,7 @@ function LoginForm() {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck="false"
-              placeholder="ইউজারনেম দিন (যেমন: superadmin)"
+              placeholder="আপনার নিবন্ধিত ইউজারনেম লিখুন"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               disabled={isPending}
@@ -127,7 +127,7 @@ export default function AdminLoginPage() {
             href="/"
             className="inline-flex items-center justify-center p-3.5 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-200"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+
             <img
               src="/brand-logo.svg"
               alt="আমাদের সংবাদ"

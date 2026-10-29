@@ -1,9 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 
-/**
- * Edge & Cloudflare Workers compliant JWT tokenization using `jose`.
- * Zero Node native crypto dependencies.
- */
+
+
 
 export const AUTH_COOKIE_NAME = "auth_token";
 
@@ -14,9 +12,8 @@ export function getJwtSecretKey() {
   return new TextEncoder().encode(secret);
 }
 
-/**
- * Creates and signs a JWT token using HS256 algorithm via Web Crypto API
- */
+
+
 export async function createJwtToken(payload, options = {}) {
   const secretKey = getJwtSecretKey();
   const expiresIn = options.expiresIn || "7d";
@@ -28,9 +25,8 @@ export async function createJwtToken(payload, options = {}) {
     .sign(secretKey);
 }
 
-/**
- * Verifies a JWT token and returns the payload if valid, otherwise returns null
- */
+
+
 export async function verifyJwtToken(token) {
   if (!token) return null;
   try {

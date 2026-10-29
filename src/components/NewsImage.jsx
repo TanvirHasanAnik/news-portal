@@ -3,13 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { DEFAULT_NEWS_IMAGE, getNewsImageUrl } from "../utils/imageUtils";
 
-/**
- * NewsImage Component
- *
- * Renders an article image with automatic fallback to a branded placeholder:
- * 1. If `src` is null, undefined, or empty, displays DEFAULT_NEWS_IMAGE immediately.
- * 2. If the image fails to load (network error, 404, broken URL), gracefully swaps to DEFAULT_NEWS_IMAGE.
- */
 export default function NewsImage({
   src,
   alt = "সংবাদ চিত্র",
@@ -24,7 +17,6 @@ export default function NewsImage({
   const [imgSrc, setImgSrc] = useState(initialSrc);
   const [hasError, setHasError] = useState(false);
 
-  // Sync state if `src` prop changes dynamically
   useEffect(() => {
     const validSrc = getNewsImageUrl(src) || fallbackSrc;
     setImgSrc(validSrc);

@@ -19,15 +19,15 @@ export default async function SiteLayout({ children }) {
 
   return (
     <>
-      {/* 1. Header with Top Ad Banner, Logo, Navigation & Tickers */}
+
       <Header breakingNewsList={breakingNewsList} categories={dbCategories} />
 
-      {/* 2. Main Page Content */}
+
       <div className="flex-1">
         {children}
       </div>
 
-      {/* 3. Global Newspaper Footer */}
+
       <Footer categories={dbCategories} />
     </>
   );

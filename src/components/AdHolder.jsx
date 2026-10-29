@@ -1,13 +1,7 @@
 import React from "react";
 
-/**
- * Reusable AdHolder Component
- * 
- * Standard advertisement unit placeholder matching the portal's design system.
- * Supports medium rectangle (300 × 250) and half-page skyscraper (300 × 600).
- */
 export default function AdHolder({
-  size = "300x250", // "300x250" | "300x600"
+  size = "300x250", 
   className = "",
   label = "বিজ্ঞাপন",
   title = "বিজ্ঞাপনের স্থান",

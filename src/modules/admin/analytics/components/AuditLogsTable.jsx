@@ -5,7 +5,7 @@ import { formatStaticDateTime } from "@/utils/dateUtils";
 export function AuditLogsTable({ logs }) {
   const getActionLabel = (action) => {
     switch (action) {
-      // User Actions
+
       case "create_user":
         return { label: "নতুন ব্যবহারকারী", color: "text-purple-700 bg-purple-50 border border-purple-200" };
       case "update_user_role":
@@ -25,7 +25,6 @@ export function AuditLogsTable({ logs }) {
       case "reject_request":
         return { label: "আবেদন প্রত্যাখ্যান", color: "text-rose-700 bg-rose-50 border border-rose-200" };
 
-      // Curation Actions
       case "add_curation":
         return { label: "কিউরেশন যুক্ত", color: "text-blue-700 bg-blue-50 border border-blue-200" };
       case "batch_update_curation":
@@ -33,7 +32,6 @@ export function AuditLogsTable({ logs }) {
       case "remove_curation":
         return { label: "কিউরেশন অপসারণ", color: "text-slate-700 bg-slate-100 border border-slate-200" };
 
-      // Category Actions
       case "batch_update_categories":
       case "create_category":
       case "update_category":

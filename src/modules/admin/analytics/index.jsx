@@ -34,19 +34,19 @@ export default async function AnalyticsModule() {
 
   return (
     <div className="space-y-6">
-      {/* 1. Header */}
+
       <AnalyticsHeader />
 
-      {/* 2. Key Metrics Row */}
+
       <AnalyticsMetricCards metrics={summary} />
 
-      {/* 3. Category Breakdown & Top Articles Grid */}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <CategoryViewsBreakdown categoryStats={categoryStats} />
         <TopArticlesTable articles={topArticles} />
       </div>
 
-      {/* 4. Audit Trail */}
+
       <AuditLogsTable logs={auditLogs} />
     </div>
   );

@@ -6,14 +6,14 @@ import { HandpickedCurationTab } from "./HandpickedCurationTab";
 import { BreakingCurationTab } from "./BreakingCurationTab";
 
 export function CurationTabsManager({ initialItems = [], articles = [] }) {
-  const [activeTab, setActiveTab] = useState("handpicked"); // handpicked | breaking
+  const [activeTab, setActiveTab] = useState("handpicked"); 
 
   const handpickedItems = initialItems.filter((item) => item.type === "handpicked");
   const breakingItems = initialItems.filter((item) => item.type === "breaking");
 
   return (
     <div className="space-y-6">
-      {/* Tab Switcher - Strictly Handpicked & Breaking */}
+
       <div className="flex border-b border-slate-200 gap-2">
         <button
           type="button"
@@ -48,7 +48,7 @@ export function CurationTabsManager({ initialItems = [], articles = [] }) {
         </button>
       </div>
 
-      {/* Tab Contents */}
+
       {activeTab === "handpicked" ? (
         <HandpickedCurationTab
           initialItems={handpickedItems}

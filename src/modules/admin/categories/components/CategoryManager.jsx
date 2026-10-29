@@ -41,7 +41,7 @@ export function CategoryManager({ initialCategories = [] }) {
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [alertConfig, setAlertConfig] = useState(null);
 
-  // React Hook Form for Category Add Form (real-time validation)
+
   const {
     register: registerCat,
     handleSubmit: handleSubmitCat,
@@ -56,7 +56,7 @@ export function CategoryManager({ initialCategories = [] }) {
     },
   });
 
-  // React Hook Form for Subcategory Add Modal (real-time validation)
+
   const {
     register: registerSub,
     handleSubmit: handleSubmitSub,
@@ -71,7 +71,7 @@ export function CategoryManager({ initialCategories = [] }) {
     },
   });
 
-  // Local addition of category to browser state
+
   const onAddCategory = (data) => {
     const cleanSlug = data.slug.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
     if (categories.some((c) => c.slug === cleanSlug)) {
@@ -94,7 +94,7 @@ export function CategoryManager({ initialCategories = [] }) {
     setShowAddCategory(false);
   };
 
-  // Local removal of category from browser state with confirmation
+
   const handleDeleteCategory = (cat) => {
     if (cat.is_permanent || cat.slug === "latest" || cat.slug === "handpicked") {
       setAlertConfig({ message: "স্থায়ী ক্যাটাগরি মুছে ফেলা যাবে না।" });
@@ -112,7 +112,7 @@ export function CategoryManager({ initialCategories = [] }) {
     });
   };
 
-  // Local addition of subcategory to browser state
+
   const onAddSubcategory = (data) => {
     if (!subcategoryModalCat) return;
 
@@ -144,7 +144,7 @@ export function CategoryManager({ initialCategories = [] }) {
     setSubcategoryModalCat(null);
   };
 
-  // Local removal of subcategory from browser state with confirmation
+
   const handleDeleteSubcategory = (categoryId, sub) => {
     setConfirmConfig({
       message: `আপনি কি নিশ্চিতভাবে "${sub.name}" উপ-বিভাগটি মুছে ফেলতে চান?`,
@@ -163,7 +163,7 @@ export function CategoryManager({ initialCategories = [] }) {
     });
   };
 
-  // Re-confirmation before discarding local changes
+
   const requestDiscard = () => {
     setConfirmConfig({
       message: "আপনি কি নিশ্চিত যে সকল অসংরক্ষিত পরিবর্তন বাতিল করতে চান?",
@@ -177,7 +177,7 @@ export function CategoryManager({ initialCategories = [] }) {
     });
   };
 
-  // Re-confirmation before saving batch changes to database & update live site
+
   const requestSave = () => {
     setConfirmConfig({
       message: "আপনি কি নিশ্চিতভাবে ক্যাটাগরির সকল পরিবর্তন সংরক্ষণ করতে চান?",
@@ -197,12 +197,12 @@ export function CategoryManager({ initialCategories = [] }) {
     });
   };
 
-  // Separate dynamic categories from permanent system categories
+
   const dynamicCats = categories.filter(
     (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked"
   );
 
-  // Move dynamic category up for priority sorting
+
   const handleMoveCategoryUp = (catId) => {
     const dynIdx = dynamicCats.findIndex((c) => c.id === catId);
     if (dynIdx <= 0) return;
@@ -224,7 +224,7 @@ export function CategoryManager({ initialCategories = [] }) {
     setIsDirty(true);
   };
 
-  // Move dynamic category down for priority sorting
+
   const handleMoveCategoryDown = (catId) => {
     const dynIdx = dynamicCats.findIndex((c) => c.id === catId);
     if (dynIdx === -1 || dynIdx >= dynamicCats.length - 1) return;
@@ -248,7 +248,7 @@ export function CategoryManager({ initialCategories = [] }) {
 
   return (
     <div className="space-y-6">
-      {/* Top Status & Save Action Bar */}
+
       <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           {isDirty ? (
@@ -308,7 +308,7 @@ export function CategoryManager({ initialCategories = [] }) {
         </div>
       </div>
 
-      {/* Feedback banner */}
+
       {feedback && (
         <div
           className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between transition-all ${
@@ -337,7 +337,7 @@ export function CategoryManager({ initialCategories = [] }) {
         </div>
       )}
 
-      {/* Section Header & Add Category Button */}
+
       <div className="flex items-center justify-between pt-1">
         <div>
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -359,7 +359,7 @@ export function CategoryManager({ initialCategories = [] }) {
         </Button>
       </div>
 
-      {/* Add New Category Box with Real-Time React Hook Form Validation */}
+
       {showAddCategory && (
         <form
           onSubmit={handleSubmitCat(onAddCategory)}
@@ -379,7 +379,7 @@ export function CategoryManager({ initialCategories = [] }) {
               </label>
               <Input
                 type="text"
-                placeholder="যেমন: পরিবেশ ও জলবায়ু"
+                placeholder="ক্যাটাগরির বাংলা নাম লিখুন"
                 {...registerCat("name")}
                 className={`text-xs h-9 ${
                   catErrors.name ? "border-red-400 focus-visible:ring-red-400" : ""
@@ -396,7 +396,7 @@ export function CategoryManager({ initialCategories = [] }) {
               </label>
               <Input
                 type="text"
-                placeholder="যেমন: environment"
+                placeholder="ক্যাটাগরির ইংরেজি স্লাগ লিখুন"
                 {...registerCat("slug")}
                 className={`text-xs h-9 font-mono ${
                   catErrors.slug ? "border-red-400 focus-visible:ring-red-400" : ""
@@ -432,7 +432,7 @@ export function CategoryManager({ initialCategories = [] }) {
         </form>
       )}
 
-      {/* Dynamic Categories Cards Grid */}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {dynamicCats.length === 0 ? (
           <div className="col-span-full py-12 text-center text-slate-400 text-xs bg-white rounded-xl border border-slate-200">
@@ -451,7 +451,7 @@ export function CategoryManager({ initialCategories = [] }) {
                 <div>
                   <div className="flex items-start justify-between gap-2 pb-3 border-b border-slate-100">
                     <div className="flex items-center gap-2">
-                      {/* Up/Down arrow buttons for category card sorting */}
+
                       <div className="flex items-center gap-0.5 bg-slate-100 rounded-md p-0.5 border border-slate-200 shrink-0">
                         <button
                           type="button"
@@ -489,7 +489,7 @@ export function CategoryManager({ initialCategories = [] }) {
                     </button>
                   </div>
 
-                  {/* Subcategories list */}
+
                   <div className="py-3">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-[11px] font-semibold text-slate-500">
@@ -545,7 +545,7 @@ export function CategoryManager({ initialCategories = [] }) {
         )}
       </div>
 
-      {/* Subcategory Add Modal with React Hook Form Real-time Validation */}
+
       {subcategoryModalCat && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden">
@@ -572,7 +572,7 @@ export function CategoryManager({ initialCategories = [] }) {
                 </label>
                 <Input
                   type="text"
-                  placeholder="যেমন: রাজধানী"
+                  placeholder="উপ-বিভাগের বাংলা নাম লিখুন"
                   {...registerSub("name")}
                   className={`text-xs h-9 ${
                     subErrors.name ? "border-red-400 focus-visible:ring-red-400" : ""
@@ -589,7 +589,7 @@ export function CategoryManager({ initialCategories = [] }) {
                 </label>
                 <Input
                   type="text"
-                  placeholder="যেমন: capital"
+                  placeholder="উপ-বিভাগের ইংরেজি স্লাগ লিখুন"
                   {...registerSub("slug")}
                   className={`text-xs h-9 font-mono ${
                     subErrors.slug ? "border-red-400 focus-visible:ring-red-400" : ""
@@ -626,7 +626,7 @@ export function CategoryManager({ initialCategories = [] }) {
         </div>
       )}
 
-      {/* Re-confirmation Modal */}
+
       <ConfirmModal
         isOpen={Boolean(confirmConfig)}
         onClose={() => setConfirmConfig(null)}
@@ -635,7 +635,7 @@ export function CategoryManager({ initialCategories = [] }) {
         confirmVariant={confirmConfig?.confirmVariant || "default"}
       />
 
-      {/* Alert / Warning Modal */}
+
       <AlertModal
         isOpen={Boolean(alertConfig)}
         onClose={() => setAlertConfig(null)}

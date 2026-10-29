@@ -26,12 +26,10 @@ export function getBanglaDate(d = new Date()) {
   const year = d.getFullYear();
   const isLeap = (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
 
-  // April 14 in local calendar
   const boishakh1 = new Date(year, 3, 14);
   let banglaYear = year - 593;
   let diffDays;
 
-  // Set hours to 0 to compare days properly
   const dZero = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const bZero = new Date(boishakh1.getFullYear(), boishakh1.getMonth(), boishakh1.getDate());
 
@@ -43,11 +41,6 @@ export function getBanglaDate(d = new Date()) {
     diffDays = Math.round((dZero - bZero) / (1000 * 60 * 60 * 24));
   }
 
-  // Bangla Academy rules (adopted in Bangladesh):
-  // Boishakh to Ashwin: 31 days each (first 6 months)
-  // Kartik to Magh: 30 days each (next 4 months)
-  // Falgun: 29 days (30 in Gregorian leap year)
-  // Chaitra: 30 days
   const daysInMonths = [31, 31, 31, 31, 31, 31, 30, 30, 30, 30, isLeap ? 30 : 29, 30];
 
   let monthIndex = 0;
@@ -71,7 +64,7 @@ export function getHijriDate(d = new Date()) {
       year: 'numeric',
     });
     let formatted = formatter.format(d);
-    // Remove comma and replace 'যুগ' with 'হিজরি' if present
+
     formatted = formatted.replace(',', '').replace(/যুগ/g, 'হিজরি').trim();
     if (!formatted.includes('হিজরি')) {
       formatted += ' হিজরি';
@@ -82,14 +75,26 @@ export function getHijriDate(d = new Date()) {
   }
 }
 
-/**
- * Formats a timestamp into a human-readable Bengali relative time
- */
+export function parseDateSafe(timestamp) {
+  if (!timestamp) return null;
+  if (timestamp instanceof Date) return timestamp;
+  let str = String(timestamp).trim();
+  if (!str) return null;
+  if (!str.includes('Z') && !str.includes('+') && !str.includes('-0') && !str.includes('+0')) {
+    str = str.replace(' ', 'T') + 'Z';
+  } else {
+    str = str.replace(' ', 'T');
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 export function formatTimeAgo(timestamp) {
   if (!timestamp) return 'কিছুক্ষণ আগে';
   try {
+    const date = parseDateSafe(timestamp);
+    if (!date) return 'কিছুক্ষণ আগে';
     const now = new Date();
-    const date = new Date(timestamp);
     const diffSeconds = Math.max(0, Math.floor((now - date) / 1000));
 
     if (diffSeconds < 60) {
@@ -119,16 +124,11 @@ const BENGALI_MONTHS = [
   'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
-/**
- * Formats a timestamp into a static Bengali date & hour/time string
- * Example: "২৭ অক্টোবর ২০২৬, ৯:৩৯ PM"
- */
 export function formatStaticDateTime(timestamp) {
   if (!timestamp) return '—';
   try {
-    const raw = typeof timestamp === 'string' ? timestamp.replace(' ', 'T') : timestamp;
-    const d = new Date(raw);
-    if (isNaN(d.getTime())) return '—';
+    const d = parseDateSafe(timestamp);
+    if (!d) return '—';
 
     const day = toBengaliDigits(d.getDate());
     const month = BENGALI_MONTHS[d.getMonth()] || '';

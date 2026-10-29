@@ -60,10 +60,7 @@ export function ArticleListTable({
     propCanManageCuration !== undefined ? propCanManageCuration : can("curation:manage");
 
   const [articles, setArticles] = useState(initialArticles);
-  // View mode:
-  // Upper Roles: "all" (All Articles) vs "my" (My Articles) vs "audit"
-  // Sub-Editor: "reporters" (Reporters' Submissions) vs "my" (My Articles)
-  // Reporter: "my"
+
   const [activeView, setActiveView] = useState(() => (currentUser?.role === "sub_editor" ? "reporters" : "all"));
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -72,7 +69,6 @@ export function ArticleListTable({
   const [feedback, setFeedback] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
 
-  // Determine if an article belongs to the current user
   const isOwnArticle = (art) => {
     if (!currentUser) return false;
     return (
@@ -83,15 +79,14 @@ export function ArticleListTable({
     );
   };
 
-  // Base scope based on role and active sub-view
   const scopedArticles = useMemo(() => {
     if (isReporter) {
-      // Reporter only ever sees their own articles
+
       return articles.filter(isOwnArticle);
     }
     if (isSubEditor) {
       if (activeView === "reporters") {
-        // Reporters' submitted articles (awaiting review)
+
         return articles.filter((art) => !isOwnArticle(art));
       }
       return articles.filter(isOwnArticle);
@@ -99,11 +94,10 @@ export function ArticleListTable({
     if (activeView === "my") {
       return articles.filter((art) => isOwnArticle(art) && art.status !== "rejected");
     }
-    // "All Articles" view for upper roles: Upper roles cannot see others' drafts
+
     return articles.filter((art) => art.status !== "draft");
   }, [articles, isReporter, isSubEditor, activeView, currentUser]);
 
-  // Compute live status counts for the currently active scope
   const computedCounts = useMemo(() => {
     const counts = {
       all: scopedArticles.length,
@@ -122,19 +116,18 @@ export function ArticleListTable({
     return counts;
   }, [scopedArticles]);
 
-  // Filtered articles based on selected status, category, and search query
   const filteredArticles = useMemo(() => {
     return scopedArticles.filter((art) => {
-      // Status filter
+
       if (selectedStatus !== "all") {
         const artSt = art.status === "pending_approval" ? "pending" : art.status;
         if (artSt !== selectedStatus) return false;
       }
-      // Category filter
+
       if (selectedCategory !== "all" && art.category_slug !== selectedCategory) {
         return false;
       }
-      // Search query
+
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const matchHeadline = art.headline?.toLowerCase().includes(q);
@@ -165,7 +158,6 @@ export function ArticleListTable({
           )
         );
 
-        // Update upper-role pending articles count live
         const wasPending = prevArt?.status === "pending" || prevArt?.status === "pending_approval";
         const isNowPending = newStatus === "pending" || newStatus === "pending_approval";
         if (wasPending && !isNowPending) {
@@ -287,7 +279,7 @@ export function ArticleListTable({
 
   return (
     <div className="space-y-6">
-      {/* Feedback banner */}
+
       {feedback && (
         <div
           className={`p-3.5 rounded-xl text-xs font-semibold flex items-center justify-between transition-all ${
@@ -306,7 +298,6 @@ export function ArticleListTable({
         </div>
       )}
 
-      {/* Upper Roles View Selector ("All Articles", "My Articles", "Article Audits") */}
       {!isLower && (
         <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
           <button
@@ -354,7 +345,6 @@ export function ArticleListTable({
         </div>
       )}
 
-      {/* Sub-Editor View Selector ("Reporters' Submissions" vs "My Articles") */}
       {isSubEditor && (
         <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
           <button
@@ -393,7 +383,7 @@ export function ArticleListTable({
         <ArticleAuditLogsSection logs={auditLogs} />
       ) : (
         <>
-          {/* Status Filter Tabs */}
+
           <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100/80 rounded-xl border border-slate-200/60">
         <button
           type="button"
@@ -407,10 +397,9 @@ export function ArticleListTable({
           সবগুলো ({computedCounts.all || 0})
         </button>
 
-        {/* For Lower Roles */}
         {isLower ? (
           isSubEditor && activeView === "reporters" ? (
-            /* Sub-Editor viewing Reporter Submissions */
+
             <button
               type="button"
               onClick={() => setSelectedStatus("pending")}
@@ -423,7 +412,7 @@ export function ArticleListTable({
               পর্যালোচনার অপেক্ষায় ({computedCounts.pending || 0})
             </button>
           ) : (
-            /* Own Articles view: Drafts first, then Pending, Approved, Rejected */
+
             <>
               <button
                 type="button"
@@ -472,7 +461,7 @@ export function ArticleListTable({
             </>
           )
         ) : activeView === "all" ? (
-          /* For Upper Roles ("All Articles"): Pending, Published, Rejected, Archived (Drafts excluded) */
+
           <>
             <button
               type="button"
@@ -520,7 +509,7 @@ export function ArticleListTable({
             </button>
           </>
         ) : (
-          /* For Upper Roles ("My Articles"): Published, Draft, Pending, Archived (Rejected excluded) */
+
           <>
             <button
               type="button"
@@ -570,7 +559,6 @@ export function ArticleListTable({
         )}
       </div>
 
-      {/* Search & Category Filter Controls */}
       <div className="flex flex-col sm:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -597,7 +585,6 @@ export function ArticleListTable({
         </select>
       </div>
 
-      {/* Articles Table with Audit Metadata and Clean Consumer-Grade Layout */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -628,7 +615,7 @@ export function ArticleListTable({
 
                   return (
                     <tr key={art.id} className="hover:bg-slate-50/70 transition-colors">
-                      {/* 1. Headline & State Badge */}
+
                       <td className="py-3.5 px-4 max-w-sm sm:max-w-md">
                         <div className="flex items-center gap-2 flex-wrap">
                           {canEdit ? (
@@ -681,14 +668,12 @@ export function ArticleListTable({
                         </div>
                       </td>
 
-                      {/* 2. Category & Subcategory */}
                       <td className="py-3.5 px-3 whitespace-nowrap">
                         <span className="inline-block px-2.5 py-1 rounded bg-slate-100 text-slate-700 font-medium text-[11px]">
                           {art.category_name}
                         </span>
                       </td>
 
-                      {/* 3. Audit Metadata: created_by and last_edited_by */}
                       <td className="py-3.5 px-3 whitespace-nowrap">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5 text-xs text-slate-700">
@@ -727,7 +712,6 @@ export function ArticleListTable({
                         </div>
                       </td>
 
-                      {/* 4. Flags & Views */}
                       <td className="py-3.5 px-3 whitespace-nowrap">
                         <div className="flex items-center gap-1.5 mb-1">
                           <button
@@ -762,13 +746,12 @@ export function ArticleListTable({
                         </p>
                       </td>
 
-                      {/* 5. Role-Based Actions */}
                       <td className="py-3.5 px-3 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-1.5">
-                          {/* Upper Roles Actions: Approve & Publish, Reject, Archive */}
+
                           {!isLower ? (
                             <>
-                              {/* Approve Button (when pending or draft or rejected) */}
+
                               {status !== "published" && canApprove && (
                                 <button
                                   type="button"
@@ -782,7 +765,6 @@ export function ArticleListTable({
                                 </button>
                               )}
 
-                              {/* Reject Button (when pending or published, and not own article) */}
                               {(status === "pending" || status === "published") && canApprove && !isAuthor && (
                                 <button
                                   type="button"
@@ -796,7 +778,6 @@ export function ArticleListTable({
                                 </button>
                               )}
 
-                              {/* Archive Button (when published) */}
                               {status === "published" && canArchive && (
                                 <button
                                   type="button"
@@ -810,9 +791,9 @@ export function ArticleListTable({
                               )}
                             </>
                           ) : (
-                            /* Lower Roles (Reporter / Sub-Editor) Actions: Submit for Review, Withdraw, Pass Forward */
+
                             <>
-                              {/* Sub-Editor Action for Reporter Submissions: Pass Forward to Upper Roles */}
+
                               {isSubEditor && !isAuthor && (status === "pending" || art.status === "pending_approval") && (
                                 art.is_passed_to_upper ? (
                                   <span
@@ -864,7 +845,6 @@ export function ArticleListTable({
                             </>
                           )}
 
-                          {/* Edit Button */}
                           {canEdit && (
                             <Link
                               href={`/admin?tab=create-article&editId=${art.id}`}
@@ -875,7 +855,6 @@ export function ArticleListTable({
                             </Link>
                           )}
 
-                          {/* Live preview link (when published) */}
                           {status === "published" && (
                             <Link
                               href={`/article/${art.slug || art.id}`}
@@ -887,7 +866,6 @@ export function ArticleListTable({
                             </Link>
                           )}
 
-                          {/* Delete (if permitted by role) */}
                           {((canDelete && isUpper) || (isAuthor && status === "draft")) && (
                             <button
                               type="button"
@@ -912,7 +890,6 @@ export function ArticleListTable({
       </>
       )}
 
-      {/* Re-confirmation Modal */}
       <ConfirmModal
         isOpen={Boolean(confirmConfig)}
         onClose={() => setConfirmConfig(null)}

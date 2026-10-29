@@ -1,8 +1,4 @@
-/**
- * Centralized Role Definitions
- * Reusable across the entire project with English and Bengali strings.
- * Aligned with admin_panel_features.md specifications.
- */
+
 
 export const ROLES = {
   SUPER_ADMIN: {
@@ -64,11 +60,6 @@ export const ROLES = {
 export const ROLE_KEYS = Object.keys(ROLES);
 export const ALL_ROLES = Object.values(ROLES);
 
-/**
- * Single-User System Roles
- * These roles are singleton/fixed and provided solely via initial configuration.
- * No user can be created with or promoted to these roles.
- */
 export const SINGLE_USER_ROLES = [
   ROLES.SUPER_ADMIN.id,
   ROLES.ADMIN.id,
@@ -79,9 +70,6 @@ export function isSingleUserRole(roleId) {
   return SINGLE_USER_ROLES.includes(roleId);
 }
 
-/**
- * Roles that can be assigned to new or existing staff by Super Admin
- */
 export const ASSIGNABLE_ROLES = [
   ROLES.EDITOR_IN_CHIEF,
   ROLES.EDITOR,
@@ -111,7 +99,6 @@ export function getRoleBadgeClass(roleId) {
   return role ? role.badgeClass : "bg-slate-100 text-slate-700 border-slate-300";
 }
 
-// Backward-compatible exports for existing codebase
 export const USER_ROLES = {
   SUPER_ADMIN: ROLES.SUPER_ADMIN.id,
   ADMIN: ROLES.ADMIN.id,
@@ -121,10 +108,6 @@ export const USER_ROLES = {
   REPORTER: ROLES.REPORTER.id,
 };
 
-/**
- * Upper Editorial and Administrative Roles
- * Have full permission to view, edit, approve, publish, or reject any article across the system
- */
 export const UPPER_ROLES = [
   ROLES.SUPER_ADMIN.id,
   ROLES.ADMIN.id,
@@ -132,10 +115,6 @@ export const UPPER_ROLES = [
   ROLES.EDITOR.id,
 ];
 
-/**
- * Lower Roles (Content Creators)
- * Can create and submit articles for review; can only view and manage their own articles
- */
 export const LOWER_ROLES = [
   ROLES.SUB_EDITOR.id,
   ROLES.REPORTER.id,

@@ -20,7 +20,6 @@ export default async function NotificationsModule({ currentUser }) {
       notifications = notifs || [];
       unreadCount = unread || 0;
 
-      // Mark all notifications as read in the database so that badges clear on next visit/reload
       if (unreadCount > 0) {
         await markAllNotificationsAsRead(currentUser.id);
       }

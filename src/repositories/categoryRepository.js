@@ -1,18 +1,15 @@
 import { getDb, query, queryOne, withTransaction } from "@/lib/db";
 
-/**
- * Category Repository
- * Raw MySQL (mysql2/promise) data layer designed for Cloudflare Workers (workerd) & TiDB.
- */
+
+
 
 export async function getAllCategories() {
   const rows = await query("SELECT * FROM categories ORDER BY sort_order ASC, name ASC");
   return rows || [];
 }
 
-/**
- * Returns only dynamic content categories (excluding permanent 'latest' and 'handpicked')
- */
+
+
 export async function getDynamicCategories() {
   const rows = await query(
     "SELECT * FROM categories WHERE is_permanent = 0 AND slug NOT IN ('latest', 'handpicked') ORDER BY sort_order ASC, name ASC"
@@ -20,9 +17,8 @@ export async function getDynamicCategories() {
   return rows || [];
 }
 
-/**
- * Returns only permanent system categories ('latest' and 'handpicked')
- */
+
+
 export async function getPermanentCategories() {
   const rows = await query(
     "SELECT * FROM categories WHERE is_permanent = 1 OR slug IN ('latest', 'handpicked') ORDER BY sort_order ASC, name ASC"
@@ -30,32 +26,36 @@ export async function getPermanentCategories() {
   return rows || [];
 }
 
-/**
- * Returns dynamic content categories with their respective subcategories
- */
+
+
 export async function getDynamicCategoriesWithSubcategories() {
   const allWithSubs = await getAllCategoriesWithSubcategories();
   return allWithSubs.filter((c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked");
 }
 
 export async function getAllCategoriesWithSubcategories() {
-  const [categories, subcategories] = await Promise.all([
-    query("SELECT * FROM categories ORDER BY sort_order ASC, name ASC"),
-    query("SELECT * FROM subcategories ORDER BY sort_order ASC, name ASC"),
-  ]);
+  try {
+    const [categories, subcategories] = await Promise.all([
+      query("SELECT * FROM categories ORDER BY sort_order ASC, name ASC"),
+      query("SELECT * FROM subcategories ORDER BY sort_order ASC, name ASC"),
+    ]);
 
-  const subMap = new Map();
-  for (const sub of subcategories || []) {
-    if (!subMap.has(sub.category_id)) {
-      subMap.set(sub.category_id, []);
+    const subMap = new Map();
+    for (const sub of subcategories || []) {
+      if (!subMap.has(sub.category_id)) {
+        subMap.set(sub.category_id, []);
+      }
+      subMap.get(sub.category_id).push(sub);
     }
-    subMap.get(sub.category_id).push(sub);
-  }
 
-  return (categories || []).map((cat) => ({
-    ...cat,
-    subcategories: subMap.get(cat.id) || [],
-  }));
+    return (categories || []).map((cat) => ({
+      ...cat,
+      subcategories: subMap.get(cat.id) || [],
+    }));
+  } catch (error) {
+    console.error("[Category] Error loading categories with subcategories:", error?.message || error);
+    return [];
+  }
 }
 
 export async function getCategoryBySlug(slug) {
@@ -70,9 +70,8 @@ export async function getSubcategoriesByCategoryId(categoryId) {
   return rows || [];
 }
 
-/**
- * Creates a new category
- */
+
+
 export async function createCategory({ name, slug, sortOrder = 0, isPermanent = 0 }) {
   const id = `cat_${slug.toLowerCase().replace(/[^a-z0-9]/g, "_")}_${Date.now().toString(36)}`;
 
@@ -85,9 +84,8 @@ export async function createCategory({ name, slug, sortOrder = 0, isPermanent = 
   return { id, name, slug };
 }
 
-/**
- * Updates an existing category
- */
+
+
 export async function updateCategory(id, { name, slug, sortOrder }) {
   await query(
     `UPDATE categories
@@ -99,9 +97,8 @@ export async function updateCategory(id, { name, slug, sortOrder }) {
   return { id, name, slug };
 }
 
-/**
- * Deletes a category (if not marked permanent)
- */
+
+
 export async function deleteCategory(id) {
   const category = await queryOne("SELECT is_permanent FROM categories WHERE id = ?", [id]);
   if (category?.is_permanent) {
@@ -115,9 +112,8 @@ export async function deleteCategory(id) {
   });
 }
 
-/**
- * Creates a new subcategory under an existing category
- */
+
+
 export async function createSubcategory({ categoryId, name, slug, sortOrder = 0 }) {
   const category = await queryOne(
     "SELECT is_permanent, slug FROM categories WHERE id = ?",
@@ -139,9 +135,8 @@ export async function createSubcategory({ categoryId, name, slug, sortOrder = 0 
   return { id, categoryId, name, slug };
 }
 
-/**
- * Deletes a subcategory
- */
+
+
 export async function deleteSubcategory(id) {
   return await withTransaction(async (tx) => {
     await tx.query("UPDATE articles SET subcategory_id = NULL WHERE subcategory_id = ?", [id]);
@@ -149,20 +144,17 @@ export async function deleteSubcategory(id) {
   });
 }
 
-/**
- * Saves a batch of categories and their subcategories from the browser state.
- * Fully atomic transaction: updates existing ones, deletes removed dynamic categories,
- * inserts new ones, and maintains foreign key consistency.
- */
+
+
 export async function saveCategoriesBatch(categoriesList = []) {
   return await withTransaction(async (tx) => {
-    // 1. Fetch current dynamic categories in database
+
     const currentDbCats = await tx.query(
       "SELECT id, slug, is_permanent FROM categories WHERE is_permanent = 0 AND slug NOT IN ('latest', 'handpicked')"
     );
     const currentDbCatIds = new Set((currentDbCats || []).map((c) => c.id));
 
-    // Extract incoming dynamic categories
+
     const incomingDynamic = categoriesList.filter(
       (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked"
     );
@@ -172,7 +164,7 @@ export async function saveCategoriesBatch(categoriesList = []) {
         .filter((id) => id && !String(id).startsWith("temp_"))
     );
 
-    // 2. Delete categories that were removed in browser
+
     for (const dbCat of currentDbCats || []) {
       if (!incomingCatIds.has(dbCat.id)) {
         await tx.query("UPDATE articles SET category_id = NULL, subcategory_id = NULL WHERE category_id = ?", [dbCat.id]);
@@ -181,7 +173,7 @@ export async function saveCategoriesBatch(categoriesList = []) {
       }
     }
 
-    // 3. Insert or update incoming dynamic categories & their subcategories
+
     for (let i = 0; i < incomingDynamic.length; i++) {
       const cat = incomingDynamic[i];
       let catId = cat.id;
@@ -203,14 +195,14 @@ export async function saveCategoriesBatch(categoriesList = []) {
           [cat.name, cat.slug, sortOrder, catId]
         );
 
-        // Keep denormalized article category names in sync
+
         await tx.query(
           "UPDATE articles SET category_name = ?, category_slug = ? WHERE category_id = ?",
           [cat.name, cat.slug, catId]
         );
       }
 
-      // Handle subcategories for this category
+
       const incomingSubs = Array.isArray(cat.subcategories) ? cat.subcategories : [];
       const currentDbSubs = await tx.query(
         "SELECT id FROM subcategories WHERE category_id = ?",
@@ -223,7 +215,7 @@ export async function saveCategoriesBatch(categoriesList = []) {
           .filter((id) => id && !String(id).startsWith("temp_"))
       );
 
-      // Delete removed subcategories
+
       for (const subId of currentSubIds) {
         if (!incomingSubIds.has(subId)) {
           await tx.query("UPDATE articles SET subcategory_id = NULL WHERE subcategory_id = ?", [subId]);
@@ -231,7 +223,7 @@ export async function saveCategoriesBatch(categoriesList = []) {
         }
       }
 
-      // Insert or update subcategories
+
       for (let j = 0; j < incomingSubs.length; j++) {
         const sub = incomingSubs[j];
         let subId = sub.id;
@@ -253,7 +245,7 @@ export async function saveCategoriesBatch(categoriesList = []) {
             [sub.name, sub.slug, subSortOrder, subId]
           );
 
-          // Keep denormalized article subcategory names in sync
+
           await tx.query(
             "UPDATE articles SET subcategory_name = ? WHERE subcategory_id = ?",
             [sub.name, subId]

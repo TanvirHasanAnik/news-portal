@@ -28,16 +28,14 @@ import {
 export function NotificationManager({ initialNotifications = [], currentUser }) {
   const { clearUnreadNotifications } = useAuth();
   const [notifications, setNotifications] = useState(initialNotifications);
-  const [filter, setFilter] = useState("all"); // 'all' | 'articles' | 'requests' | 'unread'
+  const [filter, setFilter] = useState("all"); 
   const [searchQuery, setSearchQuery] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  // Clear unread badge in Header & Sidebar upon viewing this notifications page
   useEffect(() => {
     clearUnreadNotifications?.();
   }, [clearUnreadNotifications]);
 
-  // Compute live counts
   const counts = useMemo(() => {
     return {
       all: notifications.length,
@@ -47,15 +45,13 @@ export function NotificationManager({ initialNotifications = [], currentUser }) 
     };
   }, [notifications]);
 
-  // Filtered list
   const filteredNotifications = useMemo(() => {
     return notifications.filter((n) => {
-      // 1. Tab filter
+
       if (filter === "unread" && n.is_read) return false;
       if (filter === "articles" && !n.type.startsWith("article_")) return false;
       if (filter === "requests" && !n.type.startsWith("request_")) return false;
 
-      // 2. Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
         const titleMatch = (n.title || "").toLowerCase().includes(q);
@@ -114,7 +110,7 @@ export function NotificationManager({ initialNotifications = [], currentUser }) 
 
   return (
     <div className="space-y-4">
-      {/* Top Filter Tabs & Mark All As Read */}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
           <button
@@ -178,7 +174,6 @@ export function NotificationManager({ initialNotifications = [], currentUser }) 
         )}
       </div>
 
-      {/* Search Input */}
       <div className="relative w-full max-w-sm">
         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
         <Input
@@ -190,7 +185,6 @@ export function NotificationManager({ initialNotifications = [], currentUser }) 
         />
       </div>
 
-      {/* Notifications List */}
       {filteredNotifications.length === 0 ? (
         <div className="p-12 text-center bg-white rounded-xl border border-slate-200 space-y-2">
           <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
@@ -268,9 +262,8 @@ export function NotificationManager({ initialNotifications = [], currentUser }) 
                     </div>
                   </div>
 
-                  {/* Context Actions */}
                   <div className="flex items-center gap-2 shrink-0">
-                    {/* View/Edit Link */}
+
                     {isArticle && (
                       isApproved && notif.target_slug ? (
                         <Link

@@ -13,25 +13,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-const TARGET_ASPECT = 16 / 9; // Strictly locked 16:9 ratio
+const TARGET_ASPECT = 16 / 9; 
 const MASTER_OUTPUT_WIDTH = 1600;
-const MASTER_OUTPUT_HEIGHT = Math.round(MASTER_OUTPUT_WIDTH / TARGET_ASPECT); // 900px
+const MASTER_OUTPUT_HEIGHT = Math.round(MASTER_OUTPUT_WIDTH / TARGET_ASPECT); 
 
-/**
- * ImageCropperModal
- *
- * Built-in 16:9 Upload Cropper for News Master Images.
- * Strictly locks the crop window to 16:9 so all uploaded assets start
- * clean and uniform before being stored in Cloudflare R2 as WebP.
- *
- * @param {Object} props
- * @param {File} props.file - Raw File object to crop
- * @param {boolean} props.isOpen - Whether modal is open
- * @param {Function} props.onClose - Dismiss callback
- * @param {Function} props.onCropComplete - Callback receiving the cropped 16:9 WebP File
- * @param {number} [props.currentStep=1] - Multi-file queue progress indicator
- * @param {number} [props.totalSteps=1] - Total files in upload queue
- */
+
+
 export default function ImageCropperModal({
   file,
   isOpen,
@@ -43,7 +30,7 @@ export default function ImageCropperModal({
   const [imageSrc, setImageSrc] = useState(null);
   const [imageMeta, setImageMeta] = useState({ width: 0, height: 0, loaded: false });
   const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0); // 0, 90, 180, 270
+  const [rotation, setRotation] = useState(0); 
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
@@ -52,7 +39,7 @@ export default function ImageCropperModal({
   const containerRef = useRef(null);
   const imageRef = useRef(null);
 
-  // Load selected file into object URL
+
   useEffect(() => {
     if (!file || !isOpen) {
       setImageSrc(null);
@@ -81,7 +68,7 @@ export default function ImageCropperModal({
     };
   }, [file, isOpen]);
 
-  // Compute crop box viewport dimensions inside container
+
   const getViewportDimensions = useCallback(() => {
     if (!containerRef.current) return { width: 640, height: 360 };
     const rect = containerRef.current.getBoundingClientRect();
@@ -91,7 +78,7 @@ export default function ImageCropperModal({
     return { width, height };
   }, []);
 
-  // Compute scale and bounds to guarantee 16:9 crop is always 100% covered (no black voids)
+
   const getCropMetrics = useCallback(() => {
     if (!imageMeta.loaded) return null;
 
@@ -100,14 +87,14 @@ export default function ImageCropperModal({
     const naturalW = isRotated90or270 ? imageMeta.height : imageMeta.width;
     const naturalH = isRotated90or270 ? imageMeta.width : imageMeta.height;
 
-    // Minimum scale required to fully cover 16:9 crop box at zoom = 1
+
     const baseScale = Math.max(boxW / naturalW, boxH / naturalH);
     const currentScale = baseScale * zoom;
 
     const displayedW = naturalW * currentScale;
     const displayedH = naturalH * currentScale;
 
-    // Maximum pan margins in viewport pixels
+
     const maxPanX = Math.max(0, (displayedW - boxW) / 2);
     const maxPanY = Math.max(0, (displayedH - boxH) / 2);
 
@@ -126,7 +113,7 @@ export default function ImageCropperModal({
     };
   }, [imageMeta, zoom, rotation, getViewportDimensions]);
 
-  // Clamp pan when zoom or rotation changes
+
   useEffect(() => {
     const metrics = getCropMetrics();
     if (!metrics) return;
@@ -136,7 +123,7 @@ export default function ImageCropperModal({
     }));
   }, [zoom, rotation, getCropMetrics]);
 
-  // Pointer drag event handlers
+
   const handlePointerDown = (e) => {
     setIsDragging(true);
     setDragStart({
@@ -163,7 +150,7 @@ export default function ImageCropperModal({
     setIsDragging(false);
   };
 
-  // Wheel zoom handler
+
   const handleWheel = (e) => {
     e.preventDefault();
     const delta = e.deltaY * -0.0015;
@@ -181,7 +168,7 @@ export default function ImageCropperModal({
     setPan({ x: 0, y: 0 });
   };
 
-  // Perform 16:9 crop and export as WebP
+
   const handleConfirmCrop = async () => {
     if (!imageMeta.loaded || !imageSrc) return;
     setIsProcessing(true);
@@ -192,7 +179,7 @@ export default function ImageCropperModal({
 
       const { boxW, boxH, displayedW, displayedH, isRotated90or270 } = metrics;
 
-      // Create high-res master output canvas (1600x900)
+
       const outCanvas = document.createElement("canvas");
       outCanvas.width = MASTER_OUTPUT_WIDTH;
       outCanvas.height = MASTER_OUTPUT_HEIGHT;
@@ -202,19 +189,19 @@ export default function ImageCropperModal({
       ctx.imageSmoothingEnabled = true;
       ctx.imageSmoothingQuality = "high";
 
-      // Ratio from displayed viewport pixels to master output canvas
+
       const scaleToOutput = MASTER_OUTPUT_WIDTH / boxW;
 
-      // Center of output canvas
+
       ctx.save();
       ctx.translate(MASTER_OUTPUT_WIDTH / 2, MASTER_OUTPUT_HEIGHT / 2);
 
-      // Apply rotation if any
+
       if (rotation !== 0) {
         ctx.rotate((rotation * Math.PI) / 180);
       }
 
-      // Draw image shifted by pan offset (scaled to output canvas)
+
       const drawW = (isRotated90or270 ? displayedH : displayedW) * scaleToOutput;
       const drawH = (isRotated90or270 ? displayedW : displayedH) * scaleToOutput;
       const drawX = (pan.x * scaleToOutput) - (drawW / 2);
@@ -231,7 +218,7 @@ export default function ImageCropperModal({
       ctx.drawImage(sourceImg, drawX, drawY, drawW, drawH);
       ctx.restore();
 
-      // Export canvas directly to WebP with 0.82 quality
+
       outCanvas.toBlob(
         (blob) => {
           if (!blob) {
@@ -273,7 +260,7 @@ export default function ImageCropperModal({
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200"
     >
       <div className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]">
-        {/* Modal Header */}
+
         <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/80">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs">
@@ -307,12 +294,12 @@ export default function ImageCropperModal({
           </button>
         </div>
 
-        {/* Modal Body / Cropping Canvas Area */}
+
         <div
           ref={containerRef}
           className="p-4 sm:p-6 bg-slate-900 flex flex-col items-center justify-center overflow-hidden select-none"
         >
-          {/* Strict 16:9 Crop Box Frame */}
+
           <div
             style={{ width: `${boxW}px`, height: `${boxH}px` }}
             className="relative overflow-hidden rounded-lg shadow-2xl border-2 border-indigo-400/80 cursor-grab active:cursor-grabbing bg-slate-950"
@@ -322,7 +309,7 @@ export default function ImageCropperModal({
             onPointerLeave={handlePointerUp}
             onWheel={handleWheel}
           >
-            {/* The Image being panned and zoomed */}
+
             {imageSrc && metrics && (
               <img
                 ref={imageRef}
@@ -345,7 +332,7 @@ export default function ImageCropperModal({
               />
             )}
 
-            {/* Rule-of-Thirds Grid Overlay */}
+
             <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 border border-white/30">
               <div className="border-r border-b border-white/20" />
               <div className="border-r border-b border-white/20" />
@@ -358,14 +345,14 @@ export default function ImageCropperModal({
               <div />
             </div>
 
-            {/* 16:9 Aspect Badge Overlay */}
+
             <div className="absolute top-2.5 left-2.5 pointer-events-none">
               <span className="bg-black/60 backdrop-blur-md text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded border border-white/20 shadow-xs">
                 16:9 LOCKED
               </span>
             </div>
 
-            {/* Hint overlay */}
+
             <div className="absolute bottom-2 inset-x-0 flex justify-center pointer-events-none">
               <span className="bg-black/60 backdrop-blur-md text-white/80 text-[11px] px-2.5 py-0.5 rounded-full border border-white/10">
                 মাউস দিয়ে টেনে পজিশন ঠিক করুন
@@ -374,11 +361,11 @@ export default function ImageCropperModal({
           </div>
         </div>
 
-        {/* Controls Toolbar */}
+
         <div className="p-4 bg-slate-50 border-t border-slate-200 space-y-3">
-          {/* Zoom & Transform Controls */}
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            {/* Zoom Slider */}
+
             <div className="flex items-center gap-2.5 flex-1 max-w-sm">
               <ZoomOut className="w-4 h-4 text-slate-500 shrink-0" />
               <input
@@ -396,7 +383,7 @@ export default function ImageCropperModal({
               </span>
             </div>
 
-            {/* Quick Action Buttons */}
+
             <div className="flex items-center gap-2 shrink-0">
               <Button
                 type="button"
@@ -423,7 +410,7 @@ export default function ImageCropperModal({
             </div>
           </div>
 
-          {/* Footer Action Buttons */}
+
           <div className="flex items-center justify-end gap-2.5 pt-2">
             <Button
               type="button"

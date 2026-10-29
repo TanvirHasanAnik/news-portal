@@ -12,9 +12,6 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 
 const AuthContext = createContext(null);
 
-/**
- * React Context Provider for Application Authentication & Granular RBAC Permissions
- */
 export function AuthProvider({
   children,
   initialUser = null,
@@ -71,7 +68,7 @@ export function AuthProvider({
     try {
       await logoutAction();
     } catch (_err) {
-      // In case Server Action redirects, router fallback ensures smooth UX
+
       router.push("/admin/login");
     }
   }, [router]);
@@ -113,9 +110,6 @@ export function AuthProvider({
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-/**
- * Access the full authentication state
- */
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {
@@ -124,9 +118,6 @@ export function useAuth() {
   return context;
 }
 
-/**
- * Convenience hook for checking role permissions
- */
 export function usePermissions() {
   const { can, canAccessTab, hasRole, role, permissions } = useAuth();
   return { can, canAccessTab, hasRole, role, permissions };

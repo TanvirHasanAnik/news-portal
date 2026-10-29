@@ -23,7 +23,7 @@ import {
 } from "@/actions/authActions";
 
 export function ProfileForm({ user }) {
-  // Personal Info Form State
+
   const [fullName, setFullName] = useState(user?.fullName || user?.name || "");
   const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState(user?.phone || "");
@@ -32,7 +32,7 @@ export function ProfileForm({ user }) {
   const [profileMessage, setProfileMessage] = useState(null);
   const [isProfilePending, startProfileTransition] = useTransition();
 
-  // Password Change Form State (Super Admin & Admin only)
+
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -45,8 +45,15 @@ export function ProfileForm({ user }) {
 
   const isSuperOrAdmin = user?.role === "super_admin" || user?.role === "admin";
 
-  // Handle Profile Update
+
   const handleProfileSubmit = (e) => {
+    if (fullName && !/^[a-zA-Z\s.-]+$/.test(fullName)) {
+      setProfileMessage({
+        type: "error",
+        text: "ব্যবহারকারীর পূর্ণ নাম শুধুমাত্র ইংরেজি অক্ষরে হতে হবে।",
+      });
+      return;
+    }
     e.preventDefault();
     setProfileMessage(null);
 
@@ -66,7 +73,7 @@ export function ProfileForm({ user }) {
     });
   };
 
-  // Handle Password Change (Admin/SuperAdmin)
+
   const handlePasswordSubmit = (e) => {
     e.preventDefault();
     setPasswordMessage(null);
@@ -99,7 +106,7 @@ export function ProfileForm({ user }) {
 
   return (
     <div className="space-y-6 max-w-4xl pb-10">
-      {/* Profile Header Summary */}
+
       <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xl uppercase shadow-xs shrink-0">
@@ -127,7 +134,7 @@ export function ProfileForm({ user }) {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Personal Details Card */}
+
         <div className="lg:col-span-7 bg-white rounded-xl border border-slate-200 p-6 shadow-xs space-y-5">
           <div className="border-b border-slate-100 pb-3">
             <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -157,7 +164,7 @@ export function ProfileForm({ user }) {
           )}
 
           <form onSubmit={handleProfileSubmit} className="space-y-4">
-            {/* Immutable Username */}
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 ইউজারনেম (স্থায়ী পরিচয়)
@@ -176,7 +183,7 @@ export function ProfileForm({ user }) {
               </p>
             </div>
 
-            {/* Role (Read only) */}
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 দায়িত্ব / ভূমিকা
@@ -189,14 +196,12 @@ export function ProfileForm({ user }) {
               />
             </div>
 
-            {/* Full Name */}
+
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                পুরো নাম
-              </label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">পুরো নাম (ইংরেজি)</label>
               <Input
                 type="text"
-                placeholder="আপনার পুরো নাম লিখুন"
+                placeholder="আপনার পুরো ইংরেজি নাম লিখুন"
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 disabled={isProfilePending}
@@ -204,7 +209,7 @@ export function ProfileForm({ user }) {
               />
             </div>
 
-            {/* Email */}
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 যোগাযোগের ইমেইল
@@ -213,7 +218,7 @@ export function ProfileForm({ user }) {
                 <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   type="email"
-                  placeholder="contact@example.com"
+                  placeholder="আপনার কার্যকর ইমেইল ঠিকানা লিখুন"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={isProfilePending}
@@ -222,7 +227,7 @@ export function ProfileForm({ user }) {
               </div>
             </div>
 
-            {/* Phone */}
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 ফোন নম্বর
@@ -231,7 +236,7 @@ export function ProfileForm({ user }) {
                 <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   type="tel"
-                  placeholder="০১৭xxxxxxxx"
+                  placeholder="আপনার যোগাযোগ নম্বর লিখুন"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   disabled={isProfilePending}
@@ -240,7 +245,7 @@ export function ProfileForm({ user }) {
               </div>
             </div>
 
-            {/* Bio */}
+
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 সংক্ষিপ্ত পরিচিতি (বায়ো)
@@ -267,7 +272,7 @@ export function ProfileForm({ user }) {
           </form>
         </div>
 
-        {/* Security & Password Card */}
+
         <div className="lg:col-span-5 space-y-6">
           {isSuperOrAdmin ? (
             <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs space-y-5">
@@ -299,7 +304,7 @@ export function ProfileForm({ user }) {
               )}
 
               <form onSubmit={handlePasswordSubmit} className="space-y-3.5">
-                {/* Current Password */}
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     বর্তমান পাসওয়ার্ড <span className="text-red-500">*</span>
@@ -308,7 +313,7 @@ export function ProfileForm({ user }) {
                     <Input
                       type={showCurrentPass ? "text" : "password"}
                       required
-                      placeholder="বর্তমান পাসওয়ার্ড দিন"
+                      placeholder="অ্যাকাউন্টের বর্তমান পাসওয়ার্ড লিখুন"
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       disabled={isPasswordPending}
@@ -325,7 +330,7 @@ export function ProfileForm({ user }) {
                   </div>
                 </div>
 
-                {/* New Password */}
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     নতুন পাসওয়ার্ড <span className="text-red-500">*</span>
@@ -334,7 +339,7 @@ export function ProfileForm({ user }) {
                     <Input
                       type={showNewPass ? "text" : "password"}
                       required
-                      placeholder="কমপক্ষে ৬ অক্ষর"
+                      placeholder="কমপক্ষে ৬ অক্ষরের নতুন পাসওয়ার্ড লিখুন"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       disabled={isPasswordPending}
@@ -351,7 +356,7 @@ export function ProfileForm({ user }) {
                   </div>
                 </div>
 
-                {/* Confirm Password */}
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
                     নতুন পাসওয়ার্ড নিশ্চিত করুন <span className="text-red-500">*</span>
@@ -360,7 +365,7 @@ export function ProfileForm({ user }) {
                     <Input
                       type={showConfirmPass ? "text" : "password"}
                       required
-                      placeholder="পুনরায় নতুন পাসওয়ার্ড দিন"
+                      placeholder="নতুন পাসওয়ার্ডটি নিশ্চিত করতে পুনরায় লিখুন"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       disabled={isPasswordPending}

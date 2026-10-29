@@ -13,11 +13,6 @@ import {
 } from "./components";
 import { isLowerRole } from "@/config/roles";
 
-/**
- * Single-Purpose Module: Article Creation & Editing
- * Server Component that resolves edit target (if editId provided), enforces RBAC,
- * and renders the article creation/editing form with audit tracking.
- */
 export default async function ArticleCreateModule({ currentUser, searchParams }) {
   const isLower = isLowerRole(currentUser?.role);
   const editId = searchParams?.editId;
@@ -56,7 +51,6 @@ export default async function ArticleCreateModule({ currentUser, searchParams })
     }
   }
 
-  // Fetch only dynamic content categories and role-scoped recent articles
   const recentFilter = isLower
     ? { authorId: currentUser?.id, createdBy: currentUser?.username, limit: 5 }
     : { limit: 5 };
@@ -79,17 +73,15 @@ export default async function ArticleCreateModule({ currentUser, searchParams })
 
   return (
     <div className="space-y-8">
-      {/* Module Header with Audit Metadata when editing */}
+
       <ArticleCreateHeader initialArticle={initialArticle} currentUser={currentUser} />
 
-      {/* Article Form (Client Component with Create/Edit and Workflow States) */}
       <ArticleCreateForm
         categories={categoriesWithSubs}
         initialArticle={initialArticle}
         currentUser={currentUser}
       />
 
-      {/* Live Recent Articles List (Scoped by role) */}
       <div className="pt-4">
         <RecentArticlesList articles={recentArticles} isLowerRole={isLower} />
       </div>

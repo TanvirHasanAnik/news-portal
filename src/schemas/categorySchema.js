@@ -2,9 +2,8 @@ import { z } from "zod";
 import { safeString, safeSlug, safeInteger, hasScriptInjection } from "./baseSchema.js";
 import { BANGLA_EDITORIAL_REGEX, hasEnglishLetters } from "./articleSchema.js";
 
-/**
- * Reusable helper for Bangla-only category/subcategory names
- */
+
+
 export const safeBanglaCategoryName = ({ label = "ক্যাটাগরির নাম", min = 2, max = 60 } = {}) =>
   z
     .string()

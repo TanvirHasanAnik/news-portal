@@ -15,19 +15,16 @@ const ALLOWED_MIME_TYPES = new Set([
   "image/svg+xml",
 ]);
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; 
 
-/**
- * POST /api/upload
- * - Uploads a new image file to Cloudflare R2 bucket
- * - Also handles navigator.sendBeacon JSON cleanup requests (when action=cleanup)
- */
+
+
 export async function POST(request) {
   try {
     const contentType = request.headers.get("content-type") || "";
     const url = new URL(request.url);
 
-    // Support navigator.sendBeacon JSON cleanup on tab close / page unload
+
     if (contentType.includes("application/json") || url.searchParams.get("action") === "cleanup") {
       let body = {};
       try {
@@ -50,7 +47,7 @@ export async function POST(request) {
       return NextResponse.json({ success: true, count: 0 });
     }
 
-    // Standard Multipart File Upload
+
     const formData = await request.formData();
     const file = formData.get("file");
 
@@ -61,7 +58,7 @@ export async function POST(request) {
       );
     }
 
-    // MIME type validation
+
     if (!ALLOWED_MIME_TYPES.has(file.type)) {
       return NextResponse.json(
         {
@@ -72,7 +69,7 @@ export async function POST(request) {
       );
     }
 
-    // Size limit check
+
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
         {
@@ -83,7 +80,7 @@ export async function POST(request) {
       );
     }
 
-    // Generate sanitized unique key: articles/YYYY-MM/timestamp-hash.ext
+
     const now = new Date();
     const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const cleanOriginalName = (file.name || "image")
@@ -96,7 +93,7 @@ export async function POST(request) {
 
     const bucket = await getR2Bucket();
 
-    // Save to Cloudflare R2 using bucket.put()
+
     await bucket.put(key, file.stream(), {
       httpMetadata: {
         contentType: file.type || "image/jpeg",
@@ -131,10 +128,8 @@ export async function POST(request) {
   }
 }
 
-/**
- * DELETE /api/upload
- * Deletes one or multiple images from Cloudflare R2 bucket
- */
+
+
 export async function DELETE(request) {
   try {
     const url = new URL(request.url);
@@ -146,7 +141,7 @@ export async function DELETE(request) {
     if (queryKey) targets.push(queryKey);
     if (queryUrl) targets.push(queryUrl);
 
-    // Also check JSON body if present
+
     const contentType = request.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
       try {

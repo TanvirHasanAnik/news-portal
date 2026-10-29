@@ -2,9 +2,8 @@ import { getAuthCookie } from "./cookies";
 import { verifyJwtToken } from "./jwt";
 import { getUserById } from "@/repositories/userRepository";
 
-/**
- * Server-only authentication utilities (Node.js & Server Components)
- */
+
+
 
 export const DEFAULT_DEV_USER = {
   id: "usr_superadmin",
@@ -14,10 +13,8 @@ export const DEFAULT_DEV_USER = {
   status: "active",
 };
 
-/**
- * Resolves current logged-in user from HTTP-only cookie with Edge-compliant JWT verification.
- * Strictly verifies against the database to ensure deleted or wiped users are instantly invalidated.
- */
+
+
 export async function getCurrentUser() {
   try {
     const token = await getAuthCookie();
@@ -26,7 +23,7 @@ export async function getCurrentUser() {
     const payload = await verifyJwtToken(token);
     if (!payload || !payload.sub) return null;
 
-    // Check user exists and is active in the database
+
     const dbUser = await getUserById(payload.sub);
     if (!dbUser || dbUser.status !== "active") {
       return null;

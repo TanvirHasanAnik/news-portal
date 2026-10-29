@@ -26,10 +26,6 @@ import { getCurrentUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
-/**
- * Prerenders all article routes at build time (Next.js Static Generation)
- * https://nextjs.org/docs/app/getting-started/linking-and-navigating#dynamic-segments-without-generatestaticparams
- */
 export async function generateStaticParams() {
   const articles = getAllArticles();
   return articles.map((article) => ({
@@ -37,9 +33,6 @@ export async function generateStaticParams() {
   }));
 }
 
-/**
- * Dynamic metadata generation per article
- */
 export async function generateMetadata({ params }) {
   const { id } = await params;
   let article = null;
@@ -68,12 +61,6 @@ export async function generateMetadata({ params }) {
   };
 }
 
-/**
- * Single Article Reading Page Component (Server Component / SSR)
- * Following Next.js App Router conventions:
- * https://nextjs.org/docs/app/getting-started/layouts-and-pages
- * https://nextjs.org/docs/app/getting-started/linking-and-navigating
- */
 export default async function ArticlePage({ params }) {
   const { id } = await params;
   let article = null;
@@ -81,8 +68,7 @@ export default async function ArticlePage({ params }) {
   try {
     dbRow = await findArticleBySlugOrId(id);
     if (dbRow) {
-      // Live visibility rule: Only published articles are live on the site.
-      // Draft, pending, or rejected articles can only be previewed by authenticated staff.
+
       if (dbRow.status !== "published") {
         const user = await getCurrentUser();
         if (!user) {
@@ -103,7 +89,6 @@ export default async function ArticlePage({ params }) {
     notFound();
   }
 
-  // Record authentic page view in database
   if (dbRow?.id) {
     recordArticleView(dbRow.id, {
       categorySlug: article.categorySlug,
@@ -112,7 +97,6 @@ export default async function ArticlePage({ params }) {
     }).catch(() => {});
   }
 
-  // Fetch top 10 most read articles for the sidebar MostReadSection
   let mostReadArticles = [];
   try {
     mostReadArticles = await getMostReadArticles(10);
@@ -120,16 +104,13 @@ export default async function ArticlePage({ params }) {
     console.error("Error fetching most read articles for sidebar:", err);
   }
 
-  // Get accent badge color for the category
   const accentClass =
     categoryAccentMap[article.categorySlug] ||
     "from-slate-700 to-slate-900 bg-red-600 border-red-600 text-red-600";
   const badgeBg = accentClass.split(" ")[1] || "bg-red-600";
 
-  // Detailed paragraphs for article body
   const paragraphs = getArticleContent(article);
 
-  // Extract up to 3 images (supports JSON array string, array, or fallback image)
   let allImages = [];
   if (Array.isArray(article.images)) {
     allImages = article.images.filter(Boolean).slice(0, 3);
@@ -149,7 +130,6 @@ export default async function ArticlePage({ params }) {
   }
   const heroImage = allImages[0] || article.image;
 
-  // Suggestions: "এই বিভাগের আরও খবর" (More news from the same category)
   let relatedArticles = [];
   try {
     const dbRelated = await getPublishedArticles({ categorySlug: article.categorySlug, limit: 6 });
@@ -166,11 +146,9 @@ export default async function ArticlePage({ params }) {
     <div className="min-h-screen bg-white py-4 sm:py-6 lg:py-8 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
 
-        {/* 1. Header: Category & Subcategory on left, Social Share & Link Copy on right */}
-        {/* Strictly no other info such as date, time, author etc. */}
         <header className="border-b-2 border-slate-200 pb-5 sm:pb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            {/* Category and Subcategory: Reused design from category page (refined compact size) */}
+
             <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
               <span className={`w-2 sm:w-2.5 h-5 sm:h-6 rounded-2xs ${badgeBg}`} />
               <Link
@@ -180,7 +158,6 @@ export default async function ArticlePage({ params }) {
                 {article.category}
               </Link>
 
-              {/* Subcategory placed on the right side of category name */}
               {article.subcategory && (
                 <Link
                   href={`/category/${article.categorySlug}?sub=${encodeURIComponent(article.subcategory)}`}
@@ -191,24 +168,20 @@ export default async function ArticlePage({ params }) {
               )}
             </div>
 
-            {/* Most right side: Horizontal list of social media share & link copy button */}
             <div className="shrink-0 flex items-center">
               <SocialShareBar title={article.headline} />
             </div>
           </div>
         </header>
 
-        {/* 2. Main 2:1 Column Ratio Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10 items-start">
 
-          {/* Main content [First Column - Ratio 2]: Title, Image, Detailed Text and nothing else */}
           <main className="lg:col-span-2 space-y-6">
-            {/* 2.1 Title */}
+
             <h1 className="font-serif-bangla text-2xl sm:text-3xl lg:text-2xl xl:text-3xl font-semi-bold text-slate-950 leading-tight">
               {article.headline}
             </h1>
 
-            {/* 2.2 Primary Featured Image (rendered if image was uploaded, or if no video is present) */}
             {(article.hasCustomImage || heroImage || !article.youtubeUrl) && heroImage && (
               <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-100 rounded-lg">
                 <NewsImage
@@ -221,7 +194,6 @@ export default async function ArticlePage({ params }) {
               </div>
             )}
 
-            {/* Additional Article Images (up to 3 total) */}
             {allImages.length > 1 && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 {allImages.slice(1, 3).map((imgUrl, idx) => (
@@ -239,7 +211,6 @@ export default async function ArticlePage({ params }) {
               </div>
             )}
 
-            {/* 2.3 Embedded YouTube Video (comes under image in the article page) */}
             {article.youtubeUrl && (
               <YouTubeEmbed
                 url={article.youtubeUrl}
@@ -247,7 +218,6 @@ export default async function ArticlePage({ params }) {
               />
             )}
 
-            {/* 2.4 Detailed text of the article and nothing else (omitted if no detailed text) */}
             {article.content ? (
               <ArticleContentRenderer
                 content={article.content}
@@ -264,28 +234,25 @@ export default async function ArticlePage({ params }) {
             ) : null}
           </main>
 
-          {/* Second Column [Ratio 1]: 2 Ad Holders + সর্বাধিক পঠিত Section */}
           <aside
             aria-label="বিজ্ঞাপন ও সর্বাধিক পঠিত"
             className="lg:col-span-1 space-y-6"
           >
-            {/* 2 Ad Holders (reused from home page) */}
+
             <AdHolder size="300x250" />
             <AdHolder size="300x250" />
 
-            {/* সর্বাধিক পঠিত section under the ad holders (reused from handpicked section of homepage) */}
             <MostReadSection newsList={mostReadArticles} />
           </aside>
 
         </div>
 
-        {/* 3. At the most bottom: এই বিভাগের আরও খবর suggestion */}
         {relatedArticles.length > 0 && (
           <section
             aria-label="এই বিভাগের আরও খবর"
             className="pt-8 sm:pt-10 border-t-2 border-slate-900 mt-8 sm:mt-12"
           >
-            {/* Section Header */}
+
             <div className="flex items-center gap-2.5 border-b-2 border-slate-900 pb-3 mb-6">
               <span className="w-2.5 h-6 bg-red-600 inline-block"></span>
               <h2 className="font-serif-bangla text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
@@ -293,7 +260,6 @@ export default async function ArticlePage({ params }) {
               </h2>
             </div>
 
-            {/* Suggestion Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 items-start">
               {relatedArticles.map((item) => (
                 <NewsCard

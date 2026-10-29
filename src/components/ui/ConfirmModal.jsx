@@ -4,10 +4,8 @@ import React, { useEffect } from "react";
 import { X } from "lucide-react";
 import { Button } from "./button";
 
-/**
- * Reusable clean confirmation prompt (Yes / No).
- * Only displays the question, Yes / No buttons, and a close button.
- */
+
+
 export function ConfirmModal({
   isOpen,
   onClose,
@@ -39,7 +37,7 @@ export function ConfirmModal({
         role="dialog"
         aria-modal="true"
       >
-        {/* Close Button */}
+
         <button
           type="button"
           onClick={onClose}
@@ -50,12 +48,12 @@ export function ConfirmModal({
           <X className="w-4 h-4" />
         </button>
 
-        {/* Question Message */}
+
         <p className="text-sm font-semibold text-slate-800 pr-6 pt-1 leading-relaxed">
           {message}
         </p>
 
-        {/* Action Buttons: Yes / No */}
+
         <div className="flex justify-end items-center gap-2 pt-2">
           <Button
             type="button"

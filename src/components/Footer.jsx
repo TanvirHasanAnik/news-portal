@@ -32,7 +32,7 @@ export default function Footer({ categories: propCategories = [] }) {
   return (
     <footer className="bg-white text-slate-600 pt-10 pb-8 border-t-4 border-red-600">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Top Footer: Brand Logo, Socials & Back to Top */}
+
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200">
           <Link href="/" className="inline-block group focus:outline-none">
             <img
@@ -42,7 +42,7 @@ export default function Footer({ categories: propCategories = [] }) {
             />
           </Link>
 
-          {/* Social Links & Back to Top */}
+
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2 text-slate-500">
               <a
@@ -92,9 +92,9 @@ export default function Footer({ categories: propCategories = [] }) {
           </div>
         </div>
 
-        {/* Main Footer Links & Editorial Information */}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 py-8 border-b border-slate-200 text-sm">
-          {/* Editorial & Office Address */}
+
           <div className="lg:col-span-2 space-y-3">
             <h4 className="font-serif-bangla text-base font-bold text-slate-900 border-b border-slate-200 pb-2 mb-3">
               সম্পাদকীয় ও প্রশাসনিক কার্যালয়
@@ -121,7 +121,7 @@ export default function Footer({ categories: propCategories = [] }) {
             </div>
           </div>
 
-          {/* Quick Categories Column 1 */}
+
           <div>
             <h4 className="font-serif-bangla text-base font-bold text-slate-900 border-b border-slate-200 pb-2 mb-3">
               প্রধান বিভাগ
@@ -137,7 +137,7 @@ export default function Footer({ categories: propCategories = [] }) {
             </ul>
           </div>
 
-          {/* Quick Categories Column 2 */}
+
           <div>
             <h4 className="font-serif-bangla text-base font-bold text-slate-900 border-b border-slate-200 pb-2 mb-3">
               অন্যান্য বিভাগ
@@ -163,7 +163,7 @@ export default function Footer({ categories: propCategories = [] }) {
             </ul>
           </div>
 
-          {/* Legal & Newspaper Utilities */}
+
           <div>
             <h4 className="font-serif-bangla text-base font-bold text-slate-900 border-b border-slate-200 pb-2 mb-3">
               প্রয়োজনীয় লিংক
@@ -203,7 +203,7 @@ export default function Footer({ categories: propCategories = [] }) {
           </div>
         </div>
 
-        {/* Bottom Bar: Neutral online edition tagline without copyright or trade license claims */}
+
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <p className="font-serif-bangla">
             আলো আসবে — সত্য ও সাহসের অগ্রদূত

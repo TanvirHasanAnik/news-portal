@@ -1,35 +1,26 @@
 import React from "react";
 import { sanitizeHtml } from "@/lib/editor/articleBlockParser";
 
-/**
- * ArticleContentRenderer
- *
- * Safely renders structured article content blocks stored as JSON in Cloudflare D1 / SQLite.
- * Maps each block type to its semantic HTML tag and sanitizes inline markup via DOMPurify.
- *
- * Supported Blocks:
- * - heading (level: 2 | 3)
- * - paragraph
- * - list (bullet format)
- */
+
+
 export default function ArticleContentRenderer({ content, className = "" }) {
   if (!content) return null;
 
   let parsedDoc = null;
 
-  // Handle both raw JSON strings, JSON objects, and legacy plain text strings
+
   if (typeof content === "string") {
     try {
       parsedDoc = JSON.parse(content);
     } catch {
-      // Legacy plain text format fallback
+
       parsedDoc = null;
     }
   } else if (typeof content === "object" && content !== null) {
     parsedDoc = content;
   }
 
-  // 1. Structured JSON Block Rendering
+
   if (parsedDoc?.blocks && Array.isArray(parsedDoc.blocks)) {
     return (
       <div className={`space-y-4 font-serif-bangla text-base sm:text-lg leading-relaxed text-slate-800 ${className}`}>
@@ -92,7 +83,7 @@ export default function ArticleContentRenderer({ content, className = "" }) {
     );
   }
 
-  // 2. Legacy Plain Text Fallback (split by \n\n)
+
   if (typeof content === "string") {
     const paragraphs = content.trim().split("\n\n").filter(Boolean);
     return (

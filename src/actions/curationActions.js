@@ -91,10 +91,8 @@ export async function reorderCuratedNewsAction(orderedIds) {
   }
 }
 
-/**
- * Server Action: Saves the batch of curated items to database
- * and triggers On-Demand Incremental Static Regeneration (ISR).
- */
+
+
 export async function saveCuratedBatchAction(type, items) {
   try {
     if (!type || (type !== "handpicked" && type !== "breaking")) {
@@ -103,7 +101,7 @@ export async function saveCuratedBatchAction(type, items) {
 
     const validatedItems = curatedBatchSchema.parse(items);
 
-    // Business Logic: Prevent duplicate articles in the curated list
+
     const seenArticles = new Set();
     for (const item of validatedItems) {
       const artId = item.article_id || item.articleId;
@@ -126,7 +124,7 @@ export async function saveCuratedBatchAction(type, items) {
       details: { type, count: validatedItems.length },
     });
 
-    // Trigger On-Demand Incremental Static Regeneration (ISR)
+
     revalidatePath("/");
     revalidatePath("/admin");
     revalidatePath("/category/handpicked");

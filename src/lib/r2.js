@@ -2,11 +2,8 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 let localR2Instance = null;
 
-/**
- * Creates an in-process filesystem adapter mimicking Cloudflare R2 bucket.
- * Used when running locally in Next.js development (next dev) without Miniflare.
- * In production or wrangler preview, getCloudflareContext().env.NEWS_IMAGES_BUCKET is used.
- */
+
+
 async function createLocalR2Adapter() {
   if (localR2Instance) return localR2Instance;
 
@@ -42,7 +39,7 @@ async function createLocalR2Adapter() {
       } else if (streamOrBuffer instanceof ArrayBuffer) {
         buffer = Buffer.from(streamOrBuffer);
       } else if (typeof streamOrBuffer?.getReader === "function") {
-        // ReadableStream
+
         const reader = streamOrBuffer.getReader();
         const chunks = [];
         while (true) {
@@ -60,7 +57,7 @@ async function createLocalR2Adapter() {
 
       fs.writeFileSync(filePath, buffer);
 
-      // Store metadata sidecar for local dev
+
       const metaPath = `${filePath}.meta.json`;
       const meta = {
         httpMetadata: options.httpMetadata || { contentType: "application/octet-stream" },
@@ -139,10 +136,8 @@ async function createLocalR2Adapter() {
   return localR2Instance;
 }
 
-/**
- * Returns the Cloudflare R2 bucket binding 'NEWS_IMAGES_BUCKET'
- * Falls back to local dev filesystem storage when running outside Cloudflare runtime.
- */
+
+
 export async function getR2Bucket() {
   try {
     const cfContext = await getCloudflareContext({ async: true });
@@ -150,15 +145,14 @@ export async function getR2Bucket() {
       return cfContext.env.NEWS_IMAGES_BUCKET;
     }
   } catch (_e) {
-    // Cloudflare context is not active; fallback to local dev adapter
+
   }
 
   return await createLocalR2Adapter();
 }
 
-/**
- * Returns the public URL for an uploaded R2 image key
- */
+
+
 export function getPublicImageUrl(key, env) {
   const publicBase =
     process.env.NEXT_PUBLIC_R2_PUBLIC_URL ||
@@ -169,13 +163,12 @@ export function getPublicImageUrl(key, env) {
     return `${publicBase.replace(/\/$/, "")}/${key.replace(/^\/+/, "")}`;
   }
 
-  // Self-hosted streaming route via Next.js
+
   return `/api/images/${key.replace(/^\/+/, "")}`;
 }
 
-/**
- * Extracts the storage key from a public image URL or relative path
- */
+
+
 export function extractKeyFromImageUrl(urlOrKey) {
   if (!urlOrKey || typeof urlOrKey !== "string") return null;
 
@@ -197,9 +190,8 @@ export function extractKeyFromImageUrl(urlOrKey) {
   return urlOrKey.replace(/^\/+/, "");
 }
 
-/**
- * Deletes a single image from Cloudflare R2 by key or URL
- */
+
+
 export async function deleteFromR2(keyOrUrl) {
   if (!keyOrUrl) return false;
   const key = extractKeyFromImageUrl(keyOrUrl);
@@ -210,9 +202,8 @@ export async function deleteFromR2(keyOrUrl) {
   return true;
 }
 
-/**
- * Deletes multiple images from Cloudflare R2 by keys or URLs
- */
+
+
 export async function deleteMultipleFromR2(keysOrUrls) {
   if (!Array.isArray(keysOrUrls) || keysOrUrls.length === 0) return 0;
   const keys = keysOrUrls.map(extractKeyFromImageUrl).filter(Boolean);

@@ -22,9 +22,6 @@ const moduleComponents = {
   profile: ProfileModule,
 };
 
-/**
- * Server-only Admin Module Resolver
- */
 export const adminModules = adminNavItems.map((item) => ({
   ...item,
   component: moduleComponents[item.id],

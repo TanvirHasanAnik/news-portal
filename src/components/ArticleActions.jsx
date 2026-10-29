@@ -3,13 +3,6 @@
 import React, { useState } from "react";
 import { Share2, Bookmark, Check } from "lucide-react";
 
-/**
- * ArticleActions Component
- * 
- * Interactive action buttons (Bookmark and Share) for news article cards.
- * Isolated as a Client Component so parent news cards can remain pure
- * Server Components without incurring unnecessary client hydration costs.
- */
 export default function ArticleActions({
   className = "",
   buttonClassName = "p-1.5 rounded hover:bg-white/20 transition-colors",

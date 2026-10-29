@@ -15,7 +15,7 @@ async function getAdminSecretKey() {
       return ctx.env.ADMIN_SECRET_KEY.trim();
     }
   } catch (_e) {
-    // Cloudflare context unavailable in pure Node.js
+
   }
 
   return (process.env.ADMIN_SECRET_KEY).trim();
@@ -23,7 +23,7 @@ async function getAdminSecretKey() {
 
 export async function POST(request) {
   try {
-    // 1. Verify Secret Key Header
+
     const configuredSecretKey = await getAdminSecretKey();
 
     const headerSecretKey =
@@ -48,7 +48,7 @@ export async function POST(request) {
       );
     }
 
-    // 2. Parse & Validate Request Body
+
     let body = {};
     try {
       body = await request.json();
@@ -86,7 +86,7 @@ export async function POST(request) {
 
     const cleanUsername = username.trim().toLowerCase();
 
-    // 3. Find target user by username
+
     const user = await getUserByUsername(cleanUsername);
     if (!user) {
       return NextResponse.json(
@@ -98,7 +98,7 @@ export async function POST(request) {
       );
     }
 
-    // 4. Role restriction: Only super_admin and admin passwords can be overridden via this endpoint
+
     if (user.role !== "super_admin" && user.role !== "admin") {
       return NextResponse.json(
         {
@@ -109,11 +109,11 @@ export async function POST(request) {
       );
     }
 
-    // 5. Hash new password and update in database
+
     const hashedPassword = await bcrypt.hash(newPassword.trim(), BCRYPT_SALT_ROUNDS);
     await updateUserPassword(user.id, hashedPassword);
 
-    // 6. Record Audit Log for security monitoring
+
     try {
       await recordAuditLog({
         userId: user.id,
@@ -127,7 +127,7 @@ export async function POST(request) {
         },
       });
     } catch (_auditErr) {
-      // Non-blocking
+
     }
 
     return NextResponse.json({

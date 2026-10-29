@@ -13,7 +13,7 @@ export default function ArticleContentFields({
   register,
   control,
   errors = {},
-  // Fallbacks for backward compatibility
+
   headline = "",
   setHeadline,
   summary = "",
@@ -34,7 +34,7 @@ export default function ArticleContentFields({
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        {/* 1. Headline Field (Mandatory - Pure Bangla Only) */}
+
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <Label htmlFor="headline" className="text-sm font-semibold text-slate-800">
@@ -100,12 +100,12 @@ export default function ArticleContentFields({
             </p>
           ) : (
             <p className="text-[11px] text-slate-400">
-              শুধুমাত্র বাংলা বর্ণমালায় ৩ থেকে ১৮ শব্দের শিরোনাম লিখুন।
+              ৩ থেকে ১৮ শব্দের মধ্যে সংবাদের স্পষ্ট শিরোনাম লিখুন।
             </p>
           )}
         </div>
 
-        {/* 2. Summary / Lead Field (Optional) */}
+
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
@@ -182,7 +182,7 @@ export default function ArticleContentFields({
           )}
         </div>
 
-        {/* 3. Detailed Article Body (Optional) */}
+
         <div className="space-y-1.5">
           <div className="flex items-center gap-1.5">
             <Label htmlFor="content-editor" className="text-sm font-semibold text-slate-800">

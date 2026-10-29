@@ -1,19 +1,12 @@
 import bcrypt from "bcryptjs";
 
-/**
- * Universal Database Auto-Bootstrap & Table Initialization
- *
- * Automatically creates all tables and seeds initial administrative users and categories
- * whenever the website/project boots for the first time or after a database format.
- */
-
 let isSeeded = false;
 let seedingPromise = null;
 
 const BCRYPT_SALT_ROUNDS = 12;
 
 const TABLE_DEFINITIONS = [
-  // 1. Users table (Primary unique identifier is username)
+
   `CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     username VARCHAR(64) NOT NULL,
@@ -37,7 +30,6 @@ const TABLE_DEFINITIONS = [
     INDEX idx_users_created_at (created_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-  // 2. Admin Requests table
   `CREATE TABLE IF NOT EXISTS admin_requests (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     requester_id VARCHAR(64) NOT NULL,
@@ -55,7 +47,6 @@ const TABLE_DEFINITIONS = [
     INDEX idx_admin_requests_created (created_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-  // 3. Categories table
   `CREATE TABLE IF NOT EXISTS categories (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -69,7 +60,6 @@ const TABLE_DEFINITIONS = [
     INDEX idx_categories_is_permanent (is_permanent)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-  // 4. Subcategories table
   `CREATE TABLE IF NOT EXISTS subcategories (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     category_id VARCHAR(64) NOT NULL,
@@ -83,7 +73,6 @@ const TABLE_DEFINITIONS = [
     INDEX idx_subcategories_sort_order (sort_order)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-  // 5. Articles table
   `CREATE TABLE IF NOT EXISTS articles (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     headline VARCHAR(500) NOT NULL,
@@ -132,7 +121,6 @@ const TABLE_DEFINITIONS = [
     INDEX idx_articles_view_count (view_count)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-  // 6. Article Revisions table
   `CREATE TABLE IF NOT EXISTS article_revisions (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     article_id VARCHAR(64) NOT NULL,
@@ -147,7 +135,6 @@ const TABLE_DEFINITIONS = [
     INDEX idx_revisions_created_at (created_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-  // 7. Curated News table
   `CREATE TABLE IF NOT EXISTS curated_news (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     type VARCHAR(32) NOT NULL,
@@ -162,7 +149,6 @@ const TABLE_DEFINITIONS = [
     INDEX idx_curated_article_id (article_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-  // 8. Analytics Page Views table
   `CREATE TABLE IF NOT EXISTS analytics_page_views (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     path VARCHAR(500) NOT NULL,
@@ -179,7 +165,6 @@ const TABLE_DEFINITIONS = [
     INDEX idx_analytics_category (category_slug)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-  // 9. Audit Logs table
   `CREATE TABLE IF NOT EXISTS audit_logs (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     user_id VARCHAR(64) NULL,
@@ -194,7 +179,6 @@ const TABLE_DEFINITIONS = [
     INDEX idx_audit_logs_created_at (created_at)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-  // 10. Comments table
   `CREATE TABLE IF NOT EXISTS comments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     article_id VARCHAR(64) NOT NULL,
@@ -211,7 +195,6 @@ const TABLE_DEFINITIONS = [
     INDEX idx_comments_parent_id (parent_id)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 
-  // 11. Notifications table
   `CREATE TABLE IF NOT EXISTS notifications (
     id VARCHAR(64) NOT NULL PRIMARY KEY,
     user_id VARCHAR(64) NOT NULL,
@@ -307,9 +290,6 @@ const DEFAULT_SUBCATEGORIES = [
   ['cat_opinion_s_4', 'cat_opinion', 'বিশ্লেষণ', 'sub_opinion_4', 4],
 ];
 
-/**
- * Universal query runner: supports Cloudflare Workers (TiDB HTTP) and Node.js (mysql2 TCP)
- */
 async function executeUniversalQuery(sql, params = [], env = {}) {
   const isWorker =
     typeof WebSocketPair !== "undefined" ||
@@ -369,21 +349,18 @@ export function resolveEnvSecrets(env = {}) {
   return {
     superAdminUsername,
     superAdminEmail: (getVal("SUPER_ADMIN_EMAIL") || getVal("INITIAL_SUPER_ADMIN_EMAIL") || "").trim().toLowerCase() || null,
-    superAdminName: (getVal("SUPER_ADMIN_NAME") || getVal("INITIAL_SUPER_ADMIN_NAME") || "সুপার অ্যাডমিন").trim(),
+    superAdminName: (getVal("SUPER_ADMIN_NAME") || getVal("INITIAL_SUPER_ADMIN_NAME") || "Super Admin").trim(),
     superAdminPassword,
     superAdminFallbackPassword: superAdminPassword,
 
     adminUsername,
     adminEmail: (getVal("ADMIN_EMAIL") || getVal("INITIAL_ADMIN_EMAIL") || "").trim().toLowerCase() || null,
-    adminName: (getVal("ADMIN_NAME") || getVal("INITIAL_ADMIN_NAME") || "অ্যাডমিন").trim(),
+    adminName: (getVal("ADMIN_NAME") || getVal("INITIAL_ADMIN_NAME") || "Admin").trim(),
     adminPassword,
     adminFallbackPassword: adminPassword,
   };
 }
 
-/**
- * Returns the environment fallback password for super_admin or admin
- */
 export function getFallbackPasswordForRole(role, env = {}) {
   const secrets = resolveEnvSecrets(env);
   if (role === "super_admin") {
@@ -395,9 +372,6 @@ export function getFallbackPasswordForRole(role, env = {}) {
   return null;
 }
 
-/**
- * Main Database Initialization & Bootstrap Function
- */
 export async function bootstrapDatabase(env = {}) {
   if (isSeeded) {
     return { seeded: false, skipped: true, reason: "already_seeded" };
@@ -409,12 +383,11 @@ export async function bootstrapDatabase(env = {}) {
 
   seedingPromise = (async () => {
     try {
-      // 1. Create all 10 core tables if they do not exist
+
       for (const tableSql of TABLE_DEFINITIONS) {
         await executeUniversalQuery(tableSql, [], env);
       }
 
-      // Safe schema migrations for articles table (created_by, last_edited_by, last_edited_at, is_passed_to_upper, etc.)
       try {
         await executeUniversalQuery("ALTER TABLE articles ADD COLUMN created_by VARCHAR(64) NULL", [], env);
       } catch (_e) {}
@@ -434,7 +407,6 @@ export async function bootstrapDatabase(env = {}) {
         await executeUniversalQuery("ALTER TABLE articles ADD COLUMN passed_at TIMESTAMP NULL DEFAULT NULL", [], env);
       } catch (_e) {}
 
-      // Backfill created_by with username and ensure last_edited_by only exists for real edits
       try {
         await executeUniversalQuery(
           `UPDATE articles a
@@ -444,7 +416,7 @@ export async function bootstrapDatabase(env = {}) {
           [],
           env
         );
-        // Clean out bogus last_edited_by that matched created_by or was dummy text
+
         await executeUniversalQuery(
           `UPDATE articles
            SET last_edited_by = NULL
@@ -457,12 +429,11 @@ export async function bootstrapDatabase(env = {}) {
         );
       } catch (_e) {}
 
-      // Seed initial notifications for existing approved/rejected articles and requests if notifications table is empty
       try {
         const notifCountRows = await executeUniversalQuery("SELECT COUNT(*) as cnt FROM notifications", [], env);
         const notifCount = Number(Array.isArray(notifCountRows) ? notifCountRows[0]?.cnt : 0);
         if (notifCount === 0) {
-          // 1. Initial notifications for approved & rejected articles
+
           const artRows = await executeUniversalQuery(
             `SELECT a.id, a.headline, a.slug, a.status, a.author_id, a.is_passed_to_upper, a.passed_by, a.created_at, u.username as author_username
              FROM articles a
@@ -517,7 +488,7 @@ export async function bootstrapDatabase(env = {}) {
               }
             }
           }
-          // 2. Initial notifications for approved & rejected admin requests
+
           const reqRows = await executeUniversalQuery(
             `SELECT id, requester_id, request_type, status, reviewer_note, created_at
              FROM admin_requests
@@ -554,7 +525,6 @@ export async function bootstrapDatabase(env = {}) {
             }
           }
 
-          // 3. Initial notifications for sub-editors for any pending reporter submissions
           const subEditorRows = await executeUniversalQuery(
             "SELECT id FROM users WHERE role = 'sub_editor' AND status = 'active'",
             [],
@@ -594,7 +564,6 @@ export async function bootstrapDatabase(env = {}) {
         }
       } catch (_notifSeedErr) {}
 
-      // 2. Ensure initial categories exist
       try {
         const catRows = await executeUniversalQuery(
           "SELECT COUNT(*) as count FROM categories",
@@ -615,7 +584,6 @@ export async function bootstrapDatabase(env = {}) {
         console.warn("[Auto-Bootstrap categories]:", err?.message);
       }
 
-      // 3. Ensure initial subcategories exist
       try {
         const subRows = await executeUniversalQuery(
           "SELECT COUNT(*) as count FROM subcategories",
@@ -636,17 +604,15 @@ export async function bootstrapDatabase(env = {}) {
         console.warn("[Auto-Bootstrap subcategories]:", err?.message);
       }
 
-      // 4. Ensure initial reporter exists
       try {
         await executeUniversalQuery(
           `INSERT IGNORE INTO users (id, username, full_name, name, email, phone, role, status, bio)
-           VALUES ('usr_reporter', 'reporter', 'নিজস্ব প্রতিবেদক', 'নিজস্ব প্রতিবেদক', 'reporter@aloshbe.com', '', 'reporter', 'active', 'আলো আসবে সংবাদ পরিবার')`,
+           VALUES ('usr_reporter', 'reporter', 'Reporter', 'Reporter', 'reporter@aloshbe.com', '', 'reporter', 'active', 'আলো আসবে সংবাদ পরিবার')`,
           [],
           env
         );
       } catch (_e) {}
 
-      // 5. Check and seed Super Admin and Admin
       const secrets = resolveEnvSecrets(env);
       const existingUsers = await executeUniversalQuery(
         "SELECT id, username, role, email FROM users WHERE role IN (?, ?)",
@@ -658,7 +624,6 @@ export async function bootstrapDatabase(env = {}) {
       const hasSuperAdmin = rows.some((u) => u.role === "super_admin");
       const hasAdmin = rows.some((u) => u.role === "admin");
 
-      // Seed Super Admin if missing
       if (!hasSuperAdmin && secrets.superAdminPassword) {
         const salt = await bcrypt.genSalt(BCRYPT_SALT_ROUNDS);
         const hashedPassword = await bcrypt.hash(secrets.superAdminPassword, salt);
@@ -672,7 +637,6 @@ export async function bootstrapDatabase(env = {}) {
         );
       }
 
-      // Seed Admin if missing
       if (!hasAdmin && secrets.adminPassword) {
         const salt = await bcrypt.genSalt(BCRYPT_SALT_ROUNDS);
         const hashedPassword = await bcrypt.hash(secrets.adminPassword, salt);

@@ -39,7 +39,7 @@ export async function createUserAction(prevState, formData) {
 
     const validated = createUserSchema.parse(rawData);
 
-    // Enforce single-user rule for super admin and admin
+
     if (isSingleUserRole(validated.role)) {
       return {
         success: false,
@@ -96,7 +96,7 @@ export async function updateUserRoleAction(userId, newRole) {
 
     const validated = updateUserRoleSchema.parse({ userId, role: newRole });
 
-    // Enforce single-user rule: cannot promote anyone to super admin or admin
+
     if (isSingleUserRole(validated.role)) {
       return {
         success: false,
@@ -105,7 +105,7 @@ export async function updateUserRoleAction(userId, newRole) {
     }
 
     const targetUser = await getUserById(validated.userId);
-    // Enforce single-user rule: cannot change existing super admin or admin roles
+
     if (targetUser && isSingleUserRole(targetUser.role)) {
       return {
         success: false,
@@ -144,7 +144,7 @@ export async function toggleUserStatusAction(userId, currentStatus) {
     const validated = toggleUserStatusSchema.parse({ userId, currentStatus });
 
     const targetUser = await getUserById(validated.userId);
-    // Enforce single-user rule: cannot disable super admin or admin
+
     if (targetUser && isSingleUserRole(targetUser.role)) {
       return {
         success: false,

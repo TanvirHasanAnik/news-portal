@@ -11,11 +11,10 @@ const ALLOWED_MIME_TYPES = new Set([
   "image/svg+xml",
 ]);
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; 
 
-/**
- * Server Action: Uploads an image directly to Cloudflare R2 bucket (NEWS_IMAGES_BUCKET)
- */
+
+
 export async function uploadImageAction(formData) {
   try {
     const file = formData.get("file");
@@ -50,7 +49,7 @@ export async function uploadImageAction(formData) {
 
     const bucket = await getR2Bucket();
 
-    // R2 bucket.put() with file stream and proper content-type
+
     await bucket.put(key, file.stream(), {
       httpMetadata: {
         contentType: file.type || "image/jpeg",
@@ -82,9 +81,8 @@ export async function uploadImageAction(formData) {
   }
 }
 
-/**
- * Server Action: Deletes a single image from Cloudflare R2 bucket
- */
+
+
 export async function deleteImageAction(keyOrUrl) {
   try {
     const success = await deleteFromR2(keyOrUrl);
@@ -95,9 +93,8 @@ export async function deleteImageAction(keyOrUrl) {
   }
 }
 
-/**
- * Server Action: Deletes multiple images from Cloudflare R2 bucket
- */
+
+
 export async function deleteImagesAction(keysOrUrls) {
   try {
     const count = await deleteMultipleFromR2(keysOrUrls);

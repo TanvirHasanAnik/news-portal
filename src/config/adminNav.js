@@ -11,10 +11,6 @@ import {
   Users,
 } from "lucide-react";
 
-/**
- * Client-safe navigation definitions for Admin Panel sidebar and header.
- * Free of Server Components and database repositories.
- */
 export const adminNavItems = [
   {
     id: "analytics",
