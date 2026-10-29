@@ -121,21 +121,19 @@ export function UserManager({
 
       const res = await createUserAction(null, formData);
       if (res.success) {
-        setUsers((prev) => sortUsersByRole([
-          ...prev,
-          {
-            id: `usr_${Date.now()}`,
-            username: data.username.trim().toLowerCase(),
-            full_name: (data.fullName || "").trim(),
-            name: (data.fullName || data.username).trim(),
-            email: (data.email || "").trim(),
-            phone: (data.phone || "").trim(),
-            role: data.role,
-            status: "active",
-            bio: "",
-            created_at: new Date().toISOString(),
-          },
-        ]));
+        const newUserObj = res.user || {
+          id: `usr_${Date.now()}`,
+          username: data.username.trim().toLowerCase(),
+          full_name: (data.fullName || "").trim(),
+          name: (data.fullName || data.username).trim(),
+          email: (data.email || "").trim(),
+          phone: (data.phone || "").trim(),
+          role: data.role,
+          status: "active",
+          bio: "",
+          created_at: new Date().toISOString(),
+        };
+        setUsers((prev) => sortUsersByRole([...prev, newUserObj]));
         setFeedback({ type: "success", message: res.message });
         reset({
           username: "",
@@ -321,7 +319,7 @@ export function UserManager({
 
                     <td className="py-3 px-4">
                       <div className="font-semibold text-slate-900">
-                        {usr.full_name || <span className="text-slate-400 font-normal">—</span>}
+                        {usr.full_name || usr.username}
                       </div>
                       <div className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">
                         {usr.bio || "কোনো বিবরণ নেই"}

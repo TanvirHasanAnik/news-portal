@@ -253,7 +253,19 @@ export async function updateArticleAction(prevState, formData) {
           message: "অন্য কারো সংবাদ সম্পাদনা করার অনুমতি আপনার নেই।",
         };
       }
+      if (existingArticle.status === "published") {
+        return {
+          success: false,
+          message: "প্রকাশিত সংবাদ সম্পাদনা করার অনুমতি প্রতিবেদকের নেই।",
+        };
+      }
     } else if (currentUser.role === "sub_editor") {
+      if (existingArticle.status === "published") {
+        return {
+          success: false,
+          message: "প্রকাশিত সংবাদ সম্পাদনা করার অনুমতি সহ-সম্পাদকের নেই।",
+        };
+      }
       const isReporterSubmitted =
         (existingArticle.status === "pending" || existingArticle.status === "pending_approval") &&
         (existingArticle.author_role === "reporter" || existingArticle.created_by !== currentUser.username);
@@ -356,6 +368,7 @@ export async function updateArticleAction(prevState, formData) {
 
     const isSubEditorReview = currentUser.role === "sub_editor" && !isAuthor;
     const passToUpper = formData.get("passToUpper") === "true";
+    const rejectionReason = (formData.get("rejectionReason") || "").toString().trim() || null;
 
     const readTime = calculateReadTime(validated.content);
 
@@ -485,7 +498,7 @@ export async function passArticleToUpperAction(articleId) {
   }
 }
 
-export async function updateArticleStatusAction(articleId, newStatus) {
+export async function updateArticleStatusAction(articleId, newStatus, rejectionReason = null) {
   try {
     const currentUser = await getCurrentUser();
     if (!currentUser) {
@@ -536,7 +549,15 @@ export async function updateArticleStatusAction(articleId, newStatus) {
       }
     }
 
-    await updateArticleStatus(articleId, newStatus, currentUser.id, currentUser.username);
+        if (newStatus === "rejected" && article.status !== "pending" && article.status !== "pending_approval") {
+      return {
+        success: false,
+        message: "শুধুমাত্র অনুমোদনের অপেক্ষায় থাকা (পেন্ডিং) সংবাদ প্রত্যাখ্যান করা যাবে।",
+      };
+    }
+
+    const cleanReason = (rejectionReason || "").toString().trim() || null;
+    await updateArticleStatus(articleId, newStatus, currentUser.id, currentUser.username, cleanReason);
     revalidatePath("/admin");
     revalidatePath("/");
     if (article.category_slug) {
@@ -583,6 +604,10 @@ export async function updateArticleStatusAction(articleId, newStatus) {
 
 export async function toggleArticleFlagAction(articleId, flagName) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || !isUpperRole(currentUser.role)) {
+      return { success: false, message: "এই পরিবর্তন করার অনুমতি আপনার নেই।" };
+    }
     const res = await toggleArticleFlag(articleId, flagName);
     revalidatePath("/admin");
     revalidatePath("/");
@@ -599,10 +624,17 @@ export async function deleteArticleAction(articleId) {
       return { success: false, message: "আর্টিকেল আইডি আবশ্যক।" };
     }
     const currentUser = await getCurrentUser();
+    if (!currentUser) {
+      return { success: false, message: "অননুমোদিত অনুরোধ। অনুগ্রহ করে লগইন করুন।" };
+    }
+    const allowedRoles = ["super_admin", "admin", "editor_in_chief", "editor"];
+    if (!allowedRoles.includes(currentUser.role)) {
+      return { success: false, message: "আর্টিকেল মুছে ফেলার অনুমতি আপনার নেই।" };
+    }
     await deleteArticle(
       articleId,
-      currentUser?.id || "usr_superadmin",
-      currentUser?.username || "admin"
+      currentUser.id,
+      currentUser.username
     );
     revalidatePath("/admin");
     revalidatePath("/");

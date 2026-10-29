@@ -1,4 +1,5 @@
 import { getDb, query, queryOne, withTransaction } from "@/lib/db";
+import { deleteMultipleFromR2 } from "@/lib/r2";
 
 function normalizeTimestamp(ts) {
   if (!ts) return null;
@@ -89,6 +90,8 @@ export function mapDbArticleToFrontend(dbRow) {
     created_at: normalizeTimestamp(dbRow.created_at),
     updatedAt: normalizeTimestamp(dbRow.updated_at || dbRow.created_at),
     updated_at: normalizeTimestamp(dbRow.updated_at || dbRow.created_at),
+    rejectionReason: (dbRow.rejection_reason || "").trim() || null,
+    rejection_reason: (dbRow.rejection_reason || "").trim() || null,
     hasCustomImage: Boolean(primaryImage),
     status: dbRow.status === "pending_approval" ? "pending" : (dbRow.status || "published"),
     isLead: Boolean(dbRow.is_lead),
@@ -319,6 +322,7 @@ export async function updateArticle(id, data) {
       passed_by = ?,
       passed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE passed_at END,
       published_at = CASE WHEN ? = 1 THEN COALESCE(published_at, CURRENT_TIMESTAMP) ELSE published_at END,
+      rejection_reason = ?,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
   `;
@@ -347,6 +351,7 @@ export async function updateArticle(id, data) {
     passedBy,
     data.passToUpper ? 1 : 0,
     isNowPublished ? 1 : 0,
+    newStatus === "rejected" ? (data.rejectionReason || current.rejection_reason || null) : null,
     id,
   ];
 
@@ -403,13 +408,17 @@ export async function updateArticle(id, data) {
           ]
         );
       } else if (newStatus === "rejected") {
+        const rejectMsg = data.rejectionReason
+          ? `আপনার সংবাদ "${data.headline || current.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।\nমন্তব্য/কারণ: ${data.rejectionReason}`
+          : `আপনার সংবাদ "${data.headline || current.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।`;
+
         await tx.query(
           `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
            VALUES (?, ?, 'article_rejected', 'সংবাদ প্রত্যাখ্যাত হয়েছে', ?, 'article', ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
           [
             `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
             current.author_id,
-            `আপনার সংবাদ "${data.headline || current.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।`,
+            rejectMsg,
             id,
             current.slug,
             editorUsername,
@@ -444,13 +453,17 @@ export async function updateArticle(id, data) {
             ]
           );
         } else if (newStatus === "rejected") {
+          const rejectMsg = data.rejectionReason
+            ? `আপনার যাচাইকৃত সংবাদ "${data.headline || current.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।\nমন্তব্য/কারণ: ${data.rejectionReason}`
+            : `আপনার যাচাইকৃত সংবাদ "${data.headline || current.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।`;
+
           await tx.query(
             `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
              VALUES (?, ?, 'article_rejected', 'যাচাইকৃত সংবাদ প্রত্যাখ্যাত হয়েছে', ?, 'article', ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
             [
               `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
               subUser.id,
-              `আপনার যাচাইকৃত সংবাদ "${data.headline || current.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।`,
+              rejectMsg,
               id,
               current.slug,
               editorUsername,
@@ -624,14 +637,51 @@ export async function getAllArticles({ status, authorId, createdBy, forSubEditor
 }
 
 export async function deleteArticle(id, editorId = "usr_superadmin", editorUsername = "admin") {
-  return await withTransaction(async (tx) => {
-    const existing = await tx.query("SELECT headline FROM articles WHERE id = ?", [id]);
-    const headline = existing && existing[0]?.headline ? existing[0].headline : "সংবাদ";
+  let imagesToDelete = [];
+
+  const result = await withTransaction(async (tx) => {
+    const existing = await tx.query("SELECT headline, image, images, content FROM articles WHERE id = ?", [id]);
+    const row = existing && existing[0] ? existing[0] : null;
+    const headline = row?.headline || "সংবাদ";
+
+    if (row) {
+      const imageSet = new Set();
+      if (row.image) imageSet.add(row.image);
+
+      if (Array.isArray(row.images)) {
+        row.images.filter(Boolean).forEach((img) => imageSet.add(img));
+      } else if (typeof row.images === "string" && row.images.trim()) {
+        try {
+          const parsed = JSON.parse(row.images);
+          if (Array.isArray(parsed)) {
+            parsed.filter(Boolean).forEach((img) => imageSet.add(img));
+          } else if (parsed && typeof parsed === "string") {
+            imageSet.add(parsed);
+          }
+        } catch {
+          imageSet.add(row.images.trim());
+        }
+      }
+
+      if (typeof row.content === "string" && row.content) {
+        const apiMatches = row.content.match(/\/api\/images\/[^\s"'<>)]+/g) || [];
+        apiMatches.forEach((m) => imageSet.add(m));
+
+        const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+        if (r2PublicUrl) {
+          const escapedBase = r2PublicUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const publicMatches = row.content.match(new RegExp(`${escapedBase}/[^\\s"'<>)]+`, "g")) || [];
+          publicMatches.forEach((m) => imageSet.add(m));
+        }
+      }
+
+      imagesToDelete = Array.from(imageSet);
+    }
 
     await tx.query("DELETE FROM article_revisions WHERE article_id = ?", [id]);
     await tx.query("DELETE FROM curated_news WHERE article_id = ?", [id]);
     await tx.query("DELETE FROM analytics_page_views WHERE article_id = ?", [id]);
-    const result = await tx.query("DELETE FROM articles WHERE id = ?", [id]);
+    const deleteResult = await tx.query("DELETE FROM articles WHERE id = ?", [id]);
 
     await tx.query(
       `INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, created_at)
@@ -640,12 +690,22 @@ export async function deleteArticle(id, editorId = "usr_superadmin", editorUsern
         `log_${Date.now()}`,
         editorId,
         id,
-        JSON.stringify({ headline, last_edited_by: editorUsername }),
+        JSON.stringify({ headline, last_edited_by: editorUsername, images_deleted: imagesToDelete.length }),
       ]
     );
 
-    return result;
+    return deleteResult;
   });
+
+  if (imagesToDelete.length > 0) {
+    try {
+      await deleteMultipleFromR2(imagesToDelete);
+    } catch (err) {
+      console.error("Failed to delete images from R2 for article", id, err);
+    }
+  }
+
+  return result;
 }
 
 export async function getArticleAuditLogs(limit = 100) {
@@ -669,7 +729,7 @@ export async function getArticleAuditLogs(limit = 100) {
   return rows || [];
 }
 
-export async function updateArticleStatus(id, status, editorId = "usr_superadmin", editorUsername = "admin") {
+export async function updateArticleStatus(id, status, editorId = "usr_superadmin", editorUsername = "admin", rejectionReason = null) {
   return await withTransaction(async (tx) => {
 
     const targetArticle = await tx.queryOne(
@@ -677,13 +737,16 @@ export async function updateArticleStatus(id, status, editorId = "usr_superadmin
       [id]
     );
 
+    const cleanReason = (rejectionReason || "").trim();
+
     const result = await tx.query(
       `UPDATE articles 
        SET status = ?, 
+           rejection_reason = ?,
            published_at = CASE WHEN ? = 'published' THEN COALESCE(published_at, CURRENT_TIMESTAMP) ELSE published_at END,
            updated_at = CURRENT_TIMESTAMP 
        WHERE id = ?`,
-      [status, status, id]
+      [status, status === "rejected" ? (cleanReason || null) : null, status, id]
     );
 
     const statusLabels = {
@@ -715,7 +778,7 @@ export async function updateArticleStatus(id, status, editorId = "usr_superadmin
         "update_status",
         "article",
         id,
-        JSON.stringify({ status, changed_by: editorUsername }),
+        JSON.stringify({ status, changed_by: editorUsername, rejection_reason: cleanReason || null }),
       ]
     );
 
@@ -734,13 +797,17 @@ export async function updateArticleStatus(id, status, editorId = "usr_superadmin
           ]
         );
       } else if (status === "rejected") {
+        const rejectMsg = cleanReason
+          ? `আপনার সংবাদ "${targetArticle.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।\nমন্তব্য/কারণ: ${cleanReason}`
+          : `আপনার সংবাদ "${targetArticle.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।`;
+
         await tx.query(
           `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
            VALUES (?, ?, 'article_rejected', 'সংবাদ প্রত্যাখ্যাত হয়েছে', ?, 'article', ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
           [
             `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
             targetArticle.author_id,
-            `আপনার সংবাদ "${targetArticle.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।`,
+            rejectMsg,
             id,
             targetArticle.slug,
             editorUsername,
@@ -770,13 +837,17 @@ export async function updateArticleStatus(id, status, editorId = "usr_superadmin
             ]
           );
         } else if (status === "rejected") {
+          const rejectMsg = cleanReason
+            ? `আপনার যাচাইকৃত সংবাদ "${targetArticle.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।\nমন্তব্য/কারণ: ${cleanReason}`
+            : `আপনার যাচাইকৃত সংবাদ "${targetArticle.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।`;
+
           await tx.query(
             `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at)
              VALUES (?, ?, 'article_rejected', 'যাচাইকৃত সংবাদ প্রত্যাখ্যাত হয়েছে', ?, 'article', ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
             [
               `notif_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
               subUser.id,
-              `আপনার যাচাইকৃত সংবাদ "${targetArticle.headline}" ঊর্ধ্বতন কর্তৃপক্ষের পর্যালোচনায় প্রত্যাখ্যাত হয়েছে।`,
+              rejectMsg,
               id,
               targetArticle.slug,
               editorUsername,

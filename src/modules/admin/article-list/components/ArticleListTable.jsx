@@ -7,6 +7,7 @@ import {
   ExternalLink,
   CheckCircle2,
   XCircle,
+  AlertCircle,
   Archive,
   Trash2,
   Zap,
@@ -17,6 +18,7 @@ import {
   FileText,
   User,
   History,
+  MessageSquareQuote,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -68,6 +70,9 @@ export function ArticleListTable({
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
+  const [rejectModalConfig, setRejectModalConfig] = useState(null);
+  const [viewingReasonArticle, setViewingReasonArticle] = useState(null);
+  const [rejectionReasonText, setRejectionReasonText] = useState("");
 
   const isOwnArticle = (art) => {
     if (!currentUser) return false;
@@ -138,10 +143,10 @@ export function ArticleListTable({
     });
   }, [scopedArticles, selectedStatus, selectedCategory, searchQuery]);
 
-  const executeStatusChange = (articleId, newStatus) => {
+  const executeStatusChange = (articleId, newStatus, rejectionReason = null) => {
     startTransition(async () => {
       const prevArt = articles.find((a) => a.id === articleId);
-      const res = await updateArticleStatusAction(articleId, newStatus);
+      const res = await updateArticleStatusAction(articleId, newStatus, rejectionReason);
       if (res.success) {
         setArticles((prev) =>
           prev.map((a) =>
@@ -149,6 +154,8 @@ export function ArticleListTable({
               ? {
                   ...a,
                   status: newStatus,
+                  rejection_reason: newStatus === "rejected" ? rejectionReason : null,
+                  rejectionReason: newStatus === "rejected" ? rejectionReason : null,
                   published_at:
                     newStatus === "published"
                       ? a.published_at || new Date().toISOString()
@@ -188,14 +195,8 @@ export function ArticleListTable({
     }
 
     if (newStatus === "rejected") {
-      setConfirmConfig({
-        message: `আপনি কি নিশ্চিতভাবে "${headline || "এই সংবাদটি"}" প্রত্যাখ্যান করতে চান? এটি প্রতিবেদকের কাছে প্রত্যাখ্যাত হিসেবে ফেরত যাবে।`,
-        confirmVariant: "destructive",
-        onConfirm: () => {
-          setConfirmConfig(null);
-          executeStatusChange(articleId, newStatus);
-        },
-      });
+      setRejectionReasonText("");
+      setRejectModalConfig({ articleId, headline });
       return;
     }
 
@@ -610,7 +611,7 @@ export function ArticleListTable({
                   const isAuthor = isOwnArticle(art);
                   const canEdit =
                     !isLower ||
-                    isAuthor ||
+                    (isAuthor && status !== "published") ||
                     (isSubEditor && !isAuthor && (status === "pending" || art.status === "pending_approval"));
 
                   return (
@@ -641,9 +642,22 @@ export function ArticleListTable({
                               খসড়া
                             </Badge>
                           ) : status === "rejected" ? (
+                            <div className="inline-flex items-center gap-1.5 shrink-0">
                             <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] py-0 px-1.5 shrink-0">
                               প্রত্যাখ্যাত
                             </Badge>
+                            {Boolean(art.rejection_reason || art.rejectionReason) && (
+                              <button
+                                type="button"
+                                onClick={() => setViewingReasonArticle(art)}
+                                title="প্রত্যাখ্যানের পূর্ণ মন্তব্য দেখতে ক্লিক করুন"
+                                className="inline-flex items-center gap-1 text-[10px] text-rose-700 hover:text-rose-900 bg-rose-50 hover:bg-rose-100 px-2 py-0.5 rounded-full border border-rose-200 transition-colors font-semibold cursor-pointer"
+                              >
+                                <MessageSquareQuote className="w-3 h-3 text-rose-500" />
+                                কারণ দেখুন
+                              </button>
+                            )}
+                          </div>
                           ) : status === "archived" ? (
                             <Badge className="bg-zinc-100 text-zinc-600 border-zinc-200 text-[10px] py-0 px-1.5 shrink-0">
                               আর্কাইভ
@@ -666,6 +680,26 @@ export function ArticleListTable({
                           <span>{formatTimeAgo(art.published_at || art.created_at)}</span>
                           {art.subcategory_name && <span>• {art.subcategory_name}</span>}
                         </div>
+
+                        {status === "rejected" && Boolean(art.rejection_reason || art.rejectionReason) && (
+                          <div className="mt-1.5 flex items-center">
+                            <button
+                              type="button"
+                              onClick={() => setViewingReasonArticle(art)}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-rose-50/70 hover:bg-rose-100/80 border border-rose-200/70 text-[11px] text-rose-800 transition-colors cursor-pointer max-w-lg text-left group"
+                              title="সম্পূর্ণ মন্তব্য পড়তে ক্লিক করুন"
+                            >
+                              <AlertCircle className="w-3 h-3 text-rose-500 shrink-0" />
+                              <span className="font-semibold text-rose-950 shrink-0 text-[11px]">কারণ:</span>
+                              <span className="truncate text-rose-800/90 font-normal text-[11px]">
+                                {art.rejection_reason || art.rejectionReason}
+                              </span>
+                              <span className="text-[10px] text-rose-600 font-semibold underline shrink-0 ml-1 group-hover:text-rose-950">
+                                বিস্তারিত
+                              </span>
+                            </button>
+                          </div>
+                        )}
                       </td>
 
                       <td className="py-3.5 px-3 whitespace-nowrap">
@@ -765,7 +799,7 @@ export function ArticleListTable({
                                 </button>
                               )}
 
-                              {(status === "pending" || status === "published") && canApprove && !isAuthor && (
+                              {(status === "pending" || art.status === "pending_approval") && canApprove && !isAuthor && (
                                 <button
                                   type="button"
                                   onClick={() => handleStatusChange(art.id, "rejected", art.headline)}
@@ -870,7 +904,7 @@ export function ArticleListTable({
                             <button
                               type="button"
                               onClick={() => handleDelete(art.id, art.headline)}
-                              title="মুছে ফেলুন"
+                              title="স্থায়ীভাবে মুছে ফেলুন"
                               disabled={isPending}
                               className="p-1.5 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-colors"
                             >
@@ -897,6 +931,91 @@ export function ArticleListTable({
         message={confirmConfig?.message}
         confirmVariant={confirmConfig?.confirmVariant || "default"}
       />
+
+      <ConfirmModal
+        isOpen={Boolean(rejectModalConfig)}
+        onClose={() => {
+          setRejectModalConfig(null);
+          setRejectionReasonText("");
+        }}
+        onConfirm={() => {
+          if (!rejectModalConfig) return;
+          const { articleId } = rejectModalConfig;
+          const reason = rejectionReasonText.trim() || null;
+          setRejectModalConfig(null);
+          setRejectionReasonText("");
+          executeStatusChange(articleId, "rejected", reason);
+        }}
+        message={`আপনি কি নিশ্চিতভাবে "${rejectModalConfig?.headline || "এই সংবাদটি"}" প্রত্যাখ্যান করতে চান?`}
+        confirmText="প্রত্যাখ্যান নিশ্চিত করুন"
+        cancelText="বাতিল"
+        confirmVariant="destructive"
+      >
+        <div className="space-y-1.5 pt-1 text-left">
+          <label className="block text-xs font-semibold text-slate-700">
+            প্রত্যাখ্যানের কারণ বা মন্তব্য (ঐচ্ছিক):
+          </label>
+          <textarea
+            value={rejectionReasonText}
+            onChange={(e) => setRejectionReasonText(e.target.value)}
+            placeholder="প্রত্যাখ্যানের কারণ লিখুন (ঐচ্ছিক)..."
+            rows={3}
+            className="w-full rounded-lg border border-slate-200 p-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent resize-none"
+          />
+          <p className="text-[11px] text-slate-400">
+            প্রতিবেদক ও যাচাইকারী সহ-সম্পাদক এই মন্তব্যটি দেখতে পাবেন।
+          </p>
+        </div>
+      </ConfirmModal>
+    
+      {viewingReasonArticle && (
+        <ConfirmModal
+          isOpen={Boolean(viewingReasonArticle)}
+          onClose={() => setViewingReasonArticle(null)}
+          onConfirm={() => setViewingReasonArticle(null)}
+          confirmText="বন্ধ করুন"
+          cancelText=""
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-3.5 pt-1 text-left">
+            <div className="flex items-center gap-2.5 border-b border-slate-100 pb-2.5">
+              <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center shrink-0">
+                <AlertCircle className="w-4 h-4 text-rose-600" />
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-slate-900">
+                  প্রত্যাখ্যানের পর্যালোচনা ও কারণ
+                </h4>
+                <p className="text-[11px] text-slate-400">
+                  কর্তৃপক্ষের প্রেরিত নির্দেশনা
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <span className="text-[11px] font-semibold text-slate-500 block mb-1">
+                সংবাদের শিরোনাম:
+              </span>
+              <p className="text-xs font-semibold text-slate-800 line-clamp-2">
+                {viewingReasonArticle.headline}
+              </p>
+            </div>
+
+            <div>
+              <span className="text-[11px] font-semibold text-rose-800 block mb-1">
+                মন্তব্য / নির্দেশনা:
+              </span>
+              <div className="p-3.5 bg-rose-50/60 rounded-xl border border-rose-200/80 text-xs text-rose-950 whitespace-pre-line leading-relaxed max-h-56 overflow-y-auto">
+                {viewingReasonArticle.rejection_reason || viewingReasonArticle.rejectionReason}
+              </div>
+            </div>
+
+            <p className="text-[11px] text-slate-400 leading-normal">
+              উক্ত মন্তব্য অনুযায়ী সংবাদটি সংশোধন করে পুনরায় পর্যালোচনার জন্য জমা দেওয়া যাবে।
+            </p>
+          </div>
+        </ConfirmModal>
+      )}
     </div>
   );
 }

@@ -1,8 +1,8 @@
-import React from "react";
-import { ShieldCheck, History } from "lucide-react";
 import { formatStaticDateTime } from "@/utils/dateUtils";
+import { History, ShieldCheck } from "lucide-react";
 
-export function AuditLogsTable({ logs }) {
+export function AuditLogsTable({ logs = [] }) {
+  const safeLogs = Array.isArray(logs) ? logs : [];
   const getActionLabel = (action) => {
     switch (action) {
 
@@ -70,14 +70,14 @@ export function AuditLogsTable({ logs }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-700">
-            {logs.length === 0 ? (
+            {safeLogs.length === 0 ? (
               <tr>
                 <td colSpan="4" className="py-6 text-center text-slate-400">
                   এখনো কোনো কিউরেশন, ক্যাটাগরি বা ব্যবহারকারী কার্যক্রম রেকর্ড করা হয়নি।
                 </td>
               </tr>
             ) : (
-              logs.map((log) => {
+              safeLogs.map((log) => {
                 const badge = getActionLabel(log.action);
                 let detailsText = "";
                 if (log.details) {

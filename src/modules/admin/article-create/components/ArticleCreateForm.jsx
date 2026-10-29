@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useTransition, useRef, useEffect, useState } from "react";
+import { AlertCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { articleCreateSchema } from "@/schemas/articleSchema";
@@ -22,6 +23,7 @@ export default function ArticleCreateForm({
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState(null);
   const uncommittedImagesRef = useRef(new Set());
+  const isSubmittingRef = useRef(false);
 
   const isEditing = Boolean(initialArticle);
   const isLower = checkIsLowerRole(currentUser?.role);
@@ -132,6 +134,7 @@ export default function ArticleCreateForm({
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (isSubmittingRef.current) return;
       const pending = Array.from(uncommittedImagesRef.current);
       if (pending.length > 0) {
         fetch("/api/upload", {
@@ -144,8 +147,9 @@ export default function ArticleCreateForm({
     };
   }, []);
 
-  const onValidSubmit = async (data, targetStatus, passToUpper = false) => {
+  const onValidSubmit = async (data, targetStatus, passToUpper = false, reason = "") => {
     setResult(null);
+    isSubmittingRef.current = true;
 
     const resolvedStatus =
       targetStatus ||
@@ -170,32 +174,40 @@ export default function ArticleCreateForm({
     formData.append("location", "ঢাকা");
     formData.append("status", resolvedStatus);
     formData.append("passToUpper", passToUpper ? "true" : "false");
+    formData.append("rejectionReason", (reason || "").trim());
 
     startTransition(async () => {
-      const actionFn = isEditing ? updateArticleAction : createArticleAction;
-      const res = await actionFn(null, formData);
-      setResult(res);
+      try {
+        const actionFn = isEditing ? updateArticleAction : createArticleAction;
+        const res = await actionFn(null, formData);
+        setResult(res);
 
-      if (res?.success) {
-        uncommittedImagesRef.current.clear();
-        if (!isEditing) {
-          reset({
-            headline: "",
-            summary: "",
-            content: "",
-            categorySlug: defaultCategorySlug,
-            subcategoryName: "",
-            images: [],
-            youtubeUrl: "",
-            status: isLower ? "pending" : "published",
-          });
+        if (res?.success) {
+          uncommittedImagesRef.current.clear();
+          if (!isEditing) {
+            reset({
+              headline: "",
+              summary: "",
+              content: "",
+              categorySlug: defaultCategorySlug,
+              subcategoryName: "",
+              images: [],
+              youtubeUrl: "",
+              status: isLower ? "pending" : "published",
+            });
+          }
+          window.scrollTo({ top: 0, behavior: "smooth" });
         }
-        window.scrollTo({ top: 0, behavior: "smooth" });
+      } finally {
+        isSubmittingRef.current = false;
       }
     });
   };
 
   const [confirmConfig, setConfirmConfig] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [pendingRejectData, setPendingRejectData] = useState(null);
   const isSubEditorReview =
     currentUser?.role === "sub_editor" &&
     isEditing &&
@@ -264,14 +276,9 @@ export default function ArticleCreateForm({
   });
 
   const handleReject = handleSubmit((data) => {
-    setConfirmConfig({
-      message: "আপনি কি নিশ্চিতভাবে এই সংবাদটি প্রত্যাখ্যান করতে চান? এটি প্রতিবেদকের কাছে প্রত্যাখ্যাত হিসেবে চিহ্নিত থাকবে।",
-      confirmVariant: "destructive",
-      onConfirm: () => {
-        setConfirmConfig(null);
-        onValidSubmit(data, "rejected");
-      },
-    });
+    setPendingRejectData(data);
+    setRejectReason("");
+    setShowRejectModal(true);
   });
 
   const requestReset = () => {
@@ -290,6 +297,16 @@ export default function ArticleCreateForm({
       <form onSubmit={handleFormSubmit} className="space-y-6">
 
         <ArticleFormFeedback result={result} onReset={requestReset} />
+
+        {isEditing && initialArticle?.status === "rejected" && Boolean(initialArticle.rejection_reason || initialArticle.rejectionReason) && (
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-start gap-2.5">
+            <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <span className="font-bold text-rose-950">প্রত্যাখ্যানের কারণ বা মন্তব্য: </span>
+              <span className="text-rose-800 whitespace-pre-line">{initialArticle.rejection_reason || initialArticle.rejectionReason}</span>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -347,6 +364,44 @@ export default function ArticleCreateForm({
         message={confirmConfig?.message}
         confirmVariant={confirmConfig?.confirmVariant || "default"}
       />
+
+      <ConfirmModal
+        isOpen={showRejectModal}
+        onClose={() => {
+          setShowRejectModal(false);
+          setPendingRejectData(null);
+          setRejectReason("");
+        }}
+        onConfirm={() => {
+          if (!pendingRejectData) return;
+          const data = pendingRejectData;
+          const r = rejectReason.trim();
+          setShowRejectModal(false);
+          setPendingRejectData(null);
+          setRejectReason("");
+          onValidSubmit(data, "rejected", false, r);
+        }}
+        message="আপনি কি নিশ্চিতভাবে এই সংবাদটি প্রত্যাখ্যান করতে চান? এটি প্রতিবেদকের কাছে প্রত্যাখ্যাত হিসেবে চিহ্নিত থাকবে।"
+        confirmText="প্রত্যাখ্যান নিশ্চিত করুন"
+        cancelText="বাতিল"
+        confirmVariant="destructive"
+      >
+        <div className="space-y-1.5 pt-1 text-left">
+          <label className="block text-xs font-semibold text-slate-700">
+            প্রত্যাখ্যানের কারণ বা মন্তব্য (ঐচ্ছিক):
+          </label>
+          <textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="প্রত্যাখ্যানের কারণ লিখুন (ঐচ্ছিক)..."
+            rows={3}
+            className="w-full rounded-lg border border-slate-200 p-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent resize-none"
+          />
+          <p className="text-[11px] text-slate-400">
+            প্রতিবেদক ও যাচাইকারী সহ-সম্পাদক এই মন্তব্যটি দেখতে পাবেন।
+          </p>
+        </div>
+      </ConfirmModal>
     </>
   );
 }

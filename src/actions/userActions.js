@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
 import {
   createUser,
   updateUserRole,
@@ -16,6 +17,8 @@ import {
 } from "@/schemas";
 import { hasPermission, isSingleUserRole } from "@/lib/auth";
 import { getCurrentUser } from "@/lib/auth/server";
+
+const BCRYPT_SALT_ROUNDS = 12;
 
 export async function createUserAction(prevState, formData) {
   try {
@@ -39,7 +42,6 @@ export async function createUserAction(prevState, formData) {
 
     const validated = createUserSchema.parse(rawData);
 
-
     if (isSingleUserRole(validated.role)) {
       return {
         success: false,
@@ -47,12 +49,14 @@ export async function createUserAction(prevState, formData) {
       };
     }
 
+    const hashedPassword = await bcrypt.hash(validated.password, BCRYPT_SALT_ROUNDS);
+
     const created = await createUser({
       username: validated.username,
       fullName: validated.fullName,
       email: validated.email,
       phone: validated.phone,
-      password: validated.password,
+      password: hashedPassword,
       role: validated.role,
       status: "active",
       bio: validated.bio || "",
@@ -70,6 +74,7 @@ export async function createUserAction(prevState, formData) {
 
     return {
       success: true,
+      user: created,
       message: `"${validated.username}" ব্যবহারকারী সফলভাবে যুক্ত করা হয়েছে!`,
     };
   } catch (error) {
@@ -96,7 +101,6 @@ export async function updateUserRoleAction(userId, newRole) {
 
     const validated = updateUserRoleSchema.parse({ userId, role: newRole });
 
-
     if (isSingleUserRole(validated.role)) {
       return {
         success: false,
@@ -105,8 +109,14 @@ export async function updateUserRoleAction(userId, newRole) {
     }
 
     const targetUser = await getUserById(validated.userId);
+    if (!targetUser) {
+      return {
+        success: false,
+        message: "ব্যবহারকারী খুঁজে পাওয়া যায়নি।",
+      };
+    }
 
-    if (targetUser && isSingleUserRole(targetUser.role)) {
+    if (isSingleUserRole(targetUser.role)) {
       return {
         success: false,
         message: "স্থায়ী সুপার অ্যাডমিন বা অ্যাডমিনের দায়িত্ব পরিবর্তন করা যাবে না।",
@@ -144,8 +154,14 @@ export async function toggleUserStatusAction(userId, currentStatus) {
     const validated = toggleUserStatusSchema.parse({ userId, currentStatus });
 
     const targetUser = await getUserById(validated.userId);
+    if (!targetUser) {
+      return {
+        success: false,
+        message: "ব্যবহারকারী খুঁজে পাওয়া যায়নি।",
+      };
+    }
 
-    if (targetUser && isSingleUserRole(targetUser.role)) {
+    if (isSingleUserRole(targetUser.role)) {
       return {
         success: false,
         message: "সুপার অ্যাডমিন বা অ্যাডমিনের অ্যাকাউন্ট নিষ্ক্রিয় করা সম্ভব নয়।",

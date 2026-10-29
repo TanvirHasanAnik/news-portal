@@ -2,8 +2,8 @@ import React from "react";
 import { FolderTree } from "lucide-react";
 
 export function CategoryViewsBreakdown({ categoryStats = [] }) {
-
-  const maxViews = categoryStats.reduce((max, c) => Math.max(max, c.total_views || 0), 0);
+  const safeStats = Array.isArray(categoryStats) ? categoryStats : [];
+  const maxViews = safeStats.reduce((max, c) => Math.max(max, c.total_views || 0), 0);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col justify-between">
@@ -14,16 +14,16 @@ export function CategoryViewsBreakdown({ categoryStats = [] }) {
           <h2 className="text-base font-bold text-slate-900">ক্যাটাগরিভিত্তিক ট্রাফিক</h2>
         </div>
         <span className="text-xs text-slate-500 font-medium">
-          মোট {categoryStats.length} টি বিভাগ
+          মোট {safeStats.length} টি বিভাগ
         </span>
       </div>
 
 
       <div className="divide-y divide-slate-100 mt-2 max-h-[380px] overflow-y-auto pr-2 custom-scrollbar flex-1">
-        {categoryStats.length === 0 ? (
+        {safeStats.length === 0 ? (
           <p className="text-xs text-slate-400 py-8 text-center">এখনো কোনো ক্যাটাগরি ডেটা নেই</p>
         ) : (
-          categoryStats.map((cat) => {
+          safeStats.map((cat) => {
             const views = cat.total_views || 0;
 
             const percentage = maxViews > 0 && views > 0 ? Math.min(100, Math.round((views / maxViews) * 100)) : 0;

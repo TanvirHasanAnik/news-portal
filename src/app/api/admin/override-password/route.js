@@ -14,16 +14,13 @@ async function getAdminSecretKey() {
     if (ctx?.env?.ADMIN_SECRET_KEY) {
       return ctx.env.ADMIN_SECRET_KEY.trim();
     }
-  } catch (_e) {
+  } catch (_e) {}
 
-  }
-
-  return (process.env.ADMIN_SECRET_KEY).trim();
+  return (process.env.ADMIN_SECRET_KEY || "").trim();
 }
 
 export async function POST(request) {
   try {
-
     const configuredSecretKey = await getAdminSecretKey();
 
     const headerSecretKey =
@@ -36,9 +33,9 @@ export async function POST(request) {
       bearerToken = authHeader.substring(7).trim();
     }
 
-    const providedKey = (headerSecretKey || "").trim();
+    const providedKey = (headerSecretKey || bearerToken || "").trim();
 
-    if (!providedKey || providedKey !== configuredSecretKey) {
+    if (!configuredSecretKey || !providedKey || providedKey !== configuredSecretKey) {
       return NextResponse.json(
         {
           success: false,

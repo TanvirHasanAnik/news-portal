@@ -44,10 +44,10 @@ export default function Header({ breakingNewsList = [], categories: propCategori
     ? propCategories.filter(
         (c) => c.is_permanent === 1 || c.slug === "latest" || c.slug === "handpicked"
       )
-    : permanentCategories || [
+    : [...(permanentCategories || [
         { id: "latest", name: "সর্বশেষ", slug: "latest" },
         { id: "handpicked", name: "বাছাইকৃত", slug: "handpicked" },
-      ];
+      ])];
 
   if (!permanentNavCategories.some((c) => c.slug === "latest")) {
     permanentNavCategories.unshift({ id: "latest", name: "সর্বশেষ", slug: "latest" });

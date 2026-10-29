@@ -1,14 +1,14 @@
+﻿import { handpickedNewsList } from "../data/handpickedNewsData";
 import {
   categories,
   categoryNewsData,
-  opinionArticles,
   latestMixedNews,
   leadStory,
+  opinionArticles,
   secondaryLeads,
   trendingNews,
 } from "../data/newsData";
-import { temporaryNewsList, getSortedNewsByTime } from "../data/temporaryNewsData";
-import { handpickedNewsList } from "../data/handpickedNewsData";
+import { getSortedNewsByTime, temporaryNewsList } from "../data/temporaryNewsData";
 import { getYouTubeThumbnail } from "./imageUtils";
 
 export const categoryAccentMap = {
@@ -70,7 +70,12 @@ export function getCategoryNews(categorySlug) {
     };
   }
 
-  const decodedSlug = decodeURIComponent(categorySlug).toLowerCase();
+  let decodedSlug = categorySlug;
+  try {
+    decodedSlug = decodeURIComponent(categorySlug).toLowerCase();
+  } catch {
+    decodedSlug = String(categorySlug).toLowerCase();
+  }
 
   const matchedCategory = categories.find(
     (c) => c.slug.toLowerCase() === decodedSlug || c.id.toLowerCase() === decodedSlug

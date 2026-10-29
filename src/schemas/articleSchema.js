@@ -149,6 +149,7 @@ export const articleCreateSchema = z.object({
     .enum(["draft", "pending", "published", "rejected", "archived"])
     .optional()
     .default("published"),
+  rejectionReason: z.string().trim().max(1000).optional().nullable().default(""),
   isBreaking: z.boolean().optional().default(false),
   isLead: z.boolean().optional().default(false),
   isHandpicked: z.boolean().optional().default(false),

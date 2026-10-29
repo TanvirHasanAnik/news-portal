@@ -28,7 +28,7 @@ export default async function ArticleCreateModule({ currentUser, searchParams })
           const isAuthor =
             rawArticle.author_id === currentUser?.id ||
             rawArticle.created_by === currentUser?.username;
-          if (!isAuthor) {
+          if (!isAuthor || rawArticle.status === "published") {
             isUnauthorizedEdit = true;
           }
         } else if (currentUser?.role === "sub_editor") {
@@ -38,7 +38,7 @@ export default async function ArticleCreateModule({ currentUser, searchParams })
           const isReporterSubmitted =
             (rawArticle.status === "pending" || rawArticle.status === "pending_approval") &&
             (rawArticle.author_role === "reporter" || rawArticle.created_by !== currentUser?.username);
-          if (!isAuthor && !isReporterSubmitted) {
+          if ((!isAuthor && !isReporterSubmitted) || (isAuthor && rawArticle.status === "published")) {
             isUnauthorizedEdit = true;
           }
         }

@@ -1,30 +1,30 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
 import {
-  User,
-  Mail,
-  Phone,
-  Lock,
-  KeyRound,
-  CheckCircle2,
+  changeAdminPasswordAction,
+  updateProfileAction,
+} from "@/actions/authActions";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { getRoleBadgeClass, getRoleName } from "@/config/roles";
+import {
   AlertCircle,
+  CheckCircle2,
   Eye,
   EyeOff,
+  KeyRound,
+  Lock,
+  Mail,
+  Phone,
   ShieldAlert,
+  User,
 } from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { getRoleName, getRoleBadgeClass } from "@/config/roles";
-import {
-  updateProfileAction,
-  changeAdminPasswordAction,
-} from "@/actions/authActions";
+import { useState, useTransition } from "react";
 
 export function ProfileForm({ user }) {
 
-  const [fullName, setFullName] = useState(user?.fullName || user?.full_name || "");
+  const [fullName, setFullName] = useState((user?.full_name && user.full_name !== user.username ? user.full_name : "") || (user?.fullName && user.fullName !== user.username ? user.fullName : "") || "");
   const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [bio, setBio] = useState(user?.bio || "");
@@ -47,6 +47,9 @@ export function ProfileForm({ user }) {
 
 
   const handleProfileSubmit = (e) => {
+    e.preventDefault();
+    setProfileMessage(null);
+
     if (fullName && !/^[a-zA-Z\s.-]+$/.test(fullName)) {
       setProfileMessage({
         type: "error",
@@ -54,8 +57,6 @@ export function ProfileForm({ user }) {
       });
       return;
     }
-    e.preventDefault();
-    setProfileMessage(null);
 
     startProfileTransition(async () => {
       const formData = new FormData();
@@ -114,7 +115,7 @@ export function ProfileForm({ user }) {
           </div>
           <div>
             <h1 className="text-xl font-bold text-slate-900">
-              {user?.fullName || user?.full_name || user?.username}
+              {user?.full_name || (user?.fullName && user.fullName !== user.username ? user.fullName : "") || user?.username}
             </h1>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs text-slate-500 font-mono">

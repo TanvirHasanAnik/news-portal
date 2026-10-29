@@ -7,7 +7,7 @@ import { getUserById } from "@/repositories/userRepository";
 
 export const DEFAULT_DEV_USER = {
   id: "usr_superadmin",
-  name: "প্রধান সম্পাদক",
+  name: "superadmin",
   email: "admin@aloshbe.com",
   role: "super_admin",
   status: "active",
@@ -32,8 +32,8 @@ export async function getCurrentUser() {
     return {
       id: dbUser.id,
       username: dbUser.username,
-      name: dbUser.name || dbUser.full_name || dbUser.username,
-      fullName: dbUser.full_name || dbUser.name || dbUser.username,
+      name: dbUser.full_name || dbUser.username,
+      fullName: dbUser.full_name || "",
       email: dbUser.email || "",
       phone: dbUser.phone || "",
       role: dbUser.role,

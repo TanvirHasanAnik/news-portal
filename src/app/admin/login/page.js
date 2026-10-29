@@ -35,7 +35,11 @@ function LoginForm() {
 
       const res = await loginAction(null, formData);
       if (res.success) {
-        const destination = returnFrom && returnFrom.startsWith("/admin") ? returnFrom : "/admin";
+        const isSafeDestination =
+          returnFrom &&
+          returnFrom.startsWith("/admin") &&
+          !returnFrom.startsWith("/admin/login");
+        const destination = isSafeDestination ? returnFrom : "/admin";
         window.location.href = destination;
       } else {
         setErrorMessage(res.message || "লগইন ব্যর্থ হয়েছে। পুনরায় চেষ্টা করুন।");

@@ -13,10 +13,7 @@ export const loginSchema = z.object({
   password: z
     .string()
     .min(1, { message: "পাসওয়ার্ড দিন।" })
-    .max(100, { message: "পাসওয়ার্ড সর্বোচ্চ ১০০ অক্ষরের মধ্যে হতে হবে।" })
-    .refine((val) => !hasScriptInjection(val), {
-      message: "পাসওয়ার্ডে অননুমোদিত কোড ব্যবহার করা যাবে না।",
-    }),
+    .max(100, { message: "পাসওয়ার্ড সর্বোচ্চ ১০০ অক্ষরের মধ্যে হতে হবে।" }),
 });
 
 export const updateProfileSchema = z.object({

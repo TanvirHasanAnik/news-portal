@@ -15,9 +15,15 @@ import {
   categoryBatchSchema,
   formatZodError,
 } from "@/schemas";
+import { getCurrentUser } from "@/lib/auth/server";
 
 export async function createCategoryAction(prevState, formData) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.role !== "super_admin") {
+      return { success: false, message: "শুধুমাত্র সুপার অ্যাডমিন নতুন ক্যাটাগরি তৈরি করতে পারেন।" };
+    }
+
     const rawData = {
       name: formData.get("name")?.toString() || "",
       slug: formData.get("slug")?.toString() || "",
@@ -27,6 +33,14 @@ export async function createCategoryAction(prevState, formData) {
     const validated = categorySchema.parse(rawData);
 
     await createCategory(validated);
+
+    await recordAuditLog({
+      userId: currentUser.id,
+      action: "create_category",
+      targetType: "category",
+      details: { name: validated.name, slug: validated.slug },
+    });
+
     revalidatePath("/", "layout");
     revalidatePath("/");
     revalidatePath("/admin");
@@ -42,10 +56,24 @@ export async function createCategoryAction(prevState, formData) {
 
 export async function deleteCategoryAction(categoryId) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.role !== "super_admin") {
+      return { success: false, message: "শুধুমাত্র সুপার অ্যাডমিন ক্যাটাগরি মুছে ফেলতে পারেন।" };
+    }
+
     if (!categoryId || typeof categoryId !== "string") {
       return { success: false, message: "ক্যাটাগরি আইডি আবশ্যক।" };
     }
+
     await deleteCategory(categoryId);
+
+    await recordAuditLog({
+      userId: currentUser.id,
+      action: "delete_category",
+      targetType: "category",
+      targetId: categoryId,
+    });
+
     revalidatePath("/", "layout");
     revalidatePath("/");
     revalidatePath("/admin");
@@ -58,6 +86,11 @@ export async function deleteCategoryAction(categoryId) {
 
 export async function createSubcategoryAction(prevState, formData) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.role !== "super_admin") {
+      return { success: false, message: "শুধুমাত্র সুপার অ্যাডমিন উপ-বিভাগ যোগ করতে পারেন।" };
+    }
+
     const rawData = {
       categoryId: formData.get("categoryId")?.toString() || "",
       name: formData.get("name")?.toString() || "",
@@ -68,6 +101,14 @@ export async function createSubcategoryAction(prevState, formData) {
     const validated = subcategorySchema.parse(rawData);
 
     await createSubcategory(validated);
+
+    await recordAuditLog({
+      userId: currentUser.id,
+      action: "create_subcategory",
+      targetType: "subcategory",
+      details: { categoryId: validated.categoryId, name: validated.name, slug: validated.slug },
+    });
+
     revalidatePath("/", "layout");
     revalidatePath("/");
     revalidatePath("/admin");
@@ -80,10 +121,24 @@ export async function createSubcategoryAction(prevState, formData) {
 
 export async function deleteSubcategoryAction(subcategoryId) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.role !== "super_admin") {
+      return { success: false, message: "শুধুমাত্র সুপার অ্যাডমিন উপ-বিভাগ মুছে ফেলতে পারেন।" };
+    }
+
     if (!subcategoryId || typeof subcategoryId !== "string") {
       return { success: false, message: "উপ-বিভাগ আইডি আবশ্যক।" };
     }
+
     await deleteSubcategory(subcategoryId);
+
+    await recordAuditLog({
+      userId: currentUser.id,
+      action: "delete_subcategory",
+      targetType: "subcategory",
+      targetId: subcategoryId,
+    });
+
     revalidatePath("/", "layout");
     revalidatePath("/");
     revalidatePath("/admin");
@@ -94,20 +149,23 @@ export async function deleteSubcategoryAction(subcategoryId) {
   }
 }
 
-
-
 export async function saveCategoriesBatchAction(categories) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.role !== "super_admin") {
+      return { success: false, message: "শুধুমাত্র সুপার অ্যাডমিন ক্যাটাগরি হালনাগাদ করতে পারেন।" };
+    }
+
     const validatedCategories = categoryBatchSchema.parse(categories);
 
     const res = await saveCategoriesBatch(validatedCategories);
 
     await recordAuditLog({
+      userId: currentUser.id,
       action: "batch_update_categories",
       targetType: "categories",
       details: { count: validatedCategories.length },
     });
-
 
     revalidatePath("/", "layout"); 
     revalidatePath("/"); 
@@ -129,4 +187,3 @@ export async function saveCategoriesBatchAction(categories) {
     return { success: false, message: formatZodError(error, "সংরক্ষণ সম্পন্ন করা যায়নি।") };
   }
 }
-

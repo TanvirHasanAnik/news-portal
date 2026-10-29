@@ -15,6 +15,8 @@ export function ConfirmModal({
   cancelText = "না",
   confirmVariant = "default",
   isLoading = false,
+  maxWidth = "max-w-sm",
+  children,
 }) {
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -33,7 +35,7 @@ export function ConfirmModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
       <div
-        className="bg-white rounded-xl shadow-xl max-w-sm w-full border border-slate-200 p-5 space-y-4 animate-in zoom-in-95 duration-150 relative"
+        className={`bg-white rounded-xl shadow-xl ${maxWidth} w-full border border-slate-200 p-5 space-y-4 animate-in zoom-in-95 duration-150 relative`}
         role="dialog"
         aria-modal="true"
       >
@@ -49,12 +51,17 @@ export function ConfirmModal({
         </button>
 
 
-        <p className="text-sm font-semibold text-slate-800 pr-6 pt-1 leading-relaxed">
-          {message}
-        </p>
+        {message && (
+          <p className="text-sm font-semibold text-slate-800 pr-6 pt-1 leading-relaxed">
+            {message}
+          </p>
+        )}
+
+        {children}
 
 
         <div className="flex justify-end items-center gap-2 pt-2">
+          {Boolean(cancelText) && (
           <Button
             type="button"
             variant="outline"
@@ -65,6 +72,7 @@ export function ConfirmModal({
           >
             {cancelText}
           </Button>
+        )}
 
           <Button
             type="button"

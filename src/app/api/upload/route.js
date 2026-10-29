@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCurrentUser } from "@/lib/auth/server";
 import {
   getR2Bucket,
   getPublicImageUrl,
@@ -12,18 +13,22 @@ const ALLOWED_MIME_TYPES = new Set([
   "image/webp",
   "image/gif",
   "image/avif",
-  "image/svg+xml",
 ]);
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; 
-
-
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export async function POST(request) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.status !== "active") {
+      return NextResponse.json(
+        { success: false, error: "অননুমোদিত অনুরোধ। অনুগ্রহ করে লগইন করুন।" },
+        { status: 401 }
+      );
+    }
+
     const contentType = request.headers.get("content-type") || "";
     const url = new URL(request.url);
-
 
     if (contentType.includes("application/json") || url.searchParams.get("action") === "cleanup") {
       let body = {};
@@ -41,23 +46,21 @@ export async function POST(request) {
       const itemsToDelete = body.urls || body.keys || (body.url ? [body.url] : (body.key ? [body.key] : []));
       if (Array.isArray(itemsToDelete) && itemsToDelete.length > 0) {
         const count = await deleteMultipleFromR2(itemsToDelete);
-        return NextResponse.json({ success: true, count, message: "Uncommitted images cleaned up." });
+        return NextResponse.json({ success: true, count, message: "অপ্রয়োজনীয় ছবি মুছে ফেলা হয়েছে।" });
       }
 
       return NextResponse.json({ success: true, count: 0 });
     }
 
-
     const formData = await request.formData();
     const file = formData.get("file");
 
-    if (!file || typeof file === "string") {
+    if (!file || typeof file === "string" || typeof file.stream !== "function") {
       return NextResponse.json(
         { success: false, error: "কোনো ফাইল পাওয়া যায়নি।" },
         { status: 400 }
       );
     }
-
 
     if (!ALLOWED_MIME_TYPES.has(file.type)) {
       return NextResponse.json(
@@ -69,7 +72,6 @@ export async function POST(request) {
       );
     }
 
-
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
         {
@@ -79,7 +81,6 @@ export async function POST(request) {
         { status: 400 }
       );
     }
-
 
     const now = new Date();
     const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -93,7 +94,6 @@ export async function POST(request) {
 
     const bucket = await getR2Bucket();
 
-
     await bucket.put(key, file.stream(), {
       httpMetadata: {
         contentType: file.type || "image/jpeg",
@@ -101,6 +101,7 @@ export async function POST(request) {
       },
       customMetadata: {
         originalName: file.name || "image",
+        uploadedBy: currentUser.username,
         uploadedAt: now.toISOString(),
       },
     });
@@ -121,26 +122,30 @@ export async function POST(request) {
     return NextResponse.json(
       {
         success: false,
-        error: `আপলোডে ত্রুটি দেখা দিয়েছে: ${error.message}`,
+        error: "আপলোডে প্রযুক্তিগত সমস্যা দেখা দিয়েছে।",
       },
       { status: 500 }
     );
   }
 }
 
-
-
 export async function DELETE(request) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.status !== "active") {
+      return NextResponse.json(
+        { success: false, error: "অননুমোদিত অনুরোধ।" },
+        { status: 401 }
+      );
+    }
+
     const url = new URL(request.url);
     const queryKey = url.searchParams.get("key");
     const queryUrl = url.searchParams.get("url");
 
     let targets = [];
-
     if (queryKey) targets.push(queryKey);
     if (queryUrl) targets.push(queryUrl);
-
 
     const contentType = request.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
@@ -155,7 +160,7 @@ export async function DELETE(request) {
 
     if (targets.length === 0) {
       return NextResponse.json(
-        { success: false, error: "মুছে ফেলার জন্য কোনো ইমেজ কি (key) বা ইউআরএল (url) প্রদান করা হয়নি।" },
+        { success: false, error: "মুছে ফেলার জন্য কোনো ছবি নির্দেশ করা হয়নি।" },
         { status: 400 }
       );
     }
@@ -165,14 +170,14 @@ export async function DELETE(request) {
     return NextResponse.json({
       success: true,
       count,
-      message: `${count}টি ছবি ক্লাউডফ্লেয়ার R2 বাকেট থেকে সফলভাবে মুছে ফেলা হয়েছে।`,
+      message: `${count}টি ছবি সফলভাবে মুছে ফেলা হয়েছে।`,
     });
   } catch (error) {
     console.error("R2 Delete Error:", error);
     return NextResponse.json(
       {
         success: false,
-        error: `ছবি মুছে ফেলতে সমস্যা হয়েছে: ${error.message}`,
+        error: "ছবি মুছে ফেলতে সমস্যা হয়েছে।",
       },
       { status: 500 }
     );

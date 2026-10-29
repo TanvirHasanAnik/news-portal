@@ -95,6 +95,7 @@ const TABLE_DEFINITIONS = [
     is_breaking TINYINT(1) NOT NULL DEFAULT 0,
     is_lead TINYINT(1) NOT NULL DEFAULT 0,
     is_handpicked TINYINT(1) NOT NULL DEFAULT 0,
+    rejection_reason TEXT NULL,
     created_by VARCHAR(64) NULL,
     last_edited_by VARCHAR(64) NULL,
     last_edited_at TIMESTAMP NULL DEFAULT NULL,
@@ -405,6 +406,9 @@ export async function bootstrapDatabase(env = {}) {
       } catch (_e) {}
       try {
         await executeUniversalQuery("ALTER TABLE articles ADD COLUMN passed_at TIMESTAMP NULL DEFAULT NULL", [], env);
+      } catch (_e) {}
+      try {
+        await executeUniversalQuery("ALTER TABLE articles ADD COLUMN rejection_reason TEXT NULL", [], env);
       } catch (_e) {}
 
       try {

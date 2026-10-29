@@ -125,7 +125,7 @@ export default function ArticleFormSubmit({
           </Button>
         )}
 
-        {!isLowerRole && isEditing && onReject && (currentStatus === "pending" || currentStatus === "published") && (
+        {!isLowerRole && isEditing && onReject && (currentStatus === "pending" || currentStatus === "pending_approval") && (
           <Button
             type="button"
             variant="outline"

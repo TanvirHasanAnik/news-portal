@@ -1,5 +1,6 @@
 "use server";
 
+import { getCurrentUser } from "@/lib/auth/server";
 import { getR2Bucket, getPublicImageUrl, deleteMultipleFromR2, deleteFromR2 } from "@/lib/r2";
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -8,18 +9,20 @@ const ALLOWED_MIME_TYPES = new Set([
   "image/webp",
   "image/gif",
   "image/avif",
-  "image/svg+xml",
 ]);
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; 
-
-
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export async function uploadImageAction(formData) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.status !== "active") {
+      return { success: false, error: "অননুমোদিত অনুরোধ। অনুগ্রহ করে লগইন করুন।" };
+    }
+
     const file = formData.get("file");
 
-    if (!file || typeof file === "string") {
+    if (!file || typeof file === "string" || typeof file.stream !== "function") {
       return { success: false, error: "কোনো ফাইল পাওয়া যায়নি।" };
     }
 
@@ -49,7 +52,6 @@ export async function uploadImageAction(formData) {
 
     const bucket = await getR2Bucket();
 
-
     await bucket.put(key, file.stream(), {
       httpMetadata: {
         contentType: file.type || "image/jpeg",
@@ -57,6 +59,7 @@ export async function uploadImageAction(formData) {
       },
       customMetadata: {
         originalName: file.name || "image",
+        uploadedBy: currentUser.username,
         uploadedAt: now.toISOString(),
       },
     });
@@ -81,10 +84,13 @@ export async function uploadImageAction(formData) {
   }
 }
 
-
-
 export async function deleteImageAction(keyOrUrl) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.status !== "active") {
+      return { success: false, error: "অননুমোদিত অনুরোধ।" };
+    }
+
     const success = await deleteFromR2(keyOrUrl);
     return { success };
   } catch (error) {
@@ -93,10 +99,13 @@ export async function deleteImageAction(keyOrUrl) {
   }
 }
 
-
-
 export async function deleteImagesAction(keysOrUrls) {
   try {
+    const currentUser = await getCurrentUser();
+    if (!currentUser || currentUser.status !== "active") {
+      return { success: false, error: "অননুমোদিত অনুরোধ।" };
+    }
+
     const count = await deleteMultipleFromR2(keysOrUrls);
     return { success: true, count };
   } catch (error) {

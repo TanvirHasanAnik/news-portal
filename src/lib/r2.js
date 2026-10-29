@@ -2,8 +2,6 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 let localR2Instance = null;
 
-
-
 async function createLocalR2Adapter() {
   if (localR2Instance) return localR2Instance;
 
@@ -25,10 +23,16 @@ async function createLocalR2Adapter() {
   localR2Instance = {
     isLocal: true,
     async put(key, streamOrBuffer, options = {}) {
-      const sanitizedKey = key.replace(/^\/+/, "");
+      const sanitizedKey = path.normalize(key).replace(/^(\.\.[\/\\])+/, "").replace(/^\/+/, "");
       const filePath = path.join(storageDir, sanitizedKey);
-      const fileDir = path.dirname(filePath);
+      const resolvedPath = path.resolve(filePath);
+      const resolvedStorageDir = path.resolve(storageDir);
 
+      if (!resolvedPath.startsWith(resolvedStorageDir)) {
+        throw new Error("Invalid file path");
+      }
+
+      const fileDir = path.dirname(resolvedPath);
       if (!fs.existsSync(fileDir)) {
         fs.mkdirSync(fileDir, { recursive: true });
       }
@@ -39,7 +43,6 @@ async function createLocalR2Adapter() {
       } else if (streamOrBuffer instanceof ArrayBuffer) {
         buffer = Buffer.from(streamOrBuffer);
       } else if (typeof streamOrBuffer?.getReader === "function") {
-
         const reader = streamOrBuffer.getReader();
         const chunks = [];
         while (true) {
@@ -55,10 +58,9 @@ async function createLocalR2Adapter() {
         buffer = Buffer.from(streamOrBuffer || "");
       }
 
-      fs.writeFileSync(filePath, buffer);
+      fs.writeFileSync(resolvedPath, buffer);
 
-
-      const metaPath = `${filePath}.meta.json`;
+      const metaPath = `${resolvedPath}.meta.json`;
       const meta = {
         httpMetadata: options.httpMetadata || { contentType: "application/octet-stream" },
         customMetadata: options.customMetadata || {},
@@ -77,15 +79,17 @@ async function createLocalR2Adapter() {
     },
 
     async get(key) {
-      const sanitizedKey = key.replace(/^\/+/, "");
+      const sanitizedKey = path.normalize(key).replace(/^(\.\.[\/\\])+/, "").replace(/^\/+/, "");
       const filePath = path.join(storageDir, sanitizedKey);
+      const resolvedPath = path.resolve(filePath);
+      const resolvedStorageDir = path.resolve(storageDir);
 
-      if (!fs.existsSync(filePath)) {
+      if (!resolvedPath.startsWith(resolvedStorageDir) || !fs.existsSync(resolvedPath)) {
         return null;
       }
 
-      const fileBuffer = fs.readFileSync(filePath);
-      const metaPath = `${filePath}.meta.json`;
+      const fileBuffer = fs.readFileSync(resolvedPath);
+      const metaPath = `${resolvedPath}.meta.json`;
       let meta = { httpMetadata: { contentType: "application/octet-stream" } };
       if (fs.existsSync(metaPath)) {
         try {
@@ -121,12 +125,19 @@ async function createLocalR2Adapter() {
         }
         return;
       }
-      const sanitizedKey = key.replace(/^\/+/, "");
+      const sanitizedKey = path.normalize(key).replace(/^(\.\.[\/\\])+/, "").replace(/^\/+/, "");
       const filePath = path.join(storageDir, sanitizedKey);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+      const resolvedPath = path.resolve(filePath);
+      const resolvedStorageDir = path.resolve(storageDir);
+
+      if (!resolvedPath.startsWith(resolvedStorageDir)) {
+        return;
       }
-      const metaPath = `${filePath}.meta.json`;
+
+      if (fs.existsSync(resolvedPath)) {
+        fs.unlinkSync(resolvedPath);
+      }
+      const metaPath = `${resolvedPath}.meta.json`;
       if (fs.existsSync(metaPath)) {
         fs.unlinkSync(metaPath);
       }
@@ -136,22 +147,16 @@ async function createLocalR2Adapter() {
   return localR2Instance;
 }
 
-
-
 export async function getR2Bucket() {
   try {
     const cfContext = await getCloudflareContext({ async: true });
     if (cfContext?.env?.NEWS_IMAGES_BUCKET) {
       return cfContext.env.NEWS_IMAGES_BUCKET;
     }
-  } catch (_e) {
-
-  }
+  } catch (_e) {}
 
   return await createLocalR2Adapter();
 }
-
-
 
 export function getPublicImageUrl(key, env) {
   const publicBase =
@@ -163,53 +168,58 @@ export function getPublicImageUrl(key, env) {
     return `${publicBase.replace(/\/$/, "")}/${key.replace(/^\/+/, "")}`;
   }
 
-
   return `/api/images/${key.replace(/^\/+/, "")}`;
 }
-
-
 
 export function extractKeyFromImageUrl(urlOrKey) {
   if (!urlOrKey || typeof urlOrKey !== "string") return null;
 
   if (urlOrKey.includes("/api/images/")) {
     const after = urlOrKey.split("/api/images/")[1];
-    return decodeURIComponent(after.replace(/^\/+/, ""));
+    try {
+      return decodeURIComponent(after.replace(/^\/+/, ""));
+    } catch {
+      return after.replace(/^\/+/, "");
+    }
   }
 
-  try {
-    const parsed = new URL(urlOrKey, "http://dummy");
-    if (parsed.pathname.startsWith("/api/images/")) {
-      return decodeURIComponent(parsed.pathname.replace("/api/images/", "").replace(/^\/+/, ""));
+  if (urlOrKey.startsWith("http://") || urlOrKey.startsWith("https://")) {
+    const publicBase = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+    if (publicBase && urlOrKey.startsWith(publicBase)) {
+      return urlOrKey.replace(publicBase, "").replace(/^\/+/, "");
     }
-    if (parsed.pathname && parsed.pathname.length > 1) {
-      return decodeURIComponent(parsed.pathname.replace(/^\/+/, ""));
-    }
-  } catch {}
+    return null;
+  }
 
   return urlOrKey.replace(/^\/+/, "");
 }
-
-
 
 export async function deleteFromR2(keyOrUrl) {
   if (!keyOrUrl) return false;
   const key = extractKeyFromImageUrl(keyOrUrl);
   if (!key) return false;
 
-  const bucket = await getR2Bucket();
-  await bucket.delete(key);
-  return true;
+  try {
+    const bucket = await getR2Bucket();
+    await bucket.delete(key);
+    return true;
+  } catch (err) {
+    console.error("R2 delete error:", err);
+    return false;
+  }
 }
-
-
 
 export async function deleteMultipleFromR2(keysOrUrls) {
   if (!Array.isArray(keysOrUrls) || keysOrUrls.length === 0) return 0;
   const keys = keysOrUrls.map(extractKeyFromImageUrl).filter(Boolean);
   if (keys.length === 0) return 0;
 
-  const bucket = await getR2Bucket();
-  await bucket.delete(keys);
-  return keys.length;
+  try {
+    const bucket = await getR2Bucket();
+    await bucket.delete(keys);
+    return keys.length;
+  } catch (err) {
+    console.error("R2 deleteMultiple error:", err);
+    return 0;
+  }
 }

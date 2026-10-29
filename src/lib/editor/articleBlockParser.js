@@ -1,13 +1,9 @@
 import DOMPurify from "dompurify";
 
-
-
 const SANITIZE_CONFIG = {
   ALLOWED_TAGS: ["b", "strong", "i", "em", "u", "h2", "h3", "ul", "li", "p", "a", "br"],
   ALLOWED_ATTR: ["href", "target", "rel"],
 };
-
-
 
 export function sanitizeHtml(dirtyHtml) {
   if (!dirtyHtml || typeof dirtyHtml !== "string") return "";
@@ -16,20 +12,17 @@ export function sanitizeHtml(dirtyHtml) {
     return DOMPurify.sanitize(dirtyHtml, SANITIZE_CONFIG);
   }
 
-
   return dirtyHtml
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
     .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-    .replace(/on\w+="[^"]*"/gi, "")
-    .replace(/javascript:/gi, "");
+    .replace(/\s+on\w+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, "")
+    .replace(/href\s*=\s*['"]?\s*(?:javascript|data|vbscript):[^'"]*['"]?/gi, 'href="#"')
+    .replace(/<\/?(?:iframe|object|embed|applet|meta|link|base|form|input|button)\b[^>]*>/gi, "");
 }
-
-
 
 function sanitizeInline(html) {
   if (!html) return "";
   let clean = sanitizeHtml(html);
-
 
   if (typeof window !== "undefined") {
     const temp = document.createElement("div");
@@ -49,15 +42,12 @@ function sanitizeInline(html) {
   return clean;
 }
 
-
-
 export function htmlToArticleBlocks(htmlString) {
   if (!htmlString || typeof htmlString !== "string" || !htmlString.trim()) {
     return { version: 1, blocks: [] };
   }
 
   if (typeof window === "undefined") {
-
     return {
       version: 1,
       blocks: [
@@ -106,7 +96,6 @@ export function htmlToArticleBlocks(htmlString) {
     if (node.nodeType === Node.ELEMENT_NODE) {
       const tagName = node.tagName.toLowerCase();
 
-
       if (tagName === "h2") {
         flushInlineGroup();
         const text = node.textContent.trim();
@@ -121,7 +110,6 @@ export function htmlToArticleBlocks(htmlString) {
         continue;
       }
 
-
       if (tagName === "h3") {
         flushInlineGroup();
         const text = node.textContent.trim();
@@ -135,7 +123,6 @@ export function htmlToArticleBlocks(htmlString) {
         }
         continue;
       }
-
 
       if (tagName === "ul") {
         flushInlineGroup();
@@ -157,10 +144,8 @@ export function htmlToArticleBlocks(htmlString) {
         continue;
       }
 
-
       if (tagName === "p" || tagName === "div") {
         flushInlineGroup();
-
 
         const nestedBlocks = node.querySelectorAll("h2, h3, ul, p");
         if (nestedBlocks.length > 0) {
@@ -180,7 +165,6 @@ export function htmlToArticleBlocks(htmlString) {
         continue;
       }
 
-
       inlineGroup.push(node);
     }
   }
@@ -193,18 +177,14 @@ export function htmlToArticleBlocks(htmlString) {
   };
 }
 
-
-
 export function articleBlocksToHtml(blocksDoc) {
   if (!blocksDoc) return "";
-
 
   let doc = blocksDoc;
   if (typeof blocksDoc === "string") {
     try {
       doc = JSON.parse(blocksDoc);
     } catch {
-
       return blocksDoc
         .split("\n\n")
         .map((p) => `<p>${sanitizeHtml(p.trim())}</p>`)
@@ -237,8 +217,6 @@ export function articleBlocksToHtml(blocksDoc) {
     .join("");
 }
 
-
-
 export function extractPlainTextFromBlocks(content) {
   if (!content) return "";
 
@@ -249,7 +227,6 @@ export function extractPlainTextFromBlocks(content) {
         return extractPlainTextFromBlocks(parsed);
       }
     } catch {
-
       return content.replace(/<[^>]*>?/gm, "").trim();
     }
   }
@@ -268,4 +245,3 @@ export function extractPlainTextFromBlocks(content) {
 
   return "";
 }
-

@@ -63,9 +63,14 @@ export async function generateMetadata({ params }) {
 export default async function CategoryPage({ params, searchParams }) {
   const { category } = await params;
   const resolvedSearchParams = (await searchParams) || {};
-  const selectedSub = resolvedSearchParams.sub
-    ? decodeURIComponent(resolvedSearchParams.sub)
-    : null;
+  let selectedSub = null;
+  if (resolvedSearchParams.sub) {
+    try {
+      selectedSub = decodeURIComponent(resolvedSearchParams.sub);
+    } catch {
+      selectedSub = resolvedSearchParams.sub;
+    }
+  }
 
   const categoryData = getCategoryNews(category);
   let { name, articles, subcategories, slug } = categoryData;

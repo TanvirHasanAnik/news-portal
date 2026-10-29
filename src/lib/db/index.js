@@ -1,8 +1,5 @@
 import mysql from "mysql2/promise";
 
-
-
-
 let globalNodePool = null;
 let isDbBootstrapped = false;
 let bootstrapPromise = null;
@@ -22,9 +19,7 @@ export async function getDbConfig() {
     if (ctx?.env) {
       cfEnv = ctx.env;
     }
-  } catch (_e) {
-
-  }
+  } catch (_e) {}
 
   const host =
     cfEnv.DB_HOST ||
@@ -81,8 +76,6 @@ export async function getDbConfig() {
   };
 }
 
-
-
 export async function getConnectionHandle() {
   const config = await getDbConfig();
 
@@ -101,7 +94,6 @@ export async function getConnectionHandle() {
       },
     };
   }
-
 
   if (!globalNodePool) {
     globalNodePool = mysql.createPool({
@@ -126,8 +118,6 @@ export async function getConnectionHandle() {
     },
   };
 }
-
-
 
 export async function ensureDbInitialized() {
   if (isDbBootstrapped) return;
@@ -157,8 +147,6 @@ export async function ensureDbInitialized() {
   return await bootstrapPromise;
 }
 
-
-
 export async function query(sql, params = []) {
   if (
     !isDbBootstrapped &&
@@ -183,8 +171,6 @@ export async function query(sql, params = []) {
   }
 }
 
-
-
 export async function queryOne(sql, params = []) {
   const rows = await query(sql, params);
   if (!rows || !Array.isArray(rows) || rows.length === 0) {
@@ -192,8 +178,6 @@ export async function queryOne(sql, params = []) {
   }
   return rows[0];
 }
-
-
 
 export async function withTransaction(callback) {
   const handle = await getConnectionHandle();
@@ -237,8 +221,6 @@ export async function withTransaction(callback) {
   }
 }
 
-
-
 export async function getDb() {
   return {
     query,
@@ -247,9 +229,13 @@ export async function getDb() {
     prepare(sql) {
       let boundParams = [];
       return {
+        sql,
         bind(...params) {
           boundParams = params;
           return this;
+        },
+        getBoundParams() {
+          return boundParams;
         },
         async all() {
           const rows = await query(sql, boundParams);
@@ -281,8 +267,15 @@ export async function getDb() {
       return await withTransaction(async (tx) => {
         const results = [];
         for (const stmt of statements) {
-          const res = await stmt.run();
-          results.push(res);
+          const params = typeof stmt.getBoundParams === "function" ? stmt.getBoundParams() : [];
+          const [result] = await tx.connection.query(stmt.sql, params);
+          results.push({
+            success: true,
+            meta: {
+              changes: result?.affectedRows ?? 0,
+              last_row_id: Number(result?.insertId ?? 0),
+            },
+          });
         }
         return results;
       });

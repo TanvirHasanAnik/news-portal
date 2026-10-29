@@ -9,7 +9,6 @@ import {
   Bell,
   CheckCheck,
   ExternalLink,
-  Edit,
   ClipboardList,
   Search,
   Clock,
@@ -264,23 +263,14 @@ export function NotificationManager({ initialNotifications = [], currentUser }) 
 
                   <div className="flex items-center gap-2 shrink-0">
 
-                    {isArticle && (
-                      isApproved && notif.target_slug ? (
-                        <Link
-                          href={`/article/${notif.target_slug}`}
-                          target="_blank"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold transition-colors"
-                        >
-                          সংবাদটি দেখুন <ExternalLink className="w-3 h-3" />
-                        </Link>
-                      ) : (
-                        <Link
-                          href={`/admin?tab=create-article&editId=${notif.target_id}`}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-semibold transition-colors"
-                        >
-                          <Edit className="w-3 h-3" /> সংশোধন করুন
-                        </Link>
-                      )
+                    {isArticle && isApproved && notif.target_slug && (
+                      <Link
+                        href={`/article/${notif.target_slug}`}
+                        target="_blank"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold transition-colors"
+                      >
+                        সংবাদটি দেখুন <ExternalLink className="w-3 h-3" />
+                      </Link>
                     )}
 
                     {isRequest && (

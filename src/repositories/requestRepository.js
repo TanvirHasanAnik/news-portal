@@ -1,4 +1,5 @@
 import { getDb, query, queryOne, withTransaction } from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 export async function getAllAdminRequests({ status } = {}) {
   let sql = `
@@ -61,15 +62,31 @@ export async function updateAdminRequestStatus(id, { status, reviewedBy = "usr_s
           } else if (req.request_type === "role_change" && req.target_user_id && details.newRole) {
             await tx.query("UPDATE users SET role = ? WHERE id = ?", [details.newRole, req.target_user_id]);
           } else if (req.request_type === "new_user" && details.email && details.name) {
-            const newUserId = `usr_${Date.now().toString(36)}`;
+            const newUserId = `usr_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+            const baseUsername = (details.username || details.email.split("@")[0] || "user")
+              .toLowerCase()
+              .replace(/[^a-z0-9_.-]/g, "")
+              .substring(0, 30);
+            const fallbackUsername = `${baseUsername || "user"}_${Date.now().toString(36).slice(-4)}`;
+            const tempPlainPassword = `Temp@${Math.random().toString(36).slice(2, 8)}!`;
+            const hashedTempPassword = await bcrypt.hash(tempPlainPassword, 12);
+
             await tx.query(
-              `INSERT INTO users (id, name, email, role, status, created_at, updated_at)
-               VALUES (?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-              [newUserId, details.name, details.email, details.role || "reporter"]
+              `INSERT INTO users (id, username, full_name, name, email, password, role, status, must_change_password, created_at, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+              [
+                newUserId,
+                fallbackUsername,
+                details.name,
+                details.name,
+                details.email.toLowerCase().trim(),
+                hashedTempPassword,
+                details.role || "reporter",
+              ]
             );
           }
-        } catch (_parseErr) {
-
+        } catch (parseErr) {
+          console.error("Admin request processing error:", parseErr);
         }
       }
 
