@@ -9,7 +9,6 @@ import {
   Home,
   ChevronDown,
 } from "lucide-react";
-import { categories, permanentCategories, dynamicCategories } from "../data/newsData";
 import MobileDrawer from "./MobileDrawer";
 import NewsTickerSection from "./NewsTickerSection";
 import {
@@ -25,7 +24,7 @@ import {
 } from "../utils/dateUtils";
 
 
-export default function Header({ breakingNewsList = [], categories: propCategories = [] }) {
+export default function Header({ breakingNewsList = [], latestHeadlines = [], categories: propCategories = [] }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -36,18 +35,16 @@ export default function Header({ breakingNewsList = [], categories: propCategori
     hijri: "৪ জমাদিউল আউয়াল ১৪৪৮ হিজরি",
   });
 
-
-
   const hasDbCats = Array.isArray(propCategories) && propCategories.length > 0;
 
   const permanentNavCategories = hasDbCats
     ? propCategories.filter(
         (c) => (c.is_permanent === 1 || c.slug === "latest" || c.slug === "handpicked") && c.slug !== "others"
       )
-    : [...(permanentCategories || [
+    : [
         { id: "latest", name: "সর্বশেষ", slug: "latest" },
         { id: "handpicked", name: "বাছাইকৃত", slug: "handpicked" },
-      ])];
+      ];
 
   if (!permanentNavCategories.some((c) => c.slug === "latest")) {
     permanentNavCategories.unshift({ id: "latest", name: "সর্বশেষ", slug: "latest" });
@@ -60,9 +57,7 @@ export default function Header({ breakingNewsList = [], categories: propCategori
     ? propCategories.filter(
         (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked" && c.slug !== "others"
       )
-    : (dynamicCategories || categories).filter(
-        (c) => !permanentNavCategories.some((p) => p.slug === c.slug) && c.slug !== "others"
-      );
+    : [];
 
   const fallbackNavCategory = hasDbCats
     ? propCategories.find((c) => c.slug === "others") || { id: "cat_others", name: "অন্যান্য", slug: "others" }
@@ -78,34 +73,31 @@ export default function Header({ breakingNewsList = [], categories: propCategori
   const [visibleCount, setVisibleCount] = useState(allNavCategories.length);
   const [moreDropdownOpen, setMoreDropdownOpen] = useState(false);
 
+  const navWrapperRef = useRef(null);
   const navContainerRef = useRef(null);
   const homeRef = useRef(null);
   const itemRefs = useRef([]);
-  const itemWidthsRef = useRef([]);
   const moreDropdownRef = useRef(null);
 
   const visibleCategories = allNavCategories.slice(0, visibleCount);
   const overflowCategories = allNavCategories.slice(visibleCount);
 
-
   const calculateVisible = () => {
-    if (!navContainerRef.current) return;
-    const containerWidth = navContainerRef.current.clientWidth;
-    if (!containerWidth) return;
+    const container = navWrapperRef.current || navContainerRef.current;
+    if (!container) return;
+    const containerWidth = container.clientWidth;
+    if (!containerWidth || containerWidth <= 0) return;
 
-
-    if (itemRefs.current.length > 0 && itemWidthsRef.current.length < allNavCategories.length) {
-      const measured = itemRefs.current.map((el) => (el ? el.getBoundingClientRect().width : 0));
-      if (measured.length >= allNavCategories.length && measured.every((w) => w > 0)) {
-        itemWidthsRef.current = measured;
+    const widths = allNavCategories.map((cat, idx) => {
+      const el = itemRefs.current[idx];
+      if (el && el.getBoundingClientRect().width > 0) {
+        return el.getBoundingClientRect().width;
       }
-    }
+      return (cat.name ? cat.name.length * 15 : 60) + 30;
+    });
 
-    const widths = itemWidthsRef.current;
-    if (!widths || widths.length === 0) return;
-
-    const homeWidth = homeRef.current ? homeRef.current.getBoundingClientRect().width : 56;
-    const moreBtnReserve = 96; 
+    const homeWidth = homeRef.current ? homeRef.current.getBoundingClientRect().width : 54;
+    const moreBtnReserve = 86;
 
     const totalNeeded = homeWidth + widths.reduce((sum, w) => sum + w, 0);
 
@@ -121,40 +113,35 @@ export default function Header({ breakingNewsList = [], categories: propCategori
         available -= widths[i];
         count++;
       }
-
-      setVisibleCount(Math.max(permanentNavCategories.length, count));
+      setVisibleCount(Math.max(2, count));
     }
   };
 
   useEffect(() => {
-
     calculateVisible();
-
 
     if (typeof document !== "undefined" && document.fonts) {
       document.fonts.ready.then(() => {
-        if (itemRefs.current.length >= allNavCategories.length) {
-          itemWidthsRef.current = itemRefs.current.map((el) => (el ? el.getBoundingClientRect().width : 0));
-        }
         calculateVisible();
       });
     }
 
-    const resizeObserver = new ResizeObserver(() => {
-      calculateVisible();
-    });
-
-    if (navContainerRef.current) {
-      resizeObserver.observe(navContainerRef.current);
+    const targetEl = navWrapperRef.current || navContainerRef.current;
+    let resizeObserver = null;
+    if (targetEl && typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => {
+        calculateVisible();
+      });
+      resizeObserver.observe(targetEl);
     }
 
     window.addEventListener("resize", calculateVisible);
 
     return () => {
-      resizeObserver.disconnect();
+      if (resizeObserver) resizeObserver.disconnect();
       window.removeEventListener("resize", calculateVisible);
     };
-  }, []);
+  }, [allNavCategories.length, propCategories]);
 
 
   useEffect(() => {
@@ -357,16 +344,14 @@ export default function Header({ breakingNewsList = [], categories: propCategori
 
 
       <nav className="hidden lg:block sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
+        <div ref={navWrapperRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div ref={navContainerRef} className="flex items-center justify-center w-full min-w-0">
-
             <div className="flex items-center justify-center flex-nowrap divide-x divide-slate-200 text-base font-medium min-w-0">
               <Link
                 ref={homeRef}
                 href="/"
                 title="হোম পেজ"
-                className={`px-4.5 py-3.5 transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
+                className={`px-3.5 xl:px-4 py-3 xl:py-3.5 transition-colors flex items-center gap-2 whitespace-nowrap shrink-0 ${
                   pathname === "/"
                     ? "text-red-600 bg-red-50/70 font-bold"
                     : "text-slate-800 hover:text-red-600 hover:bg-slate-50"
@@ -375,17 +360,16 @@ export default function Header({ breakingNewsList = [], categories: propCategori
                 <Home className="w-5 h-5 text-red-600 shrink-0" />
               </Link>
 
-
               {visibleCategories.map((cat, idx) => {
                 const isActive = pathname === `/category/${cat.slug}`;
                 return (
                   <Link
-                    key={cat.id}
+                    key={cat.id || cat.slug || idx}
                     ref={(el) => {
                       itemRefs.current[idx] = el;
                     }}
                     href={`/category/${cat.slug}`}
-                    className={`px-4.5 py-3.5 text-xl whitespace-nowrap tracking-wide shrink-0 transition-colors ${
+                    className={`px-3.5 xl:px-4 py-3 xl:py-3.5 text-base xl:text-lg whitespace-nowrap tracking-wide shrink-0 transition-colors ${
                       isActive
                         ? "text-red-600 font-bold bg-red-50/70"
                         : "text-slate-950 hover:text-red-600 hover:bg-slate-50"
@@ -396,13 +380,12 @@ export default function Header({ breakingNewsList = [], categories: propCategori
                 );
               })}
 
-
               {overflowCategories.length > 0 && (
                 <div className="relative shrink-0" ref={moreDropdownRef}>
                   <button
                     type="button"
                     onClick={() => setMoreDropdownOpen((prev) => !prev)}
-                    className={`px-4.5 py-3.5 text-xl font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap select-none cursor-pointer ${
+                    className={`px-3.5 xl:px-4 py-3 xl:py-3.5 text-base xl:text-lg font-bold flex items-center gap-1.5 transition-colors whitespace-nowrap select-none cursor-pointer ${
                       moreDropdownOpen || overflowCategories.some((c) => pathname === `/category/${c.slug}`)
                         ? "text-red-600 bg-red-50/70"
                         : "text-slate-950 hover:text-red-600 hover:bg-slate-50"
@@ -454,13 +437,14 @@ export default function Header({ breakingNewsList = [], categories: propCategori
       </nav>
 
 
-      <NewsTickerSection breakingNewsList={breakingNewsList} />
+      <NewsTickerSection breakingNewsList={breakingNewsList} headlines={latestHeadlines} />
 
 
       <MobileDrawer
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
         categories={allNavCategories}
+        dates={dates}
       />
     </>
   );

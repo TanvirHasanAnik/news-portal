@@ -8,29 +8,26 @@ import MostReadSection from "@/components/MostReadSection";
 import SocialShareBar from "@/components/SocialShareBar";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import ArticleContentRenderer from "@/components/ArticleContentRenderer";
-import {
-  getArticleById as getStaticArticleById,
-  getAllArticles,
-  getRelatedArticles,
-  getArticleContent,
-  categoryAccentMap,
-} from "@/utils/categoryNews";
+import { categoryAccentMap } from "@/utils/categoryNews";
 import {
   findArticleBySlugOrId,
   getPublishedArticles,
-  getMostReadArticles,
   mapDbArticleToFrontend,
 } from "@/repositories/articleRepository";
-import { recordArticleView } from "@/repositories/analyticsRepository";
+import { recordArticleView, getTopArticles } from "@/repositories/analyticsRepository";
 import { getCurrentUser } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
 export async function generateStaticParams() {
-  const articles = getAllArticles();
-  return articles.map((article) => ({
-    id: String(article.id),
-  }));
+  try {
+    const rawArticles = await getPublishedArticles({ limit: 50 });
+    return (rawArticles || []).map((article) => ({
+      id: String(article.slug || article.id),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({ params }) {
@@ -43,10 +40,6 @@ export async function generateMetadata({ params }) {
     }
   } catch (err) {
     console.error("Error fetching db article for metadata:", err);
-  }
-
-  if (!article) {
-    article = getStaticArticleById(id);
   }
 
   if (!article) {
@@ -65,10 +58,10 @@ export default async function ArticlePage({ params }) {
   const { id } = await params;
   let article = null;
   let dbRow = null;
+
   try {
     dbRow = await findArticleBySlugOrId(id);
     if (dbRow) {
-
       if (dbRow.status !== "published") {
         const user = await getCurrentUser();
         if (!user) {
@@ -79,10 +72,6 @@ export default async function ArticlePage({ params }) {
     }
   } catch (err) {
     console.error("Error fetching db article for page:", err);
-  }
-
-  if (!article) {
-    article = getStaticArticleById(id);
   }
 
   if (!article) {
@@ -99,7 +88,7 @@ export default async function ArticlePage({ params }) {
 
   let mostReadArticles = [];
   try {
-    mostReadArticles = await getMostReadArticles(10);
+    mostReadArticles = await getTopArticles(10);
   } catch (err) {
     console.error("Error fetching most read articles for sidebar:", err);
   }
@@ -108,8 +97,6 @@ export default async function ArticlePage({ params }) {
     categoryAccentMap[article.categorySlug] ||
     "from-slate-700 to-slate-900 bg-red-600 border-red-600 text-red-600";
   const badgeBg = accentClass.split(" ")[1] || "bg-red-600";
-
-  const paragraphs = getArticleContent(article);
 
   let allImages = [];
   if (Array.isArray(article.images)) {
@@ -133,22 +120,19 @@ export default async function ArticlePage({ params }) {
   let relatedArticles = [];
   try {
     const dbRelated = await getPublishedArticles({ categorySlug: article.categorySlug, limit: 6 });
-    const mappedDbRelated = (dbRelated || [])
+    relatedArticles = (dbRelated || [])
       .map(mapDbArticleToFrontend)
-      .filter((a) => a.id !== article.id && a.dbId !== article.dbId && a.slug !== article.slug);
-    const staticRelated = getRelatedArticles(article.categorySlug, article.id, 4);
-    relatedArticles = [...mappedDbRelated, ...staticRelated].slice(0, 4);
-  } catch {
-    relatedArticles = getRelatedArticles(article.categorySlug, article.id, 4);
+      .filter((a) => a.id !== article.id && a.dbId !== article.dbId && a.slug !== article.slug)
+      .slice(0, 4);
+  } catch (err) {
+    console.error("Error fetching related articles:", err);
   }
 
   return (
     <div className="min-h-screen bg-white py-4 sm:py-6 lg:py-8 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
-
         <header className="border-b-2 border-slate-200 pb-5 sm:pb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-
             <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
               <span className={`w-2 sm:w-2.5 h-5 sm:h-6 rounded-2xs ${badgeBg}`} />
               <Link
@@ -175,10 +159,8 @@ export default async function ArticlePage({ params }) {
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10 items-start">
-
           <main className="lg:col-span-2 space-y-6">
-
-            <h1 className="font-serif-bangla text-2xl sm:text-3xl lg:text-2xl xl:text-3xl font-semi-bold text-slate-950 leading-tight">
+            <h1 className="font-serif-bangla text-2xl sm:text-3xl lg:text-2xl xl:text-3xl font-semibold text-slate-950 leading-tight">
               {article.headline}
             </h1>
 
@@ -223,14 +205,10 @@ export default async function ArticlePage({ params }) {
                 content={article.content}
                 className="text-lg sm:text-xl text-slate-800 leading-relaxed sm:leading-loose space-y-5 sm:space-y-6"
               />
-            ) : paragraphs.length > 0 ? (
-              <div className="font-serif-bangla text-lg sm:text-xl text-slate-800 leading-relaxed sm:leading-loose space-y-5 sm:space-y-6">
-                {paragraphs.map((paragraph, index) => (
-                  <p key={index} className="text-justify sm:text-left">
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
+            ) : article.summary ? (
+              <p className="font-serif-bangla text-lg sm:text-xl text-slate-800 leading-relaxed sm:leading-loose">
+                {article.summary}
+              </p>
             ) : null}
           </main>
 
@@ -238,13 +216,11 @@ export default async function ArticlePage({ params }) {
             aria-label="বিজ্ঞাপন ও সর্বাধিক পঠিত"
             className="lg:col-span-1 space-y-6"
           >
-
             <AdHolder size="300x250" />
             <AdHolder size="300x250" />
 
             <MostReadSection newsList={mostReadArticles} />
           </aside>
-
         </div>
 
         {relatedArticles.length > 0 && (
@@ -252,7 +228,6 @@ export default async function ArticlePage({ params }) {
             aria-label="এই বিভাগের আরও খবর"
             className="pt-8 sm:pt-10 border-t-2 border-slate-900 mt-8 sm:mt-12"
           >
-
             <div className="flex items-center gap-2.5 border-b-2 border-slate-900 pb-3 mb-6">
               <span className="w-2.5 h-6 bg-red-600 inline-block"></span>
               <h2 className="font-serif-bangla text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
@@ -278,9 +253,7 @@ export default async function ArticlePage({ params }) {
             </div>
           </section>
         )}
-
       </div>
     </div>
   );
 }
-

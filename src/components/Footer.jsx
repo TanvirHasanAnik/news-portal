@@ -15,7 +15,7 @@ import {
   InstagramIcon,
   LinkedinIcon,
 } from "./SocialIcons";
-import { categories } from "../data/newsData";
+
 
 export default function Footer({ categories: propCategories = [] }) {
   const displayCats = (() => {
@@ -26,7 +26,7 @@ export default function Footer({ categories: propCategories = [] }) {
       const others = propCategories.find((c) => c.slug === "others") || { id: "cat_others", name: "অন্যান্য", slug: "others" };
       return [...dynamic, others];
     }
-    return categories;
+    return [];
   })();
 
   const scrollToTop = () => {

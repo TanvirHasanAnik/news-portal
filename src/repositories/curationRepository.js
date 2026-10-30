@@ -1,7 +1,7 @@
 import { getDb, query, queryOne, withTransaction } from "@/lib/db";
 import { mapDbArticleToFrontend } from "./articleRepository";
-import { handpickedNewsList } from "@/data/handpickedNewsData";
-import { breakingNews as fallbackBreakingNews } from "@/data/newsData";
+
+
 
 
 
@@ -268,19 +268,10 @@ export async function getActiveHandpickedArticles(limit = 4) {
       });
     }
 
-    if (curatedArticles.length < safeLimit) {
-      const existingTitles = new Set(curatedArticles.map((a) => a.headline));
-      const needed = safeLimit - curatedArticles.length;
-      const fallback = handpickedNewsList
-        .filter((item) => !existingTitles.has(item.headline))
-        .slice(0, needed);
-      curatedArticles.push(...fallback);
-    }
-
     return curatedArticles.slice(0, safeLimit);
   } catch (error) {
     console.error("[Curation] Error loading active handpicked articles:", error?.message || error);
-    return handpickedNewsList.slice(0, safeLimit);
+    return [];
   }
 }
 
@@ -331,13 +322,9 @@ export async function getActiveBreakingNews(limit = 10) {
       });
     }
 
-    if (breakingItems.length === 0) {
-      return fallbackBreakingNews;
-    }
-
     return breakingItems.slice(0, safeLimit);
   } catch (error) {
     console.error("[Curation] Error loading active breaking news:", error?.message || error);
-    return fallbackBreakingNews;
+    return [];
   }
 }

@@ -526,34 +526,84 @@ export async function findArticleBySlugOrId(identifier) {
   return null;
 }
 
-export async function getPublishedArticles({ categorySlug, limit = 20, offset = 0 } = {}) {
+export async function getPublishedArticles({ categorySlug, subcategoryName, limit = 20, offset = 0 } = {}) {
   try {
     const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 100);
     const safeOffset = Math.max(0, Number(offset) || 0);
 
+    const conditions = ["status = 'published'"];
+    const params = [];
+
     if (categorySlug === "handpicked") {
-      const rows = await query(
-        "SELECT * FROM articles WHERE status = 'published' AND is_handpicked = 1 ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        [safeLimit, safeOffset]
-      );
-      return rows || [];
+      conditions.push("is_handpicked = 1");
+    } else if (categorySlug && categorySlug !== "all" && categorySlug !== "latest") {
+      conditions.push("category_slug = ?");
+      params.push(categorySlug);
     }
 
-    if (!categorySlug || categorySlug === "all" || categorySlug === "latest") {
-      const rows = await query(
-        "SELECT * FROM articles WHERE status = 'published' ORDER BY created_at DESC LIMIT ? OFFSET ?",
-        [safeLimit, safeOffset]
-      );
-      return rows || [];
+    if (subcategoryName) {
+      conditions.push("subcategory_name = ?");
+      params.push(subcategoryName);
     }
 
-    const rows = await query(
-      "SELECT * FROM articles WHERE status = 'published' AND category_slug = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-      [categorySlug, safeLimit, safeOffset]
-    );
+    const sql = `
+      SELECT * FROM articles
+      WHERE ${conditions.join(" AND ")}
+      ORDER BY COALESCE(published_at, created_at) DESC
+      LIMIT ? OFFSET ?
+    `;
+    params.push(safeLimit, safeOffset);
+
+    const rows = await query(sql, params);
     return rows || [];
   } catch (error) {
     console.error("[Article] Error in getPublishedArticles:", error?.message || error);
+    return [];
+  }
+}
+
+export async function getPublishedArticlesCount({ categorySlug, subcategoryName } = {}) {
+  try {
+    const conditions = ["status = 'published'"];
+    const params = [];
+
+    if (categorySlug === "handpicked") {
+      conditions.push("is_handpicked = 1");
+    } else if (categorySlug && categorySlug !== "all" && categorySlug !== "latest") {
+      conditions.push("category_slug = ?");
+      params.push(categorySlug);
+    }
+
+    if (subcategoryName) {
+      conditions.push("subcategory_name = ?");
+      params.push(subcategoryName);
+    }
+
+    const sql = `
+      SELECT COUNT(*) as count FROM articles
+      WHERE ${conditions.join(" AND ")}
+    `;
+
+    const row = await queryOne(sql, params);
+    return Number(row?.count || 0);
+  } catch (error) {
+    console.error("[Article] Error in getPublishedArticlesCount:", error?.message || error);
+    return 0;
+  }
+}
+
+export async function getPublishedSubcategories(categorySlug) {
+  try {
+    if (!categorySlug || categorySlug === "all" || categorySlug === "latest" || categorySlug === "handpicked") {
+      return [];
+    }
+    const rows = await query(
+      "SELECT DISTINCT subcategory_name FROM articles WHERE category_slug = ? AND subcategory_name IS NOT NULL AND status = 'published' ORDER BY subcategory_name ASC",
+      [categorySlug]
+    );
+    return (rows || []).map((r) => r.subcategory_name).filter(Boolean);
+  } catch (error) {
+    console.error("[Article] Error in getPublishedSubcategories:", error?.message || error);
     return [];
   }
 }

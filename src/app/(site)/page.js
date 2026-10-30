@@ -3,9 +3,9 @@ import HandpickedNewsSection from "@/components/HandpickedNewsSection";
 import CategoryScrollSection from "@/components/CategoryScrollSection";
 import {
   getPublishedArticles,
-  getMostReadArticles,
   mapDbArticleToFrontend,
 } from "@/repositories/articleRepository";
+import { getTopArticles } from "@/repositories/analyticsRepository";
 import { getActiveHandpickedArticles } from "@/repositories/curationRepository";
 import { getDynamicCategoriesWithSubcategories } from "@/repositories/categoryRepository";
 
@@ -15,27 +15,43 @@ export default async function Home() {
   let dbArticles = [];
   let mostReadArticles = [];
   let handpickedArticles = [];
-  let dynamicCats = [];
+  let categorySections = [];
+
   try {
-    const [raw, mostRead, handpicked, cats] = await Promise.all([
+    const [raw, mostRead, handpicked, dynamicCats] = await Promise.all([
       getPublishedArticles({ limit: 20 }),
-      getMostReadArticles(10),
+      getTopArticles(10),
       getActiveHandpickedArticles(4),
       getDynamicCategoriesWithSubcategories(),
     ]);
+
     dbArticles = (raw || []).map(mapDbArticleToFrontend);
     mostReadArticles = mostRead || [];
     handpickedArticles = handpicked || [];
-    dynamicCats = cats || [];
+
+    if (Array.isArray(dynamicCats) && dynamicCats.length > 0) {
+      const catResults = await Promise.all(
+        dynamicCats.map(async (cat) => {
+          try {
+            const catArticles = await getPublishedArticles({ categorySlug: cat.slug, limit: 4 });
+            return {
+              ...cat,
+              articles: (catArticles || []).map(mapDbArticleToFrontend),
+            };
+          } catch {
+            return { ...cat, articles: [] };
+          }
+        })
+      );
+      categorySections = catResults.filter((c) => c.articles && c.articles.length > 0);
+    }
   } catch (err) {
     console.error("Error loading db articles for homepage:", err);
   }
 
   return (
     <>
-
       <LatestMixedSection dbArticles={dbArticles} />
-
 
       <HandpickedNewsSection
         newsList={handpickedArticles}
@@ -43,8 +59,7 @@ export default async function Home() {
         mostReadList={mostReadArticles}
       />
 
-
-      <CategoryScrollSection dbArticles={dbArticles} categories={dynamicCats} />
+      <CategoryScrollSection categorySections={categorySections} />
     </>
   );
 }

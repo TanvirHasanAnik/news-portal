@@ -1,13 +1,17 @@
 import React from "react";
 import Link from "next/link";
-import { Home, ChevronRight, Layers, Newspaper } from "lucide-react";
+import { notFound } from "next/navigation";
+import { Newspaper } from "lucide-react";
 import NewsArticleCard from "@/components/NewsArticleCard";
 import SubcategoryDropdown from "@/components/SubcategoryDropdown";
 import AdHolder from "@/components/AdHolder";
-import { getCategoryNews, getAllCategorySlugs, categoryAccentMap } from "@/utils/categoryNews";
-import { categories } from "@/data/newsData";
-import { getPublishedArticles, mapDbArticleToFrontend } from "@/repositories/articleRepository";
-import { getActiveHandpickedArticles } from "@/repositories/curationRepository";
+import { categoryAccentMap } from "@/utils/categoryNews";
+import {
+  getPublishedArticles,
+  getPublishedArticlesCount,
+  getPublishedSubcategories,
+  mapDbArticleToFrontend,
+} from "@/repositories/articleRepository";
 import {
   getCategoryBySlug,
   getSubcategoriesByCategoryId,
@@ -16,36 +20,37 @@ import {
 
 export const dynamic = "force-dynamic";
 
-
-
 export async function generateStaticParams() {
-  const staticSlugs = getAllCategorySlugs();
-  const allSlugs = new Set(staticSlugs);
+  const slugs = new Set(["latest", "handpicked", "others"]);
   try {
     const dbCats = await getAllCategories();
     (dbCats || []).forEach((c) => {
-      if (c.slug) allSlugs.add(c.slug);
+      if (c.slug) slugs.add(c.slug);
     });
   } catch (_e) {}
 
-  return Array.from(allSlugs).map((slug) => ({
+  return Array.from(slugs).map((slug) => ({
     category: slug,
   }));
 }
 
-
-
 export async function generateMetadata({ params }) {
   const { category } = await params;
   let categoryName = "";
-  try {
-    const dbCat = await getCategoryBySlug(category);
-    if (dbCat?.name) categoryName = dbCat.name;
-  } catch (_e) {}
+
+  if (category === "latest") {
+    categoryName = "সর্বশেষ";
+  } else if (category === "handpicked") {
+    categoryName = "বাছাইকৃত";
+  } else {
+    try {
+      const dbCat = await getCategoryBySlug(category);
+      if (dbCat?.name) categoryName = dbCat.name;
+    } catch (_e) {}
+  }
 
   if (!categoryName) {
-    const categoryData = getCategoryNews(category);
-    categoryName = categoryData.name;
+    categoryName = "সংবাদ";
   }
 
   const pageTitle = categoryName.endsWith("সংবাদ")
@@ -58,11 +63,10 @@ export async function generateMetadata({ params }) {
   };
 }
 
-
-
 export default async function CategoryPage({ params, searchParams }) {
   const { category } = await params;
   const resolvedSearchParams = (await searchParams) || {};
+
   let selectedSub = null;
   if (resolvedSearchParams.sub) {
     try {
@@ -72,87 +76,87 @@ export default async function CategoryPage({ params, searchParams }) {
     }
   }
 
-  const categoryData = getCategoryNews(category);
-  let { name, articles, subcategories, slug } = categoryData;
+  let name = "";
+  let subcategories = [];
+  let dbCat = null;
 
+  if (category === "latest") {
+    name = "সর্বশেষ";
+  } else if (category === "handpicked") {
+    name = "বাছাইকৃত";
+  } else {
+    try {
+      dbCat = await getCategoryBySlug(category);
+      if (dbCat) {
+        name = dbCat.name;
+        const [subs, liveSubs] = await Promise.all([
+          getSubcategoriesByCategoryId(dbCat.id),
+          getPublishedSubcategories(category),
+        ]);
+        const set = new Set();
+        (subs || []).forEach((s) => s.name && set.add(s.name));
+        (liveSubs || []).forEach((s) => s && set.add(s));
+        subcategories = Array.from(set);
+      } else {
+        const checkCount = await getPublishedArticlesCount({ categorySlug: category });
+        if (checkCount === 0 && category !== "others") {
+          notFound();
+        }
+        name = "সংবাদ";
+      }
+    } catch (err) {
+      console.error("Error loading category metadata:", err);
+      name = "সংবাদ";
+    }
+  }
 
-  let dbSubcategories = [];
+  const PAGE_SIZE = 10;
+  const rawPageNum = parseInt(resolvedSearchParams.page, 10);
+  const requestedPage = Number.isInteger(rawPageNum) && rawPageNum > 0 ? rawPageNum : 1;
+
+  let totalCount = 0;
+  let displayedArticles = [];
+
   try {
-    const dbCat = await getCategoryBySlug(category);
-    if (dbCat) {
-      if (dbCat.name) name = dbCat.name;
-      const subs = await getSubcategoriesByCategoryId(dbCat.id);
-      dbSubcategories = (subs || []).map((s) => s.name).filter(Boolean);
-    }
+    totalCount = await getPublishedArticlesCount({
+      categorySlug: category,
+      subcategoryName: selectedSub,
+    });
+
+    const totalPagesCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+    const currentPageNum = Math.min(totalPagesCount, requestedPage);
+    const offset = (currentPageNum - 1) * PAGE_SIZE;
+
+    const raw = await getPublishedArticles({
+      categorySlug: category,
+      subcategoryName: selectedSub,
+      limit: PAGE_SIZE,
+      offset,
+    });
+
+    displayedArticles = (raw || []).map(mapDbArticleToFrontend);
   } catch (err) {
-    console.error("Error fetching db category details:", err);
+    console.error("Error fetching paginated articles for category:", err);
   }
 
-
-  let dbArticles = [];
-  try {
-    if (category === "handpicked") {
-      dbArticles = await getActiveHandpickedArticles(50);
-    } else {
-      const raw = await getPublishedArticles({ categorySlug: category, limit: 50 });
-      dbArticles = (raw || []).map(mapDbArticleToFrontend);
-    }
-  } catch (err) {
-    console.error("Error fetching db articles for category page:", err);
-  }
-
-
-  const baseArticles = [...dbArticles, ...articles];
-  const seenKeys = new Set();
-  const mergedArticles = [];
-  for (const item of baseArticles) {
-    if (!item) continue;
-    const key = item.id || item.slug;
-    if (key && !seenKeys.has(key)) {
-      seenKeys.add(key);
-      mergedArticles.push(item);
-    }
-  }
-
-
-  const displayedArticles = selectedSub
-    ? mergedArticles.filter(
-        (a) => a.subcategory === selectedSub || a.originalCategory === selectedSub
-      )
-    : mergedArticles;
-
-
-  const liveSubcategories = dbArticles.map((a) => a.subcategory).filter(Boolean);
-  const combinedSubcategories = Array.from(
-    new Set([...subcategories, ...dbSubcategories, ...liveSubcategories])
-  );
-
-  const totalCount = displayedArticles.length;
-
-
-  const PAGE_SIZE = 5;
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  const parsedPage = parseInt(resolvedSearchParams.page, 10);
-  const currentPage = Math.min(
-    totalPages,
-    Math.max(1, isNaN(parsedPage) ? 1 : parsedPage)
-  );
-  const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const paginatedArticles = displayedArticles.slice(startIndex, startIndex + PAGE_SIZE);
+  const currentPage = Math.min(totalPages, requestedPage);
 
-  const leadStory = paginatedArticles.length > 0 ? paginatedArticles[0] : null;
-  const remainingArticles = paginatedArticles.length > 1 ? paginatedArticles.slice(1) : [];
-
+  const leadStory = currentPage === 1 && displayedArticles.length > 0 ? displayedArticles[0] : null;
+  const remainingArticles = currentPage === 1 && displayedArticles.length > 1
+    ? displayedArticles.slice(1)
+    : currentPage > 1
+    ? displayedArticles
+    : [];
 
   const getPageLink = (pageNumber) => {
     const queryParts = [];
     if (selectedSub) queryParts.push(`sub=${encodeURIComponent(selectedSub)}`);
     if (pageNumber > 1) queryParts.push(`page=${pageNumber}`);
     return queryParts.length > 0
-      ? `/category/${slug}?${queryParts.join("&")}`
-      : `/category/${slug}`;
+      ? `/category/${category}?${queryParts.join("&")}`
+      : `/category/${category}`;
   };
-
 
   const toBanglaNumber = (num) => {
     const banglaDigits = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
@@ -160,15 +164,26 @@ export default async function CategoryPage({ params, searchParams }) {
   };
 
   const accentClass =
-    categoryAccentMap[slug] ||
+    categoryAccentMap[category] ||
     "from-slate-700 to-slate-900 bg-slate-800 border-slate-800 text-slate-800";
-  const [gradientClasses, badgeBg, borderColor, textColor] = accentClass.split(" ");
+  const [, badgeBg] = accentClass.split(" ");
+
+  const getPageNumbers = () => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (currentPage <= 4) {
+      return [1, 2, 3, 4, 5, "...", totalPages];
+    }
+    if (currentPage >= totalPages - 3) {
+      return [1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 py-4 sm:py-6 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
-
-
         <header className="border-b-2 border-slate-200 pb-6">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
@@ -177,7 +192,6 @@ export default async function CategoryPage({ params, searchParams }) {
                 {name}
               </h1>
 
-
               {selectedSub && (
                 <span className="font-serif-bangla text-xl sm:text-2xl font-bold text-red-600 shrink-0">
                   / {selectedSub}
@@ -185,25 +199,22 @@ export default async function CategoryPage({ params, searchParams }) {
               )}
             </div>
 
-
-            {combinedSubcategories.length > 0 && (
+            {subcategories.length > 0 && (
               <div className="sm:hidden shrink-0 flex items-center">
                 <SubcategoryDropdown
-                  slug={slug}
-                  subcategories={combinedSubcategories}
+                  slug={category}
+                  subcategories={subcategories}
                   selectedSub={selectedSub}
                 />
               </div>
             )}
           </div>
 
-
-          {combinedSubcategories.length > 0 && (
+          {subcategories.length > 0 && (
             <div className="hidden sm:flex mt-6 pt-2 items-center gap-3 sm:gap-4 flex-wrap">
               <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-
                 <Link
-                  href={`/category/${slug}`}
+                  href={`/category/${category}`}
                   className={`px-4.5 sm:px-5 py-2 sm:py-2.5 rounded-none font-serif-bangla text-base sm:text-lg font-bold transition-all cursor-pointer whitespace-nowrap select-none bg-slate-100 hover:bg-slate-200 ${
                     !selectedSub
                       ? "text-red-600"
@@ -213,13 +224,12 @@ export default async function CategoryPage({ params, searchParams }) {
                   সকল
                 </Link>
 
-
-                {combinedSubcategories.map((sub, index) => {
+                {subcategories.map((sub, index) => {
                   const isSelected = selectedSub === sub;
                   return (
                     <Link
                       key={index}
-                      href={`/category/${slug}?sub=${encodeURIComponent(sub)}`}
+                      href={`/category/${category}?sub=${encodeURIComponent(sub)}`}
                       className={`px-4.5 sm:px-5 py-2 sm:py-2.5 rounded-none font-serif-bangla text-base sm:text-lg font-bold transition-all cursor-pointer whitespace-nowrap select-none bg-slate-100 hover:bg-slate-200 ${
                         isSelected
                           ? "text-red-600"
@@ -235,13 +245,9 @@ export default async function CategoryPage({ params, searchParams }) {
           )}
         </header>
 
-
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-
           <div className="lg:col-span-8 space-y-8">
             {displayedArticles.length === 0 ? (
-
               <div className="bg-white rounded-none border border-slate-200 p-12 text-center space-y-4 max-w-2xl mx-auto shadow-2xs my-12">
                 <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                   <Newspaper className="w-8 h-8" />
@@ -269,7 +275,6 @@ export default async function CategoryPage({ params, searchParams }) {
               </div>
             ) : (
               <div className="space-y-8">
-
                 {leadStory && (
                   <section aria-label="শীর্ষ সংবাদ">
                     <NewsArticleCard
@@ -286,13 +291,11 @@ export default async function CategoryPage({ params, searchParams }) {
                   </section>
                 )}
 
-
                 {leadStory && (
                   <div className="lg:hidden pb-6 border-b border-slate-200">
                     <AdHolder size="300x250" />
                   </div>
                 )}
-
 
                 {remainingArticles.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-start">
@@ -311,77 +314,78 @@ export default async function CategoryPage({ params, searchParams }) {
                   </div>
                 )}
 
-
-                <nav
-                  aria-label="পৃষ্ঠা নেভিগেশন"
-                  className="pt-6 border-t border-slate-200 flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap"
-                >
-
-                  {currentPage > 1 ? (
-                    <Link
-                      href={getPageLink(currentPage - 1)}
-                      className="px-3.5 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-serif-bangla font-semibold transition-colors cursor-pointer select-none rounded-none"
-                    >
-                      &larr; পূর্ববর্তী
-                    </Link>
-                  ) : (
-                    <span className="px-3.5 sm:px-4 py-2 bg-slate-50 text-slate-300 text-sm font-serif-bangla font-semibold select-none rounded-none cursor-not-allowed">
-                      &larr; পূর্ববর্তী
-                    </span>
-                  )}
-
-
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-                    const isActive = p === currentPage;
-                    return (
+                {totalPages > 1 && (
+                  <nav
+                    aria-label="পৃষ্ঠা নেভিগেশন"
+                    className="pt-6 border-t border-slate-200 flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap"
+                  >
+                    {currentPage > 1 ? (
                       <Link
-                        key={p}
-                        href={getPageLink(p)}
-                        className={`min-w-[38px] sm:min-w-[42px] h-9 sm:h-10 px-2 flex items-center justify-center text-sm sm:text-base font-serif-bangla font-bold transition-colors cursor-pointer select-none rounded-none ${
-                          isActive
-                            ? "bg-slate-900 text-white"
-                            : "bg-slate-100 hover:bg-slate-200 text-slate-800 hover:text-red-600"
-                        }`}
+                        href={getPageLink(currentPage - 1)}
+                        className="px-3.5 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-serif-bangla font-semibold transition-colors cursor-pointer select-none rounded-none"
                       >
-                        {toBanglaNumber(p)}
+                        &larr; পূর্ববর্তী
                       </Link>
-                    );
-                  })}
+                    ) : (
+                      <span className="px-3.5 sm:px-4 py-2 bg-slate-50 text-slate-300 text-sm font-serif-bangla font-semibold select-none rounded-none cursor-not-allowed">
+                        &larr; পূর্ববর্তী
+                      </span>
+                    )}
 
+                    {getPageNumbers().map((p, idx) => {
+                      if (p === "...") {
+                        return (
+                          <span
+                            key={`ellipsis-${idx}`}
+                            className="min-w-[32px] h-9 sm:h-10 flex items-center justify-center text-slate-400 select-none"
+                          >
+                            ...
+                          </span>
+                        );
+                      }
+                      const isActive = p === currentPage;
+                      return (
+                        <Link
+                          key={p}
+                          href={getPageLink(p)}
+                          className={`min-w-[38px] sm:min-w-[42px] h-9 sm:h-10 px-2 flex items-center justify-center text-sm sm:text-base font-serif-bangla font-bold transition-colors cursor-pointer select-none rounded-none ${
+                            isActive
+                              ? "bg-slate-900 text-white"
+                              : "bg-slate-100 hover:bg-slate-200 text-slate-800 hover:text-red-600"
+                          }`}
+                        >
+                          {toBanglaNumber(p)}
+                        </Link>
+                      );
+                    })}
 
-                  {currentPage < totalPages ? (
-                    <Link
-                      href={getPageLink(currentPage + 1)}
-                      className="px-3.5 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-serif-bangla font-semibold transition-colors cursor-pointer select-none rounded-none"
-                    >
-                      পরবর্তী &rarr;
-                    </Link>
-                  ) : (
-                    <span className="px-3.5 sm:px-4 py-2 bg-slate-50 text-slate-300 text-sm font-serif-bangla font-semibold select-none rounded-none cursor-not-allowed">
-                      পরবর্তী &rarr;
-                    </span>
-                  )}
-                </nav>
+                    {currentPage < totalPages ? (
+                      <Link
+                        href={getPageLink(currentPage + 1)}
+                        className="px-3.5 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-serif-bangla font-semibold transition-colors cursor-pointer select-none rounded-none"
+                      >
+                        পরবর্তী &rarr;
+                      </Link>
+                    ) : (
+                      <span className="px-3.5 sm:px-4 py-2 bg-slate-50 text-slate-300 text-sm font-serif-bangla font-semibold select-none rounded-none cursor-not-allowed">
+                        পরবর্তী &rarr;
+                      </span>
+                    )}
+                  </nav>
+                )}
               </div>
             )}
           </div>
-
 
           <aside
             aria-label="বিজ্ঞাপন এলাকা"
             className="hidden lg:block lg:col-span-4 space-y-6"
           >
-
             <AdHolder size="300x250" />
-
-
             <AdHolder size="300x600" className="hidden sm:flex" />
           </aside>
-
         </div>
-
       </div>
     </div>
   );
 }
-
