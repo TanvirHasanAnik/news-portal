@@ -206,7 +206,7 @@ export async function saveCategoriesBatch(categoriesList = []) {
 
 
     const incomingDynamic = categoriesList.filter(
-      (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked"
+      (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked" && c.slug !== "others"
     );
     const incomingCatIds = new Set(
       incomingDynamic

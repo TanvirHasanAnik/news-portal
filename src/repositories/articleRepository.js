@@ -43,10 +43,10 @@ export function mapDbArticleToFrontend(dbRow) {
     headline: dbRow.headline || "",
     summary: dbRow.summary || "",
     content: dbRow.content || "",
-    category: dbRow.category_name || "জাতীয়",
-    categorySlug: dbRow.category_slug || "national",
-    category_name: dbRow.category_name || "জাতীয়",
-    category_slug: dbRow.category_slug || "national",
+    category: dbRow.category_name || "অন্যান্য",
+    categorySlug: dbRow.category_slug || "others",
+    category_name: dbRow.category_name || "অন্যান্য",
+    category_slug: dbRow.category_slug || "others",
     subcategory: dbRow.subcategory_name || null,
     subcategorySlug: dbRow.subcategory_name ? encodeURIComponent(dbRow.subcategory_name) : null,
     image: primaryImage,
@@ -733,9 +733,25 @@ export async function updateArticleStatus(id, status, editorId = "usr_superadmin
   return await withTransaction(async (tx) => {
 
     const targetArticle = await tx.queryOne(
-      "SELECT id, headline, slug, status, author_id, is_passed_to_upper, passed_by FROM articles WHERE id = ?",
+      "SELECT id, headline, slug, status, author_id, category_id, category_slug, is_passed_to_upper, passed_by FROM articles WHERE id = ?",
       [id]
     );
+
+    let fallbackCategory = null;
+    if (status === "published" && targetArticle) {
+      let catExists = false;
+      if (targetArticle.category_id) {
+        const cat = await tx.queryOne("SELECT id FROM categories WHERE id = ?", [targetArticle.category_id]);
+        if (cat) catExists = true;
+      } else if (targetArticle.category_slug) {
+        const cat = await tx.queryOne("SELECT id FROM categories WHERE slug = ?", [targetArticle.category_slug]);
+        if (cat) catExists = true;
+      }
+      if (!catExists) {
+        const fb = await tx.queryOne("SELECT id, name, slug FROM categories WHERE slug = 'others' OR id = 'cat_others'");
+        fallbackCategory = fb || { id: "cat_others", name: "অন্যান্য", slug: "others" };
+      }
+    }
 
     const cleanReason = (rejectionReason || "").trim();
 

@@ -15,6 +15,11 @@ export default function ArticlePublishSettings({
   register,
   errors = {},
 }) {
+  const sortedCategories = [
+    ...categories.filter((c) => c.slug !== "others"),
+    ...categories.filter((c) => c.slug === "others"),
+  ];
+
   return (
     <Card className="border-slate-200 shadow-sm">
       <CardHeader className="pb-4 border-b border-slate-100">
@@ -62,7 +67,6 @@ export default function ArticlePublishSettings({
                 if (setSubcategoryName) setSubcategoryName("");
               }}
               className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:outline-none focus:ring-0 focus:border-slate-300 font-medium cursor-pointer"
-              required
             >
               {sortedCategories.map((cat) => (
                 <option key={cat.id} value={cat.slug}>

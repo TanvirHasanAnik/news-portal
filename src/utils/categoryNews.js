@@ -26,7 +26,7 @@ export const categoryAccentMap = {
   others: "from-slate-600 to-slate-800 bg-slate-700 border-slate-700 text-slate-700",
 };
 
-export function normalizeArticle(item, defaultCategory = "জাতীয়", defaultSlug = "national") {
+export function normalizeArticle(item, defaultCategory = "অন্যান্য", defaultSlug = "others") {
   const youtubeUrl = item.youtubeUrl || item.youtubeEmbed || item.videoUrl || item.youtube || null;
   const youtubeThumb = youtubeUrl ? getYouTubeThumbnail(youtubeUrl) : null;
   const hasCustomImage = Boolean(item.image && typeof item.image === "string" && item.image.trim());
