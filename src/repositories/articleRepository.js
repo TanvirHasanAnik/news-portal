@@ -1,4 +1,4 @@
-import { getDb, query, queryOne, withTransaction } from "@/lib/db";
+import { query, queryOne, withTransaction } from "@/lib/db";
 import { deleteMultipleFromR2 } from "@/lib/r2";
 
 function normalizeTimestamp(ts) {
