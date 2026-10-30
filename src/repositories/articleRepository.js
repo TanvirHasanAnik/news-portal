@@ -743,10 +743,28 @@ export async function updateArticleStatus(id, status, editorId = "usr_superadmin
       `UPDATE articles 
        SET status = ?, 
            rejection_reason = ?,
+           category_id = CASE WHEN ? = 1 THEN ? ELSE category_id END,
+           category_name = CASE WHEN ? = 1 THEN ? ELSE category_name END,
+           category_slug = CASE WHEN ? = 1 THEN ? ELSE category_slug END,
+           subcategory_id = CASE WHEN ? = 1 THEN NULL ELSE subcategory_id END,
+           subcategory_name = CASE WHEN ? = 1 THEN NULL ELSE subcategory_name END,
            published_at = CASE WHEN ? = 'published' THEN COALESCE(published_at, CURRENT_TIMESTAMP) ELSE published_at END,
            updated_at = CURRENT_TIMESTAMP 
        WHERE id = ?`,
-      [status, status === "rejected" ? (cleanReason || null) : null, status, id]
+      [
+        status,
+        status === "rejected" ? (cleanReason || null) : null,
+        fallbackCategory ? 1 : 0,
+        fallbackCategory?.id || null,
+        fallbackCategory ? 1 : 0,
+        fallbackCategory?.name || null,
+        fallbackCategory ? 1 : 0,
+        fallbackCategory?.slug || null,
+        fallbackCategory ? 1 : 0,
+        fallbackCategory ? 1 : 0,
+        status,
+        id,
+      ]
     );
 
     const statusLabels = {

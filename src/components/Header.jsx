@@ -42,7 +42,7 @@ export default function Header({ breakingNewsList = [], categories: propCategori
 
   const permanentNavCategories = hasDbCats
     ? propCategories.filter(
-        (c) => c.is_permanent === 1 || c.slug === "latest" || c.slug === "handpicked"
+        (c) => (c.is_permanent === 1 || c.slug === "latest" || c.slug === "handpicked") && c.slug !== "others"
       )
     : [...(permanentCategories || [
         { id: "latest", name: "সর্বশেষ", slug: "latest" },
@@ -58,16 +58,20 @@ export default function Header({ breakingNewsList = [], categories: propCategori
 
   const dynamicNavCategories = hasDbCats
     ? propCategories.filter(
-        (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked"
+        (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked" && c.slug !== "others"
       )
-    : dynamicCategories ||
-      categories.filter(
-        (c) => !permanentNavCategories.some((p) => p.slug === c.slug)
+    : (dynamicCategories || categories).filter(
+        (c) => !permanentNavCategories.some((p) => p.slug === c.slug) && c.slug !== "others"
       );
+
+  const fallbackNavCategory = hasDbCats
+    ? propCategories.find((c) => c.slug === "others") || { id: "cat_others", name: "অন্যান্য", slug: "others" }
+    : { id: "others", name: "অন্যান্য", slug: "others" };
 
   const allNavCategories = [
     ...permanentNavCategories,
     ...dynamicNavCategories,
+    ...(fallbackNavCategory ? [fallbackNavCategory] : []),
   ];
 
 

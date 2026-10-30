@@ -28,11 +28,7 @@ export default function ArticleCreateForm({
   const isEditing = Boolean(initialArticle);
   const isLower = checkIsLowerRole(currentUser?.role);
 
-  const defaultCategorySlug =
-    initialArticle?.categorySlug ||
-    categories[2]?.slug ||
-    categories[0]?.slug ||
-    "national";
+  const defaultCategorySlug = initialArticle?.categorySlug || "";
 
   const initialImages = Array.isArray(initialArticle?.images)
     ? initialArticle.images
@@ -63,7 +59,7 @@ export default function ArticleCreateForm({
     },
   });
 
-  const categorySlug = watch("categorySlug") || defaultCategorySlug;
+  const categorySlug = watch("categorySlug") !== undefined ? watch("categorySlug") : defaultCategorySlug;
   const images = watch("images") || [];
   const youtubeUrl = watch("youtubeUrl") || "";
 
@@ -166,7 +162,7 @@ export default function ArticleCreateForm({
     formData.append("headline", data.headline);
     formData.append("summary", data.summary || "");
     formData.append("content", data.content || "");
-    formData.append("categorySlug", data.categorySlug);
+    formData.append("categorySlug", data.categorySlug || "others");
     formData.append("subcategoryName", data.subcategoryName || "");
     formData.append("images", JSON.stringify(data.images?.slice(0, 3) || []));
     formData.append("image", data.images?.[0] || "");

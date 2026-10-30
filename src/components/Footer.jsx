@@ -18,12 +18,16 @@ import {
 import { categories } from "../data/newsData";
 
 export default function Footer({ categories: propCategories = [] }) {
-  const displayCats =
-    Array.isArray(propCategories) && propCategories.length > 0
-      ? propCategories.filter(
-          (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked"
-        )
-      : categories;
+  const displayCats = (() => {
+    if (Array.isArray(propCategories) && propCategories.length > 0) {
+      const dynamic = propCategories.filter(
+        (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked" && c.slug !== "others"
+      );
+      const others = propCategories.find((c) => c.slug === "others") || { id: "cat_others", name: "অন্যান্য", slug: "others" };
+      return [...dynamic, others];
+    }
+    return categories;
+  })();
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });

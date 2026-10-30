@@ -1,4 +1,4 @@
-﻿import { handpickedNewsList } from "../data/handpickedNewsData";
+import { handpickedNewsList } from "../data/handpickedNewsData";
 import {
   categories,
   categoryNewsData,
@@ -23,6 +23,7 @@ export const categoryAccentMap = {
   opinion: "from-slate-700 to-slate-900 bg-slate-800 border-slate-800 text-slate-800",
   latest: "from-red-700 to-red-900 bg-red-700 border-red-700 text-red-700",
   handpicked: "from-red-600 to-rose-700 bg-red-600 border-red-600 text-red-600",
+  others: "from-slate-600 to-slate-800 bg-slate-700 border-slate-700 text-slate-700",
 };
 
 export function normalizeArticle(item, defaultCategory = "জাতীয়", defaultSlug = "national") {

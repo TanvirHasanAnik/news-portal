@@ -10,7 +10,13 @@ export default function CategoryScrollSection({ dbArticles = [], categories: pro
 
   const baseCategories =
     Array.isArray(propCategories) && propCategories.length > 0
-      ? propCategories.filter((c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked")
+      ? (() => {
+          const dynamic = propCategories.filter(
+            (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked" && c.slug !== "others"
+          );
+          const others = propCategories.find((c) => c.slug === "others");
+          return others ? [...dynamic, others] : dynamic;
+        })()
       : categories.filter((c) => categoryNewsData && categoryNewsData[c.slug]);
 
 

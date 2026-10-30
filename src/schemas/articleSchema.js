@@ -127,7 +127,10 @@ export const articleCreateSchema = z.object({
   categorySlug: z
     .string()
     .trim()
-    .min(1, "অনুগ্রহ করে একটি বিভাগ নির্বাচন করুন।")
+    .optional()
+    .nullable()
+    .default("others")
+    .transform((val) => (!val ? "others" : val))
     .refine((val) => val !== "latest" && val !== "handpicked", {
       message: "স্থায়ী ক্যাটাগরি ('সর্বশেষ' বা 'বাছাইকৃত') কোনো আর্টিকেলের মূল বিষয় ক্যাটাগরি হতে পারে না।",
     }),

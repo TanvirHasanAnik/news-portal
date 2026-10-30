@@ -578,7 +578,10 @@ export function ArticleListTable({
           className="h-9 rounded-md border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-slate-900 w-full sm:w-auto cursor-pointer"
         >
           <option value="all">সকল ক্যাটাগরি</option>
-          {categories.map((cat) => (
+          {(Array.isArray(categories) ? [
+            ...categories.filter((c) => c.slug !== "others" && c.slug !== "latest" && c.slug !== "handpicked"),
+            ...(categories.find((c) => c.slug === "others") ? [categories.find((c) => c.slug === "others")] : [{ id: "cat_others", name: "অন্যান্য", slug: "others" }])
+          ] : []).map((cat) => (
             <option key={cat.id} value={cat.slug}>
               {cat.name}
             </option>

@@ -25,13 +25,16 @@ export default function ArticlePublishSettings({
       <CardContent className="space-y-4 pt-4">
 
         <div className="space-y-1.5">
-          <Label htmlFor="category" className="text-sm font-semibold text-slate-800">
-            বিভাগ (Category) <span className="text-red-500">*</span>
-          </Label>
+          <div className="flex items-center justify-between">
+            <Label htmlFor="category" className="text-sm font-semibold text-slate-800">
+              বিভাগ (Category)
+            </Label>
+            <span className="text-xs text-slate-400">(ঐচ্ছিক - ডিফল্ট: অন্যান্য)</span>
+          </div>
           {register ? (
             <select
               id="category"
-              value={categorySlug}
+              value={categorySlug || ""}
               {...register("categorySlug", {
                 onChange: () => {
                   if (setSubcategoryName) setSubcategoryName("");
@@ -43,8 +46,8 @@ export default function ArticlePublishSettings({
                   : "border-slate-300 focus:border-slate-400"
               }`}
             >
-              <option value="">-- বিভাগ নির্বাচন করুন --</option>
-              {categories.map((cat) => (
+              <option value="">-- বিভাগ নির্বাচন করুন (ঐচ্ছিক) --</option>
+              {sortedCategories.map((cat) => (
                 <option key={cat.id} value={cat.slug}>
                   {cat.name}
                 </option>
@@ -53,7 +56,7 @@ export default function ArticlePublishSettings({
           ) : (
             <select
               id="category"
-              value={categorySlug}
+              value={categorySlug || ""}
               onChange={(e) => {
                 if (setCategorySlug) setCategorySlug(e.target.value);
                 if (setSubcategoryName) setSubcategoryName("");
@@ -61,7 +64,7 @@ export default function ArticlePublishSettings({
               className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:outline-none focus:ring-0 focus:border-slate-300 font-medium cursor-pointer"
               required
             >
-              {categories.map((cat) => (
+              {sortedCategories.map((cat) => (
                 <option key={cat.id} value={cat.slug}>
                   {cat.name}
                 </option>

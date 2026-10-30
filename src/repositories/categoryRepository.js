@@ -3,8 +3,41 @@ import { getDb, query, queryOne, withTransaction } from "@/lib/db";
 
 
 
+export const FALLBACK_CATEGORY = {
+  id: "cat_others",
+  name: "অন্যান্য",
+  slug: "others",
+  is_permanent: 1,
+  sort_order: 9999,
+};
+
+export async function getFallbackCategory() {
+  let cat = await queryOne("SELECT * FROM categories WHERE slug = 'others' OR id = 'cat_others'");
+  if (!cat) {
+    await query(
+      "INSERT INTO categories (id, name, slug, is_permanent, sort_order) VALUES ('cat_others', 'অন্যান্য', 'others', 1, 9999) ON DUPLICATE KEY UPDATE name = 'অন্যান্য', is_permanent = 1, sort_order = 9999"
+    );
+    cat = await queryOne("SELECT * FROM categories WHERE slug = 'others' OR id = 'cat_others'");
+  }
+  return cat || FALLBACK_CATEGORY;
+}
+
+export async function ensureValidCategory(categoryId, categorySlug) {
+  let cat = null;
+  if (categorySlug && categorySlug !== "latest" && categorySlug !== "handpicked") {
+    cat = await getCategoryBySlug(categorySlug);
+  }
+  if (!cat && categoryId) {
+    cat = await queryOne("SELECT * FROM categories WHERE id = ?", [categoryId]);
+  }
+  if (!cat || cat.slug === "latest" || cat.slug === "handpicked") {
+    cat = await getFallbackCategory();
+  }
+  return cat;
+}
+
 export async function getAllCategories() {
-  const rows = await query("SELECT * FROM categories ORDER BY sort_order ASC, name ASC");
+  const rows = await query("SELECT * FROM categories ORDER BY (slug = 'others') ASC, sort_order ASC, name ASC");
   return rows || [];
 }
 
@@ -12,7 +45,7 @@ export async function getAllCategories() {
 
 export async function getDynamicCategories() {
   const rows = await query(
-    "SELECT * FROM categories WHERE is_permanent = 0 AND slug NOT IN ('latest', 'handpicked') ORDER BY sort_order ASC, name ASC"
+    "SELECT * FROM categories WHERE slug NOT IN ('latest', 'handpicked') ORDER BY (slug = 'others') ASC, sort_order ASC, name ASC"
   );
   return rows || [];
 }
@@ -21,7 +54,7 @@ export async function getDynamicCategories() {
 
 export async function getPermanentCategories() {
   const rows = await query(
-    "SELECT * FROM categories WHERE is_permanent = 1 OR slug IN ('latest', 'handpicked') ORDER BY sort_order ASC, name ASC"
+    "SELECT * FROM categories WHERE is_permanent = 1 OR slug IN ('latest', 'handpicked', 'others') ORDER BY (slug = 'others') ASC, sort_order ASC, name ASC"
   );
   return rows || [];
 }
@@ -30,7 +63,11 @@ export async function getPermanentCategories() {
 
 export async function getDynamicCategoriesWithSubcategories() {
   const allWithSubs = await getAllCategoriesWithSubcategories();
-  return allWithSubs.filter((c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked");
+  const dynamic = allWithSubs.filter(
+    (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked" && c.slug !== "others"
+  );
+  const others = allWithSubs.find((c) => c.slug === "others");
+  return others ? [...dynamic, others] : dynamic;
 }
 
 export async function getAllCategoriesWithSubcategories() {
@@ -100,13 +137,22 @@ export async function updateCategory(id, { name, slug, sortOrder }) {
 
 
 export async function deleteCategory(id) {
-  const category = await queryOne("SELECT is_permanent FROM categories WHERE id = ?", [id]);
-  if (category?.is_permanent) {
+  const category = await queryOne("SELECT is_permanent, slug FROM categories WHERE id = ?", [id]);
+  if (category?.is_permanent || category?.slug === "latest" || category?.slug === "handpicked" || category?.slug === "others") {
     throw new Error("স্থায়ী ক্যাটাগরি মুছে ফেলা সম্ভব নয়।");
   }
 
+  const fallback = await getFallbackCategory();
+
   return await withTransaction(async (tx) => {
-    await tx.query("UPDATE articles SET category_id = NULL, subcategory_id = NULL WHERE category_id = ?", [id]);
+    await tx.query(
+      "UPDATE articles SET category_id = ?, category_name = ?, category_slug = ?, subcategory_id = NULL, subcategory_name = NULL WHERE category_id = ? OR category_slug = ?",
+      [fallback.id, fallback.name, fallback.slug, id, category.slug]
+    );
+    await tx.query(
+      "UPDATE analytics_page_views SET category_slug = ?, subcategory_name = NULL WHERE category_slug = ?",
+      [fallback.slug, category.slug]
+    );
     await tx.query("DELETE FROM subcategories WHERE category_id = ?", [id]);
     return await tx.query("DELETE FROM categories WHERE id = ?", [id]);
   });
@@ -138,8 +184,12 @@ export async function createSubcategory({ categoryId, name, slug, sortOrder = 0 
 
 
 export async function deleteSubcategory(id) {
+  const sub = await queryOne("SELECT name FROM subcategories WHERE id = ?", [id]);
   return await withTransaction(async (tx) => {
-    await tx.query("UPDATE articles SET subcategory_id = NULL WHERE subcategory_id = ?", [id]);
+    await tx.query("UPDATE articles SET subcategory_id = NULL, subcategory_name = NULL WHERE subcategory_id = ?", [id]);
+    if (sub?.name) {
+      await tx.query("UPDATE analytics_page_views SET subcategory_name = NULL WHERE subcategory_name = ?", [sub.name]);
+    }
     return await tx.query("DELETE FROM subcategories WHERE id = ?", [id]);
   });
 }
@@ -150,7 +200,7 @@ export async function saveCategoriesBatch(categoriesList = []) {
   return await withTransaction(async (tx) => {
 
     const currentDbCats = await tx.query(
-      "SELECT id, slug, is_permanent FROM categories WHERE is_permanent = 0 AND slug NOT IN ('latest', 'handpicked')"
+      "SELECT id, slug, is_permanent FROM categories WHERE is_permanent = 0 AND slug NOT IN ('latest', 'handpicked', 'others')"
     );
     const currentDbCatIds = new Set((currentDbCats || []).map((c) => c.id));
 
@@ -167,7 +217,15 @@ export async function saveCategoriesBatch(categoriesList = []) {
 
     for (const dbCat of currentDbCats || []) {
       if (!incomingCatIds.has(dbCat.id)) {
-        await tx.query("UPDATE articles SET category_id = NULL, subcategory_id = NULL WHERE category_id = ?", [dbCat.id]);
+        const fallback = await getFallbackCategory();
+        await tx.query(
+          "UPDATE articles SET category_id = ?, category_name = ?, category_slug = ?, subcategory_id = NULL, subcategory_name = NULL WHERE category_id = ? OR category_slug = ?",
+          [fallback.id, fallback.name, fallback.slug, dbCat.id, dbCat.slug]
+        );
+        await tx.query(
+          "UPDATE analytics_page_views SET category_slug = ?, subcategory_name = NULL WHERE category_slug = ?",
+          [fallback.slug, dbCat.slug]
+        );
         await tx.query("DELETE FROM subcategories WHERE category_id = ?", [dbCat.id]);
         await tx.query("DELETE FROM categories WHERE id = ?", [dbCat.id]);
       }
@@ -218,7 +276,11 @@ export async function saveCategoriesBatch(categoriesList = []) {
 
       for (const subId of currentSubIds) {
         if (!incomingSubIds.has(subId)) {
-          await tx.query("UPDATE articles SET subcategory_id = NULL WHERE subcategory_id = ?", [subId]);
+          const sub = await tx.queryOne("SELECT name FROM subcategories WHERE id = ?", [subId]);
+          await tx.query("UPDATE articles SET subcategory_id = NULL, subcategory_name = NULL WHERE subcategory_id = ?", [subId]);
+          if (sub?.name) {
+            await tx.query("UPDATE analytics_page_views SET subcategory_name = NULL WHERE subcategory_name = ?", [sub.name]);
+          }
           await tx.query("DELETE FROM subcategories WHERE id = ?", [subId]);
         }
       }

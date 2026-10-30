@@ -74,6 +74,10 @@ export function CategoryManager({ initialCategories = [] }) {
 
   const onAddCategory = (data) => {
     const cleanSlug = data.slug.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
+    if (cleanSlug === "others" || cleanSlug === "latest" || cleanSlug === "handpicked") {
+      setAlertConfig({ message: "এই স্লাগটি সিস্টেমের সংরক্ষিত ক্যাটাগরির জন্য নির্ধারিত।" });
+      return;
+    }
     if (categories.some((c) => c.slug === cleanSlug)) {
       setAlertConfig({ message: "এই স্লাগটি ইতিমধ্যে ব্যবহৃত হয়েছে। অনুগ্রহ করে ভিন্ন স্লাগ লিখুন।" });
       return;
@@ -96,7 +100,7 @@ export function CategoryManager({ initialCategories = [] }) {
 
 
   const handleDeleteCategory = (cat) => {
-    if (cat.is_permanent || cat.slug === "latest" || cat.slug === "handpicked") {
+    if (cat.is_permanent || cat.slug === "latest" || cat.slug === "handpicked" || cat.slug === "others") {
       setAlertConfig({ message: "স্থায়ী ক্যাটাগরি মুছে ফেলা যাবে না।" });
       return;
     }
@@ -199,7 +203,7 @@ export function CategoryManager({ initialCategories = [] }) {
 
 
   const dynamicCats = categories.filter(
-    (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked"
+    (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked" && c.slug !== "others"
   );
 
 
@@ -543,6 +547,28 @@ export function CategoryManager({ initialCategories = [] }) {
             );
           })
         )}
+      </div>
+
+      <div className="bg-slate-50/80 rounded-xl border border-slate-200/80 p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-slate-400"></span>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-bold text-slate-800">অন্যান্য</h4>
+                <Badge className="bg-slate-200/80 text-slate-700 text-[10px] py-0 px-1.5 font-normal">
+                  স্থায়ী ফলব্যাক ক্যাটাগরি
+                </Badge>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                কোনো ক্যাটাগরি মুছে ফেলা হলে বা ক্যাটাগরি ছাড়া সংবাদ তৈরি করা হলে তা স্বয়ংক্রিয়ভাবে এই ক্যাটাগরিতে স্থানান্তরিত হয়।
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] text-slate-400 font-mono">
+            স্লাগ: /others
+          </span>
+        </div>
       </div>
 
 

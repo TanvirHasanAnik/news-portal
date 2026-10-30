@@ -4,6 +4,8 @@
 3. Robust error handling and loading shall be implemented with every feature.
 4. Maintain code reusability and manageability whenever possible.
 
+# if i am being wrong or missing anything in the prompt use your own thinking to choose whats the best with the least complication and let me know.
+
 ## 1. UI/UX Minimalism & Zero Technical Clutter
 - All user-facing components (editors, upload forms, modals, dashboards) must be clean, minimalist, and consumer-grade.
 - NEVER display raw technical information, file paths, database IDs, R2 URLs, JSON strings, coordinates, or debug state outputs on the user interface.

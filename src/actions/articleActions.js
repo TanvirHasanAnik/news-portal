@@ -11,7 +11,7 @@ import {
   deleteArticle,
 } from "@/repositories/articleRepository";
 import { notifySubEditorsOfReporterArticle } from "@/repositories/notificationRepository";
-import { getCategoryBySlug, getAllCategoriesWithSubcategories } from "@/repositories/categoryRepository";
+import { getCategoryBySlug, getAllCategoriesWithSubcategories, ensureValidCategory } from "@/repositories/categoryRepository";
 import { articleCreateSchema } from "@/schemas/articleSchema";
 import { getCurrentUser } from "@/lib/auth/server";
 import { isUpperRole, isLowerRole } from "@/config/roles";
@@ -64,7 +64,7 @@ export async function createArticleAction(prevState, formData) {
     const headline = formData.get("headline")?.toString() || "";
     const summary = formData.get("summary")?.toString() || "";
     const content = formData.get("content")?.toString() || "";
-    const categorySlug = formData.get("categorySlug")?.toString() || "";
+    const categorySlug = (formData.get("categorySlug")?.toString() || "").trim() || "others";
     const subcategoryName = formData.get("subcategoryName")?.toString() || "";
 
     let images = [];
@@ -137,17 +137,20 @@ export async function createArticleAction(prevState, formData) {
 
     const validated = validationResult.data;
 
-    const category = await getCategoryBySlug(validated.categorySlug);
-    const categoryName = category ? category.name : validated.categorySlug;
-    const categoryId = category ? category.id : null;
+    const category = await ensureValidCategory(null, validated.categorySlug);
+    const categoryName = category.name;
+    const categoryId = category.id;
+    const resolvedCategorySlug = category.slug;
 
     let subcategoryId = null;
-    if (category && validated.subcategoryName) {
+    let resolvedSubcategoryName = null;
+    if (category.slug !== "others" && validated.subcategoryName) {
       const allCats = await getAllCategoriesWithSubcategories();
-      const currentCat = allCats.find((c) => c.slug === validated.categorySlug);
+      const currentCat = allCats.find((c) => c.slug === resolvedCategorySlug);
       const foundSub = currentCat?.subcategories?.find((s) => s.name === validated.subcategoryName);
       if (foundSub) {
         subcategoryId = foundSub.id;
+        resolvedSubcategoryName = foundSub.name;
       }
     }
 
@@ -161,9 +164,9 @@ export async function createArticleAction(prevState, formData) {
       content: validated.content || "",
       categoryId,
       categoryName,
-      categorySlug: validated.categorySlug,
+      categorySlug: resolvedCategorySlug,
       subcategoryId,
-      subcategoryName: validated.subcategoryName || null,
+      subcategoryName: resolvedSubcategoryName,
       images: validated.images,
       image: primaryImage,
       youtubeUrl: validated.youtubeUrl || null,
@@ -352,17 +355,20 @@ export async function updateArticleAction(prevState, formData) {
 
     const validated = validationResult.data;
 
-    const category = await getCategoryBySlug(validated.categorySlug);
-    const categoryName = category ? category.name : validated.categorySlug;
-    const categoryId = category ? category.id : null;
+    const category = await ensureValidCategory(null, validated.categorySlug);
+    const categoryName = category.name;
+    const categoryId = category.id;
+    const resolvedCategorySlug = category.slug;
 
     let subcategoryId = null;
-    if (category && validated.subcategoryName) {
+    let resolvedSubcategoryName = null;
+    if (category.slug !== "others" && validated.subcategoryName) {
       const allCats = await getAllCategoriesWithSubcategories();
-      const currentCat = allCats.find((c) => c.slug === validated.categorySlug);
+      const currentCat = allCats.find((c) => c.slug === resolvedCategorySlug);
       const foundSub = currentCat?.subcategories?.find((s) => s.name === validated.subcategoryName);
       if (foundSub) {
         subcategoryId = foundSub.id;
+        resolvedSubcategoryName = foundSub.name;
       }
     }
 
@@ -378,9 +384,9 @@ export async function updateArticleAction(prevState, formData) {
       content: validated.content || "",
       categoryId,
       categoryName,
-      categorySlug: validated.categorySlug,
+      categorySlug: resolvedCategorySlug,
       subcategoryId,
-      subcategoryName: validated.subcategoryName || null,
+      subcategoryName: resolvedSubcategoryName,
       images: validated.images,
       image: primaryImage,
       youtubeUrl: validated.youtubeUrl || null,

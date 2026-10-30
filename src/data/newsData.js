@@ -81,6 +81,12 @@ export const dynamicCategories = [
     slug: "opinion",
     subcategories: ["সম্পাদকীয়", "কলাম", "মুক্তমত", "বিশ্লেষণ"],
   },
+  {
+    id: "others",
+    name: "অন্যান্য",
+    slug: "others",
+    subcategories: [],
+  },
 ];
 
 

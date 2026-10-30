@@ -227,6 +227,7 @@ const DEFAULT_CATEGORIES = [
   ['cat_lifestyle', 'জীবনযাপন', 'lifestyle', 0, 10],
   ['cat_career', 'চাকরি ও ক্যারিয়ার', 'career', 0, 11],
   ['cat_opinion', 'মতামত', 'opinion', 0, 12],
+  ['cat_others', 'অন্যান্য', 'others', 1, 9999],
 ];
 
 const DEFAULT_SUBCATEGORIES = [
@@ -409,6 +410,14 @@ export async function bootstrapDatabase(env = {}) {
       } catch (_e) {}
       try {
         await executeUniversalQuery("ALTER TABLE articles ADD COLUMN rejection_reason TEXT NULL", [], env);
+      } catch (_e) {}
+
+      try {
+        await executeUniversalQuery(
+          "INSERT INTO categories (id, name, slug, is_permanent, sort_order) VALUES ('cat_others', 'অন্যান্য', 'others', 1, 9999) ON DUPLICATE KEY UPDATE name = 'অন্যান্য', is_permanent = 1, sort_order = 9999",
+          [],
+          env
+        );
       } catch (_e) {}
 
       try {

@@ -28,7 +28,7 @@ export async function getCategoryViewsStats() {
             COALESCE(SUM(a.view_count), 0) as total_views 
      FROM categories c 
      LEFT JOIN articles a ON a.category_slug = c.slug 
-     WHERE c.is_permanent = 0 AND c.slug NOT IN ('latest', 'handpicked')
+     WHERE c.slug NOT IN ('latest', 'handpicked')
      GROUP BY c.id, c.name, c.slug, c.sort_order 
      ORDER BY total_views DESC, c.sort_order ASC`
   );
