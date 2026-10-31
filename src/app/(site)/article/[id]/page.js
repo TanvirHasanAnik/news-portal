@@ -8,6 +8,7 @@ import MostReadSection from "@/components/MostReadSection";
 import SocialShareBar from "@/components/SocialShareBar";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
 import ArticleContentRenderer from "@/components/ArticleContentRenderer";
+import { DEFAULT_NEWS_IMAGE } from "@/utils/imageUtils";
 import { categoryAccentMap } from "@/utils/categoryNews";
 import {
   findArticleBySlugOrId,
@@ -115,7 +116,7 @@ export default async function ArticlePage({ params }) {
   } else if (article.image) {
     allImages = [article.image];
   }
-  const heroImage = allImages[0] || article.image;
+  const heroImage = allImages[0] || article.image || (article.youtubeUrl ? null : DEFAULT_NEWS_IMAGE);
 
   let relatedArticles = [];
   try {
