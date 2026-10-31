@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Search,
   Menu,
   Home,
   ChevronDown,
@@ -27,8 +26,6 @@ import {
 export default function Header({ breakingNewsList = [], latestHeadlines = [], categories: propCategories = [] }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
   const [dates, setDates] = useState({
     english: "বৃহস্পতিবার, ১৫ অক্টোবর ২০২৬",
     bangla: "৩০ আশ্বিন ১৪৩৩ বঙ্গাব্দ",
@@ -177,13 +174,6 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
     });
   }, []);
 
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      console.log("Searching for:", searchQuery);
-    }
-  };
-
   return (
     <>
 
@@ -226,34 +216,8 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
           </div>
 
 
-          <div className="flex items-center shrink-0">
-            <button
-              onClick={() => setSearchOpen(!searchOpen)}
-              className="p-1.5 sm:p-2 rounded-lg text-slate-700 hover:bg-slate-100"
-              aria-label="অনুসন্ধান"
-            >
-              <Search className="w-5 h-5" />
-            </button>
-          </div>
+          <div className="w-8 sm:w-10 shrink-0" aria-hidden="true" />
         </div>
-
-
-        {searchOpen && (
-          <div className="mt-3 lg:hidden p-2 bg-slate-100 rounded-lg border border-slate-200">
-            <form onSubmit={handleSearch} className="relative">
-              <input
-                type="text"
-                placeholder="সংবাদ অনুসন্ধান করুন..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600"
-                autoFocus
-              />
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
-            </form>
-          </div>
-        )}
-
 
         <div className="hidden lg:grid lg:grid-cols-3 lg:items-center gap-4">
 
@@ -281,18 +245,7 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
           </div>
 
 
-          <div className="flex flex-col items-end justify-center gap-2.5">
-
-            <form onSubmit={handleSearch} className="relative w-64 xl:w-72">
-              <input
-                type="text"
-                placeholder="সংবাদ অনুসন্ধান করুন..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-1.5 text-xs bg-slate-100 hover:bg-slate-50 border border-slate-200 rounded-full focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all placeholder:text-slate-400 text-slate-800"
-              />
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-            </form>
+          <div className="flex items-center justify-end">
 
 
             <div className="flex items-center gap-2">

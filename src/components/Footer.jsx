@@ -2,12 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import {
-  MapPin,
-  Phone,
-  Mail,
-  ArrowUp,
-} from "lucide-react";
+import { Phone, Mail, ArrowUp } from "lucide-react";
 import {
   FacebookIcon,
   YoutubeIcon,
@@ -16,27 +11,14 @@ import {
   LinkedinIcon,
 } from "./SocialIcons";
 
-
-export default function Footer({ categories: propCategories = [] }) {
-  const displayCats = (() => {
-    if (Array.isArray(propCategories) && propCategories.length > 0) {
-      const dynamic = propCategories.filter(
-        (c) => !c.is_permanent && c.slug !== "latest" && c.slug !== "handpicked" && c.slug !== "others"
-      );
-      const others = propCategories.find((c) => c.slug === "others") || { id: "cat_others", name: "অন্যান্য", slug: "others" };
-      return [...dynamic, others];
-    }
-    return [];
-  })();
-
+export default function Footer() {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
-    <footer className="bg-white text-slate-600 pt-10 pb-8 border-t-4 border-red-600">
+    <footer className="bg-white text-slate-600 pt-8 pb-8 border-t-4 border-red-600">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-6 border-b border-slate-200">
           <Link href="/" className="inline-block group focus:outline-none">
             <img
@@ -45,7 +27,6 @@ export default function Footer({ categories: propCategories = [] }) {
               className="h-12 sm:h-14 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
             />
           </Link>
-
 
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2 text-slate-500">
@@ -96,125 +77,29 @@ export default function Footer({ categories: propCategories = [] }) {
           </div>
         </div>
 
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 py-8 border-b border-slate-200 text-sm">
-
-          <div className="lg:col-span-2 space-y-3">
-            <h4 className="font-serif-bangla text-base font-bold text-slate-900 border-b border-slate-200 pb-2 mb-3">
-              সম্পাদকীয় ও প্রশাসনিক কার্যালয়
-            </h4>
-            <div className="text-xs sm:text-sm text-slate-600 space-y-2">
-              <p>
-                <strong className="text-slate-800">সম্পাদক ও প্রকাশক:</strong> তানভীর হাসান অনিক
-              </p>
-              <p>
-                <strong className="text-slate-800">নির্বাহী সম্পাদক:</strong> তানভীর হাসান অনিক
-              </p>
-              <p className="flex items-start gap-2 pt-1">
-                <MapPin className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                <span>কচুখেত ঢাকা, বাংলাদেশ।</span>
-              </p>
-              <p className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-red-600 shrink-0" />
-                <span>+৮৮০ ২ ৮১৮৯xxx, +৮৮০ ১৭xxxxxxxx</span>
-              </p>
-              <p className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-red-600 shrink-0" />
-                <span>news@aloasbe.com, ads@aloasbe.com</span>
-              </p>
-            </div>
+        <div className="pt-6 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs sm:text-sm text-slate-600">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <p>
+              <strong className="text-slate-800">পরিচালক:</strong> পরিচালক নাম
+            </p>
+            <p>
+              <strong className="text-slate-800">প্রকাশক:</strong> প্রকাশক নাম
+            </p>
           </div>
-
-
-          <div>
-            <h4 className="font-serif-bangla text-base font-bold text-slate-900 border-b border-slate-200 pb-2 mb-3">
-              প্রধান বিভাগ
-            </h4>
-            <ul className="space-y-2 text-xs sm:text-sm text-slate-600">
-              {displayCats.slice(0, 5).map((cat) => (
-                <li key={cat.id}>
-                  <Link href={`/category/${cat.slug}`} className="hover:text-red-600 transition-colors">
-                    {cat.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-
-          <div>
-            <h4 className="font-serif-bangla text-base font-bold text-slate-900 border-b border-slate-200 pb-2 mb-3">
-              অন্যান্য বিভাগ
-            </h4>
-            <ul className="space-y-2 text-xs sm:text-sm text-slate-600">
-              {displayCats.slice(5).map((cat) => (
-                <li key={cat.id}>
-                  <Link href={`/category/${cat.slug}`} className="hover:text-red-600 transition-colors">
-                    {cat.name}
-                  </Link>
-                </li>
-              ))}
-              <li>
-                <a href="#photo-gallery" className="hover:text-red-600 transition-colors">
-                  ছবি গ্যালারি
-                </a>
-              </li>
-              <li>
-                <a href="#video-gallery" className="hover:text-red-600 transition-colors">
-                  ভিডিও সংবাদ
-                </a>
-              </li>
-            </ul>
-          </div>
-
-
-          <div>
-            <h4 className="font-serif-bangla text-base font-bold text-slate-900 border-b border-slate-200 pb-2 mb-3">
-              প্রয়োজনীয় লিংক
-            </h4>
-            <ul className="space-y-2 text-xs sm:text-sm text-slate-600">
-              <li>
-                <a href="#about" className="hover:text-red-600 transition-colors">
-                  আমাদের সম্পর্কে
-                </a>
-              </li>
-              <li>
-                <a href="#terms" className="hover:text-red-600 transition-colors">
-                  ব্যবহারের শর্তাবলী
-                </a>
-              </li>
-              <li>
-                <a href="#privacy" className="hover:text-red-600 transition-colors">
-                  গোপনীয়তা নীতি
-                </a>
-              </li>
-              <li>
-                <a href="#advertise" className="hover:text-red-600 transition-colors">
-                  বিজ্ঞাপন মূল্যতালিকা
-                </a>
-              </li>
-              <li>
-                <a href="#contact" className="hover:text-red-600 transition-colors">
-                  যোগাযোগ ও মতামত
-                </a>
-              </li>
-              <li>
-                <a href="#epaper" className="hover:text-red-600 transition-colors font-medium text-red-600">
-                  ই-পেপার সংস্করণ
-                </a>
-              </li>
-            </ul>
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <p className="flex items-center gap-1.5">
+              <Mail className="w-4 h-4 text-red-600 shrink-0" />
+              <span>mail@example.com</span>
+            </p>
+            <p className="flex items-center gap-1.5">
+              <Phone className="w-4 h-4 text-red-600 shrink-0" />
+              <span>+৮৮০ ১৭xxxxxxxx</span>
+            </p>
           </div>
         </div>
 
-
-        <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-          <p className="font-serif-bangla">
-            আলো আসবে — সত্য ও সাহসের অগ্রদূত
-          </p>
-          <p className="text-slate-400">
-            অনলাইন সংস্করণ
-          </p>
+        <div className="pt-6 mt-6 border-t border-slate-100 text-center text-xs text-slate-500">
+          <p>© ২০২৬ আলো আসবে। সর্বস্বত্ব সংরক্ষিত।</p>
         </div>
       </div>
     </footer>
