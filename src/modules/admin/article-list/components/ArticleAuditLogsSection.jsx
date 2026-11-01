@@ -1,14 +1,60 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { History, Search, ExternalLink, ShieldCheck, Filter } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { History, Search, ExternalLink, ShieldCheck } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { formatStaticDateTime } from "@/utils/dateUtils";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
-export function ArticleAuditLogsSection({ logs = [] }) {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedAction, setSelectedAction] = useState("all");
+export function ArticleAuditLogsSection({
+  logs = [],
+  currentPage = 1,
+  pageSize = 20,
+  totalCount = 0,
+  selectedAction: initialAction = "all",
+  searchQuery: initialSearch = "",
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [searchQuery, setSearchQuery] = useState(initialSearch);
+  const [selectedAction, setSelectedAction] = useState(initialAction);
+
+  useEffect(() => {
+    setSearchQuery(initialSearch);
+  }, [initialSearch]);
+
+  useEffect(() => {
+    setSelectedAction(initialAction);
+  }, [initialAction]);
+
+  const updateLogUrl = (actionVal, searchVal) => {
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
+    params.set("logPage", "1");
+    if (!actionVal || actionVal === "all") {
+      params.delete("logAction");
+    } else {
+      params.set("logAction", actionVal);
+    }
+    if (!searchVal || !searchVal.trim()) {
+      params.delete("logQ");
+    } else {
+      params.set("logQ", searchVal.trim());
+    }
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleActionChange = (newAction) => {
+    setSelectedAction(newAction);
+    updateLogUrl(newAction, searchQuery);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    updateLogUrl(selectedAction, searchQuery);
+  };
 
   const getActionBadge = (action) => {
     switch (action) {
@@ -91,35 +137,18 @@ export function ArticleAuditLogsSection({ logs = [] }) {
     return "সংবাদ নিবন্ধ";
   };
 
-  const filteredLogs = useMemo(() => {
-    return logs.filter((log) => {
-      if (selectedAction !== "all" && log.action !== selectedAction) {
-        return false;
-      }
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const headline = getArticleHeadline(log).toLowerCase();
-        const username = (log.user_name || "").toLowerCase();
-        const action = (log.action || "").toLowerCase();
-        if (!headline.includes(q) && !username.includes(q) && !action.includes(q)) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [logs, selectedAction, searchQuery]);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
-
       <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <History className="w-5 h-5 text-slate-800" />
-            <h2 className="text-base font-bold text-slate-900">আর্টিকেল অডিট ট্রেইল (Article Audit Trail)</h2>
+            <h2 className="text-base font-bold text-slate-900">আর্টিকেল অডিট ট্রেইল</h2>
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
-            সংবাদ তৈরি, সম্পাদনা, প্রকাশনা ও অবস্থা পরিবর্তনের সার্বিক ইতিহাস
+            সংবাদ তৈরি, সম্পাদনা, প্রকাশনা ও অবস্থা পরিবর্তনের ইতিহাস
           </p>
         </div>
 
@@ -129,7 +158,10 @@ export function ArticleAuditLogsSection({ logs = [] }) {
         </div>
       </div>
 
-      <div className="p-4 bg-slate-50/60 border-b border-slate-100 flex flex-col sm:flex-row items-center gap-3">
+      <form
+        onSubmit={handleSearchSubmit}
+        className="p-4 bg-slate-50/60 border-b border-slate-100 flex flex-col sm:flex-row items-center gap-3"
+      >
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <Input
@@ -143,16 +175,16 @@ export function ArticleAuditLogsSection({ logs = [] }) {
 
         <select
           value={selectedAction}
-          onChange={(e) => setSelectedAction(e.target.value)}
+          onChange={(e) => handleActionChange(e.target.value)}
           className="h-9 rounded-md border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-slate-900 w-full sm:w-auto cursor-pointer"
         >
-          <option value="all">সকল কার্যক্রম ({logs.length})</option>
+          <option value="all">সকল কার্যক্রম</option>
           <option value="create_article">সংবাদ তৈরি</option>
           <option value="edit_article">সংবাদ সম্পাদনা</option>
           <option value="update_status">অবস্থা পরিবর্তন</option>
           <option value="delete_article">সংবাদ মুছে ফেলা</option>
         </select>
-      </div>
+      </form>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs border-collapse">
@@ -166,23 +198,24 @@ export function ArticleAuditLogsSection({ logs = [] }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 text-slate-700">
-            {filteredLogs.length === 0 ? (
+            {logs.length === 0 ? (
               <tr>
                 <td colSpan="5" className="py-12 text-center text-slate-400">
                   কোনো আর্টিকেল অডিট রেকর্ড পাওয়া যায়নি।
                 </td>
               </tr>
             ) : (
-              filteredLogs.map((log) => {
+              logs.map((log) => {
                 const badge = getActionBadge(log.action);
                 const headline = getArticleHeadline(log);
                 const isDeleted = log.action === "delete_article";
 
                 return (
                   <tr key={log.id} className="hover:bg-slate-50/70 transition-colors">
-
                     <td className="py-3 px-4 whitespace-nowrap">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${badge.color}`}>
+                      <span
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${badge.color}`}
+                      >
                         {badge.label}
                       </span>
                     </td>
@@ -222,7 +255,14 @@ export function ArticleAuditLogsSection({ logs = [] }) {
           </tbody>
         </table>
       </div>
+
+      <AdminPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={pageSize}
+        pageParamName="logPage"
+      />
     </div>
   );
 }
-

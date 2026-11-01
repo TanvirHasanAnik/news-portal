@@ -1,8 +1,29 @@
 import { getDb, query, queryOne, withTransaction } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
-export async function getAllAdminRequests({ status } = {}) {
-  let sql = `
+export async function getAllAdminRequests({ status = "all", search = "", limit = 20, offset = 0 } = {}) {
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 100);
+  const safeOffset = Math.max(0, Number(offset) || 0);
+
+  const conditions = [];
+  const params = [];
+
+  if (status && status !== "all") {
+    conditions.push("r.status = ?");
+    params.push(status);
+  }
+
+  if (search && search.trim()) {
+    const term = `%${search.trim().toLowerCase()}%`;
+    conditions.push(
+      "(LOWER(COALESCE(u.name, '')) LIKE ? OR LOWER(COALESCE(t.name, '')) LIKE ? OR LOWER(COALESCE(r.request_type, '')) LIKE ? OR LOWER(COALESCE(r.payload, '')) LIKE ?)"
+    );
+    params.push(term, term, term, term);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  const sql = `
     SELECT r.*, 
            u.name as requester_name, 
            u.email as requester_email, 
@@ -11,18 +32,43 @@ export async function getAllAdminRequests({ status } = {}) {
     FROM admin_requests r
     LEFT JOIN users u ON r.requester_id = u.id
     LEFT JOIN users t ON r.target_user_id = t.id
+    ${whereClause}
+    ORDER BY r.created_at DESC
+    LIMIT ? OFFSET ?
   `;
-  const params = [];
-
-  if (status) {
-    sql += " WHERE r.status = ?";
-    params.push(status);
-  }
-
-  sql += " ORDER BY r.created_at DESC";
+  params.push(safeLimit, safeOffset);
 
   const rows = await query(sql, params);
   return rows || [];
+}
+
+export async function getAdminRequestsCount({ status = "all", search = "" } = {}) {
+  const conditions = [];
+  const params = [];
+
+  if (status && status !== "all") {
+    conditions.push("r.status = ?");
+    params.push(status);
+  }
+
+  if (search && search.trim()) {
+    const term = `%${search.trim().toLowerCase()}%`;
+    conditions.push(
+      "(LOWER(COALESCE(u.name, '')) LIKE ? OR LOWER(COALESCE(t.name, '')) LIKE ? OR LOWER(COALESCE(r.request_type, '')) LIKE ? OR LOWER(COALESCE(r.payload, '')) LIKE ?)"
+    );
+    params.push(term, term, term, term);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const sql = `
+    SELECT COUNT(*) as total
+    FROM admin_requests r
+    LEFT JOIN users u ON r.requester_id = u.id
+    LEFT JOIN users t ON r.target_user_id = t.id
+    ${whereClause}
+  `;
+  const row = await queryOne(sql, params);
+  return Number(row?.total || 0);
 }
 
 export async function createAdminRequest({

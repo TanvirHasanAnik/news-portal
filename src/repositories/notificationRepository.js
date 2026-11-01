@@ -23,9 +23,10 @@ export async function createNotification({
   return { id, userId, type, title, message, isRead: 0 };
 }
 
-export async function getUserNotifications(userId, { limit = 50, filter = "all" } = {}) {
+export async function getUserNotifications(userId, { limit = 20, offset = 0, filter = "all", search = "" } = {}) {
   if (!userId) return [];
-  const safeLimit = Math.min(Math.max(1, Number(limit) || 50), 100);
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 100);
+  const safeOffset = Math.max(0, Number(offset) || 0);
 
   let whereClauses = ["user_id = ?"];
   const params = [userId];
@@ -38,17 +39,48 @@ export async function getUserNotifications(userId, { limit = 50, filter = "all" 
     whereClauses.push("type LIKE 'request_%'");
   }
 
+  if (search && search.trim()) {
+    const term = `%${search.trim().toLowerCase()}%`;
+    whereClauses.push("(LOWER(title) LIKE ? OR LOWER(message) LIKE ?)");
+    params.push(term, term);
+  }
+
   const sql = `
     SELECT *
     FROM notifications
     WHERE ${whereClauses.join(" AND ")}
     ORDER BY created_at DESC
-    LIMIT ?
+    LIMIT ? OFFSET ?
   `;
-  params.push(safeLimit);
+  params.push(safeLimit, safeOffset);
 
   const rows = await query(sql, params);
   return rows || [];
+}
+
+export async function getUserNotificationsCount(userId, { filter = "all", search = "" } = {}) {
+  if (!userId) return 0;
+
+  let whereClauses = ["user_id = ?"];
+  const params = [userId];
+
+  if (filter === "unread") {
+    whereClauses.push("is_read = 0");
+  } else if (filter === "articles") {
+    whereClauses.push("type LIKE 'article_%'");
+  } else if (filter === "requests") {
+    whereClauses.push("type LIKE 'request_%'");
+  }
+
+  if (search && search.trim()) {
+    const term = `%${search.trim().toLowerCase()}%`;
+    whereClauses.push("(LOWER(title) LIKE ? OR LOWER(message) LIKE ?)");
+    params.push(term, term);
+  }
+
+  const sql = `SELECT COUNT(*) as total FROM notifications WHERE ${whereClauses.join(" AND ")}`;
+  const row = await queryOne(sql, params);
+  return Number(row?.total || 0);
 }
 
 export async function getUnreadNotificationCount(userId) {

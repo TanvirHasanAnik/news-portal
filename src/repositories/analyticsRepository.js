@@ -64,8 +64,21 @@ export async function recordArticleView(articleId, { categorySlug = "", subcateg
   }
 }
 
-export async function getRecentAuditLogs(limit = 15) {
+export async function getRecentAuditLogs(optionsOrLimit = 15, optionalOffset = 0) {
+  let limit = 15;
+  let offset = 0;
+
+  if (typeof optionsOrLimit === "number") {
+    limit = optionsOrLimit;
+    offset = optionalOffset || 0;
+  } else if (optionsOrLimit && typeof optionsOrLimit === "object") {
+    limit = optionsOrLimit.limit || 15;
+    offset = optionsOrLimit.offset || 0;
+  }
+
   const safeLimit = Math.min(Math.max(1, Number(limit) || 15), 100);
+  const safeOffset = Math.max(0, Number(offset) || 0);
+
   const rows = await query(
     `SELECT l.*, COALESCE(u.username, u.name, 'admin') as user_name, u.email as user_email, u.role as user_role
      FROM audit_logs l
@@ -73,10 +86,20 @@ export async function getRecentAuditLogs(limit = 15) {
      WHERE l.target_type IN ('curated_news', 'categories', 'category', 'subcategory', 'user', 'admin_request')
         OR l.action IN ('create_user', 'update_user_role', 'disable_user', 'enable_user', 'admin_reset_user_password', 'override_password', 'change_password', 'submit_admin_request', 'approve_request', 'reject_request', 'add_curation', 'batch_update_curation', 'batch_update_categories', 'create_category', 'update_category', 'delete_category')
      ORDER BY l.created_at DESC
-     LIMIT ?`,
-    [safeLimit]
+     LIMIT ? OFFSET ?`,
+    [safeLimit, safeOffset]
   );
   return rows || [];
+}
+
+export async function getRecentAuditLogsCount() {
+  const row = await queryOne(
+    `SELECT COUNT(*) as total
+     FROM audit_logs l
+     WHERE l.target_type IN ('curated_news', 'categories', 'category', 'subcategory', 'user', 'admin_request')
+        OR l.action IN ('create_user', 'update_user_role', 'disable_user', 'enable_user', 'admin_reset_user_password', 'override_password', 'change_password', 'submit_admin_request', 'approve_request', 'reject_request', 'add_curation', 'batch_update_curation', 'batch_update_categories', 'create_category', 'update_category', 'delete_category')`
+  );
+  return Number(row?.total || 0);
 }
 
 export async function recordAuditLog({

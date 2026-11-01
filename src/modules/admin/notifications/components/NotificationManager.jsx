@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useTransition, useMemo, useEffect } from "react";
+import React, { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   CheckCircle2,
@@ -12,55 +13,77 @@ import {
   ClipboardList,
   Search,
   Clock,
-  Sparkles,
   Send,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatStaticDateTime } from "@/utils/dateUtils";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import {
   markNotificationAsReadAction,
   markAllNotificationsAsReadAction,
 } from "@/actions/notificationActions";
 
-export function NotificationManager({ initialNotifications = [], currentUser }) {
+export function NotificationManager({
+  initialNotifications = [],
+  currentUser,
+  currentPage = 1,
+  pageSize = 20,
+  totalCount = 0,
+  initialFilter = "all",
+  initialSearchQuery = "",
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { clearUnreadNotifications } = useAuth();
+
   const [notifications, setNotifications] = useState(initialNotifications);
-  const [filter, setFilter] = useState("all"); 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [filter, setFilter] = useState(initialFilter);
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setNotifications(initialNotifications);
+  }, [initialNotifications]);
+
+  useEffect(() => {
+    setFilter(initialFilter);
+  }, [initialFilter]);
+
+  useEffect(() => {
+    setSearchQuery(initialSearchQuery);
+  }, [initialSearchQuery]);
 
   useEffect(() => {
     clearUnreadNotifications?.();
   }, [clearUnreadNotifications]);
 
-  const counts = useMemo(() => {
-    return {
-      all: notifications.length,
-      articles: notifications.filter((n) => n.type.startsWith("article_")).length,
-      requests: notifications.filter((n) => n.type.startsWith("request_")).length,
-      unread: notifications.filter((n) => !n.is_read).length,
-    };
-  }, [notifications]);
+  const updateUrlParams = (filterVal, searchVal) => {
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
+    params.set("page", "1");
+    if (!filterVal || filterVal === "all") {
+      params.delete("filter");
+    } else {
+      params.set("filter", filterVal);
+    }
+    if (!searchVal || !searchVal.trim()) {
+      params.delete("q");
+    } else {
+      params.set("q", searchVal.trim());
+    }
+    router.push(`?${params.toString()}`);
+  };
 
-  const filteredNotifications = useMemo(() => {
-    return notifications.filter((n) => {
+  const handleFilterChange = (newFilter) => {
+    setFilter(newFilter);
+    updateUrlParams(newFilter, searchQuery);
+  };
 
-      if (filter === "unread" && n.is_read) return false;
-      if (filter === "articles" && !n.type.startsWith("article_")) return false;
-      if (filter === "requests" && !n.type.startsWith("request_")) return false;
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const titleMatch = (n.title || "").toLowerCase().includes(q);
-        const msgMatch = (n.message || "").toLowerCase().includes(q);
-        return titleMatch || msgMatch;
-      }
-
-      return true;
-    });
-  }, [notifications, filter, searchQuery]);
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    updateUrlParams(filter, searchQuery);
+  };
 
   const handleMarkAsRead = (id) => {
     startTransition(async () => {
@@ -68,6 +91,7 @@ export function NotificationManager({ initialNotifications = [], currentUser }) 
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: 1 } : n))
       );
+      router.refresh();
     });
   };
 
@@ -75,6 +99,7 @@ export function NotificationManager({ initialNotifications = [], currentUser }) 
     startTransition(async () => {
       await markAllNotificationsAsReadAction();
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: 1 })));
+      router.refresh();
     });
   };
 
@@ -107,58 +132,59 @@ export function NotificationManager({ initialNotifications = [], currentUser }) 
     );
   };
 
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
   return (
     <div className="space-y-4">
-
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
           <button
             type="button"
-            onClick={() => setFilter("all")}
+            onClick={() => handleFilterChange("all")}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               filter === "all"
                 ? "bg-white text-slate-900 shadow-xs font-bold"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            সকল ({counts.all})
+            সকল
           </button>
           <button
             type="button"
-            onClick={() => setFilter("articles")}
+            onClick={() => handleFilterChange("articles")}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               filter === "articles"
                 ? "bg-white text-slate-900 shadow-xs font-bold"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            সংবাদ সংক্রান্ত ({counts.articles})
+            সংবাদ সংক্রান্ত
           </button>
           <button
             type="button"
-            onClick={() => setFilter("requests")}
+            onClick={() => handleFilterChange("requests")}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               filter === "requests"
                 ? "bg-white text-slate-900 shadow-xs font-bold"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            প্রশাসনিক আবেদন ({counts.requests})
+            প্রশাসনিক আবেদন
           </button>
           <button
             type="button"
-            onClick={() => setFilter("unread")}
+            onClick={() => handleFilterChange("unread")}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
               filter === "unread"
                 ? "bg-white text-blue-700 shadow-xs font-bold"
                 : "text-slate-600 hover:text-slate-900"
             }`}
           >
-            অপঠিত ({counts.unread})
+            অপঠিত
           </button>
         </div>
 
-        {counts.unread > 0 && (
+        {notifications.some((n) => !n.is_read) && (
           <Button
             type="button"
             variant="outline"
@@ -173,133 +199,133 @@ export function NotificationManager({ initialNotifications = [], currentUser }) 
         )}
       </div>
 
-      <div className="relative w-full max-w-sm">
+      <form onSubmit={handleSearchSubmit} className="relative w-full max-w-sm">
         <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
         <Input
           type="text"
-          placeholder="নোটিফিকেশন খুঁজুন..."
+          placeholder="নোটিফিকেশন খুঁজুন (Enter চাপুন)..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9 text-xs h-9 bg-white"
         />
-      </div>
+      </form>
 
-      {filteredNotifications.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-xl border border-slate-200 space-y-2">
-          <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-            <Bell className="w-6 h-6" />
-          </div>
-          <p className="text-sm font-semibold text-slate-700">কোনো নোটিফিকেশন পাওয়া যায়নি</p>
-          <p className="text-xs text-slate-400">
-            {filter === "unread"
-              ? "আপনার কোনো অপঠিত নোটিফিকেশন নেই।"
-              : "আপনার অ্যাকাউন্টে নতুন কোনো আপডেট নেই।"}
+      {notifications.length === 0 ? (
+        <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
+          <Bell className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+          <p className="text-xs font-semibold text-slate-700">কোনো নোটিফিকেশন নেই</p>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            সংবাদ বা প্রশাসনিক কার্যক্রম সম্পর্কিত নোটিফিকেশন এখানে প্রদর্শিত হবে।
           </p>
         </div>
       ) : (
-        <div className="space-y-2.5">
-          {filteredNotifications.map((notif) => {
-            const isApproved = notif.type.includes("approved");
-            const isRejected = notif.type.includes("rejected");
-            const isSubmission = notif.type.includes("submitted") || notif.type.includes("submission");
-            const isArticle = notif.target_type === "article";
-            const isRequest = notif.target_type === "request";
+        <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="divide-y divide-slate-100">
+            {notifications.map((notif) => {
+              const isArticle = notif.type?.startsWith("article_");
+              const isRequest = notif.type?.startsWith("request_");
+              const isApproved = notif.type?.includes("approved");
+              const isRejected = notif.type?.includes("rejected");
+              const isSubmission = notif.type?.includes("submitted");
 
-            return (
-              <div
-                key={notif.id}
-                className={`p-4 rounded-xl border transition-all ${
-                  notif.is_read
-                    ? "bg-white border-slate-200"
-                    : "bg-blue-50/40 border-blue-200 shadow-2xs"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3 min-w-0">
-                    {getNotificationIcon(notif.type)}
+              return (
+                <div
+                  key={notif.id}
+                  className={`p-4 transition-colors ${
+                    notif.is_read ? "bg-white hover:bg-slate-50/70" : "bg-blue-50/40 hover:bg-blue-50/70"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      {getNotificationIcon(notif.type)}
 
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-xs sm:text-sm font-bold text-slate-900">
-                          {notif.title}
-                        </h3>
-                        {!notif.is_read && (
-                          <Badge className="bg-blue-600 text-white text-[10px] py-0 px-1.5">
-                            নতুন
-                          </Badge>
-                        )}
-                        {isApproved && (
-                          <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] py-0 px-1.5 font-medium">
-                            অনুমোদিত
-                          </Badge>
-                        )}
-                        {isRejected && (
-                          <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] py-0 px-1.5 font-medium">
-                            প্রত্যাখ্যাত
-                          </Badge>
-                        )}
-                        {isSubmission && (
-                          <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] py-0 px-1.5 font-medium">
-                            নতুন জমাকৃত
-                          </Badge>
-                        )}
-                      </div>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs font-bold text-slate-900">
+                            {notif.title}
+                          </h4>
+                          {!notif.is_read && (
+                            <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                          )}
+                          {isApproved && (
+                            <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px] py-0 px-1.5 font-medium">
+                              অনুমোদিত
+                            </Badge>
+                          )}
+                          {isRejected && (
+                            <Badge className="bg-rose-50 text-rose-700 border-rose-200 text-[10px] py-0 px-1.5 font-medium">
+                              প্রত্যাখ্যাত
+                            </Badge>
+                          )}
+                          {isSubmission && (
+                            <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[10px] py-0 px-1.5 font-medium">
+                              নতুন জমাকৃত
+                            </Badge>
+                          )}
+                        </div>
 
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        {notif.message}
-                      </p>
+                        <p className="text-xs text-slate-600 leading-relaxed">
+                          {notif.message}
+                        </p>
 
-                      <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-400">
-                        <span className="flex items-center gap-1 font-mono">
-                          <Clock className="w-3 h-3 text-slate-400" />
-                          {formatStaticDateTime(notif.created_at)}
-                        </span>
-                        {notif.action_by && (
-                          <span>কর্তৃপক্ষ: @{notif.action_by}</span>
-                        )}
+                        <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-400">
+                          <span className="flex items-center gap-1 font-mono">
+                            <Clock className="w-3 h-3 text-slate-400" />
+                            {formatStaticDateTime(notif.created_at)}
+                          </span>
+                          {notif.action_by && (
+                            <span>কর্তৃপক্ষ: @{notif.action_by}</span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isArticle && isApproved && notif.target_slug && (
+                        <Link
+                          href={`/article/${notif.target_slug}`}
+                          target="_blank"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold transition-colors"
+                        >
+                          সংবাদটি দেখুন <ExternalLink className="w-3 h-3" />
+                        </Link>
+                      )}
 
-                    {isArticle && isApproved && notif.target_slug && (
-                      <Link
-                        href={`/article/${notif.target_slug}`}
-                        target="_blank"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-semibold transition-colors"
-                      >
-                        সংবাদটি দেখুন <ExternalLink className="w-3 h-3" />
-                      </Link>
-                    )}
+                      {isRequest && (
+                        <Link
+                          href="/admin?tab=requests"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-semibold transition-colors"
+                        >
+                          <ClipboardList className="w-3 h-3" /> আবেদন দেখুন
+                        </Link>
+                      )}
 
-                    {isRequest && (
-                      <Link
-                        href="/admin?tab=requests"
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-semibold transition-colors"
-                      >
-                        <ClipboardList className="w-3 h-3" /> আবেদন দেখুন
-                      </Link>
-                    )}
-
-                    {!notif.is_read && (
-                      <button
-                        type="button"
-                        onClick={() => handleMarkAsRead(notif.id)}
-                        title="পঠিত হিসেবে চিহ্নিত করুন"
-                        className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                      >
-                        <CheckCheck className="w-4 h-4" />
-                      </button>
-                    )}
+                      {!notif.is_read && (
+                        <button
+                          type="button"
+                          onClick={() => handleMarkAsRead(notif.id)}
+                          title="পঠিত হিসেবে চিহ্নিত করুন"
+                          className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                        >
+                          <CheckCheck className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+
+          <AdminPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            pageParamName="page"
+          />
         </div>
       )}
     </div>
   );
 }
-

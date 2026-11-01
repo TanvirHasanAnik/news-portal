@@ -1,29 +1,32 @@
 "use client";
 
+import React, { useState, useTransition, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
-    createAdminRequestAction,
-    updateAdminRequestStatusAction,
+  createAdminRequestAction,
+  updateAdminRequestStatusAction,
 } from "@/actions/requestActions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import { usePermissions } from "@/contexts/AuthContext";
 import { ASSIGNABLE_ROLE_LABELS, isSingleUserRole, ROLE_LABELS, USER_ROLES } from "@/lib/auth";
 import { createAdminRequestSchema } from "@/schemas/requestSchema";
 import { formatTimeAgo } from "@/utils/dateUtils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-    CheckCircle,
-    Clock,
-    Plus,
-    Send,
-    ShieldAlert,
-    UserPlus,
-    UserX,
-    X,
-    XCircle,
+  CheckCircle,
+  Clock,
+  Plus,
+  Send,
+  ShieldAlert,
+  UserPlus,
+  UserX,
+  X,
+  XCircle,
+  Search,
 } from "lucide-react";
-import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 
 export function RequestManager({
@@ -31,19 +34,63 @@ export function RequestManager({
   users = [],
   canReview: propCanReview,
   canCreate: propCanCreate,
+  currentPage = 1,
+  pageSize = 20,
+  totalCount = 0,
+  initialStatus = "all",
+  initialSearchQuery = "",
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { can } = usePermissions();
-
 
   const canReviewRequests = propCanReview !== undefined ? propCanReview : can("requests:review");
   const canCreateRequest = propCanCreate !== undefined ? propCanCreate : can("requests:create");
 
   const [requests, setRequests] = useState(initialRequests);
-  const [activeStatus, setActiveStatus] = useState("all");
+  const [activeStatus, setActiveStatus] = useState(initialStatus);
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
 
+  useEffect(() => {
+    setRequests(initialRequests);
+  }, [initialRequests]);
+
+  useEffect(() => {
+    setActiveStatus(initialStatus);
+  }, [initialStatus]);
+
+  useEffect(() => {
+    setSearchQuery(initialSearchQuery);
+  }, [initialSearchQuery]);
+
+  const updateUrlParams = (statusVal, searchVal) => {
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
+    params.set("page", "1");
+    if (!statusVal || statusVal === "all") {
+      params.delete("status");
+    } else {
+      params.set("status", statusVal);
+    }
+    if (!searchVal || !searchVal.trim()) {
+      params.delete("q");
+    } else {
+      params.set("q", searchVal.trim());
+    }
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleStatusChange = (newStatus) => {
+    setActiveStatus(newStatus);
+    updateUrlParams(newStatus, searchQuery);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    updateUrlParams(activeStatus, searchQuery);
+  };
 
   const {
     register,
@@ -66,11 +113,6 @@ export function RequestManager({
 
   const requestType = watch("requestType");
 
-  const filteredRequests = requests.filter((r) => {
-    if (activeStatus !== "all" && r.status !== activeStatus) return false;
-    return true;
-  });
-
   const onCreateRequest = (data) => {
     startTransition(async () => {
       const formData = new FormData();
@@ -83,25 +125,10 @@ export function RequestManager({
 
       const res = await createAdminRequestAction(null, formData);
       if (res.success) {
-        setRequests((prev) => [
-          {
-            id: `req_${Date.now()}`,
-            requester_name: "অ্যাডমিন",
-            request_type: data.requestType,
-            status: "pending",
-            payload: JSON.stringify({
-              note: data.note,
-              name: data.requestedName,
-              email: data.requestedEmail,
-              newRole: data.requestedRole,
-            }),
-            created_at: new Date().toISOString(),
-          },
-          ...prev,
-        ]);
         setFeedback({ type: "success", message: res.message });
         setShowCreateModal(false);
         reset();
+        router.refresh();
       } else {
         setFeedback({ type: "error", message: res.message });
       }
@@ -122,6 +149,7 @@ export function RequestManager({
           )
         );
         setFeedback({ type: "success", message: res.message });
+        router.refresh();
       } else {
         setFeedback({ type: "error", message: res.message });
       }
@@ -129,9 +157,10 @@ export function RequestManager({
     });
   };
 
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
   return (
     <div className="space-y-6">
-
       {feedback && (
         <div
           className={`p-3 rounded-lg text-xs font-semibold flex items-center justify-between transition-all ${
@@ -145,49 +174,51 @@ export function RequestManager({
         </div>
       )}
 
-
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-
         <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg">
           <button
-            onClick={() => setActiveStatus("all")}
+            type="button"
+            onClick={() => handleStatusChange("all")}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               activeStatus === "all"
-                ? "bg-white text-slate-900 shadow-2xs"
+                ? "bg-white text-slate-900 shadow-2xs font-bold"
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            সবগুলো ({requests.length})
+            সবগুলো
           </button>
           <button
-            onClick={() => setActiveStatus("pending")}
+            type="button"
+            onClick={() => handleStatusChange("pending")}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               activeStatus === "pending"
-                ? "bg-white text-amber-700 shadow-2xs"
+                ? "bg-white text-amber-700 shadow-2xs font-bold"
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            অপেক্ষমাণ ({requests.filter((r) => r.status === "pending").length})
+            অপেক্ষমাণ
           </button>
           <button
-            onClick={() => setActiveStatus("approved")}
+            type="button"
+            onClick={() => handleStatusChange("approved")}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               activeStatus === "approved"
-                ? "bg-white text-emerald-700 shadow-2xs"
+                ? "bg-white text-emerald-700 shadow-2xs font-bold"
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            অনুমোদিত ({requests.filter((r) => r.status === "approved").length})
+            অনুমোদিত
           </button>
           <button
-            onClick={() => setActiveStatus("rejected")}
+            type="button"
+            onClick={() => handleStatusChange("rejected")}
             className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               activeStatus === "rejected"
-                ? "bg-white text-red-600 shadow-2xs"
+                ? "bg-white text-red-600 shadow-2xs font-bold"
                 : "text-slate-500 hover:text-slate-900"
             }`}
           >
-            প্রত্যাখ্যাত ({requests.filter((r) => r.status === "rejected").length})
+            প্রত্যাখ্যাত
           </button>
         </div>
 
@@ -205,133 +236,153 @@ export function RequestManager({
         )}
       </div>
 
+      <form onSubmit={handleSearchSubmit} className="flex items-center gap-3">
+        <div className="relative flex-1 w-full">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Input
+            type="text"
+            placeholder="আবেদনকারী বা বিবরণের তথ্য দিয়ে খুঁজুন (Enter চাপুন)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 text-xs h-9 bg-white"
+          />
+        </div>
+      </form>
 
-      <div className="space-y-3">
-        {filteredRequests.length === 0 ? (
-          <div className="p-12 text-center text-slate-400 text-xs bg-white rounded-xl border border-slate-200">
-            এই ফিল্টারে কোনো আবেদন পাওয়া যায়নি।
-          </div>
-        ) : (
-          filteredRequests.map((req) => {
-            let parsedPayload = {};
-            try {
-              parsedPayload = JSON.parse(req.payload || "{}");
-            } catch {}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="divide-y divide-slate-100">
+          {requests.length === 0 ? (
+            <div className="p-12 text-center text-slate-400 text-xs">
+              এই ফিল্টারে কোনো আবেদন পাওয়া যায়নি।
+            </div>
+          ) : (
+            requests.map((req) => {
+              let parsedPayload = {};
+              try {
+                parsedPayload = JSON.parse(req.payload || "{}");
+              } catch {}
 
-            return (
-              <div
-                key={req.id}
-                className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-300 transition-colors"
-              >
-                <div className="flex items-start gap-3.5">
-                  <div
-                    className={`p-2.5 rounded-lg shrink-0 mt-0.5 ${
-                      req.request_type === "new_user"
-                        ? "bg-blue-50 text-blue-600"
-                        : req.request_type === "disable_user"
-                        ? "bg-red-50 text-red-600"
-                        : "bg-amber-50 text-amber-600"
-                    }`}
-                  >
-                    {req.request_type === "new_user" ? (
-                      <UserPlus className="w-5 h-5" />
-                    ) : req.request_type === "disable_user" ? (
-                      <UserX className="w-5 h-5" />
+              return (
+                <div
+                  key={req.id}
+                  className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50/70 transition-colors"
+                >
+                  <div className="flex items-start gap-3.5">
+                    <div
+                      className={`p-2.5 rounded-lg shrink-0 mt-0.5 ${
+                        req.request_type === "new_user"
+                          ? "bg-blue-50 text-blue-600"
+                          : req.request_type === "disable_user"
+                          ? "bg-red-50 text-red-600"
+                          : "bg-amber-50 text-amber-600"
+                      }`}
+                    >
+                      {req.request_type === "new_user" ? (
+                        <UserPlus className="w-5 h-5" />
+                      ) : req.request_type === "disable_user" ? (
+                        <UserX className="w-5 h-5" />
+                      ) : (
+                        <ShieldAlert className="w-5 h-5" />
+                      )}
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-900">
+                          {req.request_type === "new_user"
+                            ? "নতুন সদস্য যোগের আবেদন"
+                            : req.request_type === "disable_user"
+                            ? "সদস্য নিষ্ক্রিয় করার আবেদন"
+                            : req.request_type === "role_change"
+                            ? "দায়িত্ব/রোল পরিবর্তনের আবেদন"
+                            : "সাধারণ কিউরেশন আবেদন"}
+                        </span>
+                        <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {formatTimeAgo(req.created_at)}
+                        </span>
+                      </div>
+
+                      <div className="mt-1 text-xs text-slate-600 space-y-0.5">
+                        {parsedPayload.name && (
+                          <p>
+                            সদস্যের নাম: <strong className="text-slate-900">{parsedPayload.name}</strong> ({parsedPayload.email || "ইমেইল নেই"})
+                          </p>
+                        )}
+                        {parsedPayload.newRole && (
+                          <p>
+                            প্রস্তাবিত রোল: <strong>{ROLE_LABELS[parsedPayload.newRole] || parsedPayload.newRole}</strong>
+                          </p>
+                        )}
+                        {parsedPayload.note && (
+                          <p className="text-slate-500 italic mt-0.5">
+                            &ldquo;{parsedPayload.note}&rdquo;
+                          </p>
+                        )}
+                        {req.reviewer_note && (
+                          <p className="text-[11px] text-amber-700 bg-amber-50 p-1.5 rounded mt-1">
+                            মন্তব্য: {req.reviewer_note}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
+                    {req.status === "pending" ? (
+                      canReviewRequests ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateStatus(req.id, "approved")}
+                            disabled={isPending}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            অনুমোদন
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateStatus(req.id, "rejected")}
+                            disabled={isPending}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold cursor-pointer"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            প্রত্যাখ্যান
+                          </button>
+                        </>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200">
+                          <Clock className="w-3 h-3" />
+                          সুপার অ্যাডমিনের সিদ্ধান্তের অপেক্ষায়
+                        </span>
+                      )
+                    ) : req.status === "approved" ? (
+                      <Badge variant="success" className="gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        অনুমোদিত
+                      </Badge>
                     ) : (
-                      <ShieldAlert className="w-5 h-5" />
+                      <Badge variant="destructive" className="gap-1">
+                        <XCircle className="w-3 h-3" />
+                        প্রত্যাখ্যাত
+                      </Badge>
                     )}
                   </div>
-
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-900">
-                        {req.request_type === "new_user"
-                          ? "নতুন সদস্য যোগের আবেদন"
-                          : req.request_type === "disable_user"
-                          ? "সদস্য নিষ্ক্রিয় করার আবেদন"
-                          : req.request_type === "role_change"
-                          ? "দায়িত্ব/রোল পরিবর্তনের আবেদন"
-                          : "সাধারণ কিউরেশন আবেদন"}
-                      </span>
-                      <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {formatTimeAgo(req.created_at)}
-                      </span>
-                    </div>
-
-                    <div className="mt-1 text-xs text-slate-600 space-y-0.5">
-                      {parsedPayload.name && (
-                        <p>
-                          সদস্যের নাম: <strong className="text-slate-900">{parsedPayload.name}</strong> ({parsedPayload.email || "ইমেইল নেই"})
-                        </p>
-                      )}
-                      {parsedPayload.newRole && (
-                        <p>
-                          প্রস্তাবিত রোল: <strong>{ROLE_LABELS[parsedPayload.newRole] || parsedPayload.newRole}</strong>
-                        </p>
-                      )}
-                      {parsedPayload.note && (
-                        <p className="text-slate-500 italic mt-0.5">
-                          &ldquo;{parsedPayload.note}&rdquo;
-                        </p>
-                      )}
-                      {req.reviewer_note && (
-                        <p className="text-[11px] text-amber-700 bg-amber-50 p-1.5 rounded mt-1">
-                          মন্তব্য: {req.reviewer_note}
-                        </p>
-                      )}
-                    </div>
-                  </div>
                 </div>
+              );
+            })
+          )}
+        </div>
 
-
-                <div className="flex items-center gap-2.5 self-end sm:self-center shrink-0">
-                  {req.status === "pending" ? (
-                    canReviewRequests ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateStatus(req.id, "approved")}
-                          disabled={isPending}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
-                        >
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          অনুমোদন
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateStatus(req.id, "rejected")}
-                          disabled={isPending}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold cursor-pointer"
-                        >
-                          <XCircle className="w-3.5 h-3.5" />
-                          প্রত্যাখ্যান
-                        </button>
-                      </>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200">
-                        <Clock className="w-3 h-3" />
-                        সুপার অ্যাডমিনের সিদ্ধান্তের অপেক্ষায়
-                      </span>
-                    )
-                  ) : req.status === "approved" ? (
-                    <Badge variant="success" className="gap-1">
-                      <CheckCircle className="w-3 h-3" />
-                      অনুমোদিত
-                    </Badge>
-                  ) : (
-                    <Badge variant="destructive" className="gap-1">
-                      <XCircle className="w-3 h-3" />
-                      প্রত্যাখ্যাত
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            );
-          })
-        )}
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          pageParamName="page"
+        />
       </div>
-
 
       {showCreateModal && canCreateRequest && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">

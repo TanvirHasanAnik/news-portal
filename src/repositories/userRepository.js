@@ -1,5 +1,67 @@
 import { query, queryOne } from "@/lib/db";
 
+export async function getPaginatedUsers({ limit = 20, offset = 0, role = "all", search = "" } = {}) {
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 100);
+  const safeOffset = Math.max(0, Number(offset) || 0);
+
+  const conditions = [];
+  const params = [];
+
+  if (role && role !== "all") {
+    conditions.push("role = ?");
+    params.push(role);
+  }
+
+  if (search && search.trim()) {
+    const term = `%${search.trim().toLowerCase()}%`;
+    conditions.push("(LOWER(username) LIKE ? OR LOWER(COALESCE(full_name, name, '')) LIKE ? OR LOWER(email) LIKE ?)");
+    params.push(term, term, term);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  const rows = await query(
+    `SELECT id, username, full_name, COALESCE(full_name, name, username) as name, email, phone, role, status, must_change_password, avatar, bio, created_at 
+     FROM users 
+     ${whereClause}
+     ORDER BY 
+       CASE role
+         WHEN 'super_admin' THEN 1
+         WHEN 'superadmin' THEN 1
+         WHEN 'admin' THEN 2
+         WHEN 'editor_in_chief' THEN 3
+         WHEN 'editor' THEN 4
+         WHEN 'sub_editor' THEN 5
+         WHEN 'reporter' THEN 6
+         ELSE 7
+       END ASC,
+       created_at ASC
+     LIMIT ? OFFSET ?`,
+    [...params, safeLimit, safeOffset]
+  );
+  return rows || [];
+}
+
+export async function getUsersCount({ role = "all", search = "" } = {}) {
+  const conditions = [];
+  const params = [];
+
+  if (role && role !== "all") {
+    conditions.push("role = ?");
+    params.push(role);
+  }
+
+  if (search && search.trim()) {
+    const term = `%${search.trim().toLowerCase()}%`;
+    conditions.push("(LOWER(username) LIKE ? OR LOWER(COALESCE(full_name, name, '')) LIKE ? OR LOWER(email) LIKE ?)");
+    params.push(term, term, term);
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const row = await queryOne(`SELECT COUNT(*) as total FROM users ${whereClause}`, params);
+  return Number(row?.total || 0);
+}
+
 
 
 

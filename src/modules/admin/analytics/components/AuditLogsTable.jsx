@@ -1,11 +1,16 @@
 import { formatStaticDateTime } from "@/utils/dateUtils";
 import { History, ShieldCheck } from "lucide-react";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
-export function AuditLogsTable({ logs = [] }) {
+export function AuditLogsTable({
+  logs = [],
+  currentPage = 1,
+  pageSize = 20,
+  totalCount = 0,
+}) {
   const safeLogs = Array.isArray(logs) ? logs : [];
   const getActionLabel = (action) => {
     switch (action) {
-
       case "create_user":
         return { label: "নতুন ব্যবহারকারী", color: "text-purple-700 bg-purple-50 border border-purple-200" };
       case "update_user_role":
@@ -24,14 +29,12 @@ export function AuditLogsTable({ logs = [] }) {
         return { label: "আবেদন অনুমোদন", color: "text-emerald-700 bg-emerald-50 border border-emerald-200" };
       case "reject_request":
         return { label: "আবেদন প্রত্যাখ্যান", color: "text-rose-700 bg-rose-50 border border-rose-200" };
-
       case "add_curation":
         return { label: "কিউরেশন যুক্ত", color: "text-blue-700 bg-blue-50 border border-blue-200" };
       case "batch_update_curation":
         return { label: "কিউরেশন আপডেট", color: "text-blue-700 bg-blue-50 border border-blue-200" };
       case "remove_curation":
         return { label: "কিউরেশন অপসারণ", color: "text-slate-700 bg-slate-100 border border-slate-200" };
-
       case "batch_update_categories":
       case "create_category":
       case "update_category":
@@ -40,14 +43,15 @@ export function AuditLogsTable({ logs = [] }) {
       case "update_subcategory":
       case "delete_subcategory":
         return { label: "ক্যাটাগরি ও সাবক্যাটাগরি", color: "text-emerald-700 bg-emerald-50 border border-emerald-200" };
-
       default:
         return { label: action, color: "text-slate-600 bg-slate-50 border border-slate-200" };
     }
   };
 
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs">
+    <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs overflow-hidden">
       <div className="flex items-center justify-between pb-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <History className="w-4 h-4 text-slate-500" />
@@ -121,7 +125,15 @@ export function AuditLogsTable({ logs = [] }) {
           </tbody>
         </table>
       </div>
+
+      <AdminPagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={pageSize}
+        pageParamName="logPage"
+        className="mt-3 -mx-5 -mb-5"
+      />
     </div>
   );
 }
-

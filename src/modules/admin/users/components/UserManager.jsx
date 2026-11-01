@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useState, useTransition, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -14,11 +15,13 @@ import {
   Eye,
   EyeOff,
   Lock,
+  Search,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 import {
   createUserAction,
   updateUserRoleAction,
@@ -59,23 +62,30 @@ export function UserManager({
   canCreate: propCanCreate,
   canEditRole: propCanEditRole,
   canDisable: propCanDisable,
+  currentPage = 1,
+  pageSize = 20,
+  totalCount = 0,
+  initialRole = "all",
+  initialSearchQuery = "",
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { can } = usePermissions();
   const { user: currentUser } = useAuth();
 
   const isSuperAdmin = currentUser?.role === "super_admin";
-
 
   const canCreateUser = propCanCreate !== undefined ? propCanCreate : can("users:create");
   const canChangeRole = propCanEditRole !== undefined ? propCanEditRole : can("users:edit_role");
   const canToggleUser = propCanDisable !== undefined ? propCanDisable : can("users:disable");
 
   const [users, setUsers] = useState(() => sortUsersByRole(initialUsers));
+  const [selectedRole, setSelectedRole] = useState(initialRole);
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [showAddModal, setShowAddModal] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
-
 
   const [resetTargetUser, setResetTargetUser] = useState(null);
   const [resetNewPassword, setResetNewPassword] = useState("");
@@ -83,6 +93,44 @@ export function UserManager({
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetError, setResetError] = useState("");
   const [isResetPending, startResetTransition] = useTransition();
+
+  useEffect(() => {
+    setUsers(sortUsersByRole(initialUsers));
+  }, [initialUsers]);
+
+  useEffect(() => {
+    setSelectedRole(initialRole);
+  }, [initialRole]);
+
+  useEffect(() => {
+    setSearchQuery(initialSearchQuery);
+  }, [initialSearchQuery]);
+
+  const updateUrlParams = (roleVal, searchVal) => {
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
+    params.set("page", "1");
+    if (!roleVal || roleVal === "all") {
+      params.delete("role");
+    } else {
+      params.set("role", roleVal);
+    }
+    if (!searchVal || !searchVal.trim()) {
+      params.delete("q");
+    } else {
+      params.set("q", searchVal.trim());
+    }
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleRoleChange = (newRole) => {
+    setSelectedRole(newRole);
+    updateUrlParams(newRole, searchQuery);
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    updateUrlParams(selectedRole, searchQuery);
+  };
 
 
   const {
@@ -144,6 +192,7 @@ export function UserManager({
           role: USER_ROLES.REPORTER,
         });
         setShowAddModal(false);
+        router.refresh();
       } else {
         setFeedback({ type: "error", message: res.message });
       }
@@ -169,6 +218,7 @@ export function UserManager({
               sortUsersByRole(prev.map((u) => (u.id === usr.id ? { ...u, role: newRole } : u)))
             );
             setFeedback({ type: "success", message: res.message });
+            router.refresh();
           } else {
             setFeedback({ type: "error", message: res.message });
           }
@@ -193,6 +243,7 @@ export function UserManager({
               prev.map((u) => (u.id === userId ? { ...u, status: res.status } : u))
             );
             setFeedback({ type: "success", message: res.message });
+            router.refresh();
           } else {
             setFeedback({ type: "error", message: res.message });
           }
@@ -230,6 +281,7 @@ export function UserManager({
         setResetTargetUser(null);
         setResetNewPassword("");
         setResetConfirmPassword("");
+        router.refresh();
       } else {
         setResetError(res.message || "পাসওয়ার্ড পরিবর্তন ব্যর্থ হয়েছে।");
       }
@@ -257,7 +309,7 @@ export function UserManager({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-base font-bold text-slate-900">
-            নিবন্ধিত সদস্য তালিকা ({users.length})
+            নিবন্ধিত সদস্য তালিকা ({totalCount || users.length})
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             {canCreateUser
@@ -295,6 +347,31 @@ export function UserManager({
         )}
       </div>
 
+      <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-center gap-3">
+        <div className="relative flex-1 w-full">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Input
+            type="text"
+            placeholder="ইউজারনেম, নাম বা ইমেইল দিয়ে খুঁজুন (Enter চাপুন)..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 text-xs h-9 bg-white"
+          />
+        </div>
+
+        <select
+          value={selectedRole}
+          onChange={(e) => handleRoleChange(e.target.value)}
+          className="h-9 rounded-md border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-slate-900 w-full sm:w-auto cursor-pointer"
+        >
+          <option value="all">সকল দায়িত্ব (রোল)</option>
+          {Object.entries(ROLE_LABELS).map(([rKey, rLabel]) => (
+            <option key={rKey} value={rKey}>
+              {rLabel}
+            </option>
+          ))}
+        </select>
+      </form>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
@@ -444,6 +521,13 @@ export function UserManager({
             </tbody>
           </table>
         </div>
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={Math.max(1, Math.ceil(totalCount / pageSize))}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          pageParamName="page"
+        />
       </div>
 
 

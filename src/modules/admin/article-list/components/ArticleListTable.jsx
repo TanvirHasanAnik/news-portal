@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useTransition, useMemo } from "react";
+import React, { useState, useTransition, useMemo, useEffect } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Search,
   ExternalLink,
@@ -34,6 +35,7 @@ import { formatTimeAgo, formatStaticDateTime } from "@/utils/dateUtils";
 import { useAuth, usePermissions } from "@/contexts/AuthContext";
 import { isLowerRole as checkIsLowerRole } from "@/config/roles";
 import { ArticleAuditLogsSection } from "./ArticleAuditLogsSection";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 export function ArticleListTable({
   initialArticles = [],
@@ -46,7 +48,21 @@ export function ArticleListTable({
   canArchive: propCanArchive,
   canDelete: propCanDelete,
   canManageCuration: propCanManageCuration,
+  currentPage = 1,
+  pageSize = 20,
+  totalCount = 0,
+  initialActiveView,
+  initialSelectedStatus = "all",
+  initialSelectedCategory = "all",
+  initialSearchQuery = "",
+  auditCurrentPage = 1,
+  auditPageSize = 20,
+  auditTotalCount = 0,
+  auditSelectedAction = "all",
+  auditSearchQuery = "",
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { can } = usePermissions();
   const { setPendingArticlesCount } = useAuth();
 
@@ -62,17 +78,69 @@ export function ArticleListTable({
     propCanManageCuration !== undefined ? propCanManageCuration : can("curation:manage");
 
   const [articles, setArticles] = useState(initialArticles);
-
-  const [activeView, setActiveView] = useState(() => (currentUser?.role === "sub_editor" ? "reporters" : "all"));
-  const [selectedStatus, setSelectedStatus] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [activeView, setActiveView] = useState(() => initialActiveView || (currentUser?.role === "sub_editor" ? "reporters" : "all"));
+  const [selectedStatus, setSelectedStatus] = useState(initialSelectedStatus);
+  const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
+  const [selectedCategory, setSelectedCategory] = useState(initialSelectedCategory);
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [rejectModalConfig, setRejectModalConfig] = useState(null);
   const [viewingReasonArticle, setViewingReasonArticle] = useState(null);
   const [rejectionReasonText, setRejectionReasonText] = useState("");
+
+  useEffect(() => {
+    setArticles(initialArticles);
+  }, [initialArticles]);
+
+  useEffect(() => {
+    if (initialActiveView) setActiveView(initialActiveView);
+  }, [initialActiveView]);
+
+  useEffect(() => {
+    setSelectedStatus(initialSelectedStatus);
+  }, [initialSelectedStatus]);
+
+  useEffect(() => {
+    setSelectedCategory(initialSelectedCategory);
+  }, [initialSelectedCategory]);
+
+  useEffect(() => {
+    setSearchQuery(initialSearchQuery);
+  }, [initialSearchQuery]);
+
+  const updateUrlParams = (updates) => {
+    const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
+    params.set("page", "1");
+    Object.entries(updates).forEach(([key, val]) => {
+      if (!val || val === "all") {
+        params.delete(key);
+      } else {
+        params.set(key, val);
+      }
+    });
+    router.push(`?${params.toString()}`);
+  };
+
+  const handleViewChange = (newView) => {
+    setActiveView(newView);
+    updateUrlParams({ view: newView, status: "all" });
+  };
+
+  const handleStatusFilterChange = (newStatus) => {
+    setSelectedStatus(newStatus);
+    updateUrlParams({ status: newStatus });
+  };
+
+  const handleCategoryFilterChange = (newCategory) => {
+    setSelectedCategory(newCategory);
+    updateUrlParams({ category: newCategory });
+  };
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    updateUrlParams({ q: searchQuery.trim() });
+  };
 
   const isOwnArticle = (art) => {
     if (!currentUser) return false;
@@ -84,64 +152,18 @@ export function ArticleListTable({
     );
   };
 
-  const scopedArticles = useMemo(() => {
-    if (isReporter) {
-
-      return articles.filter(isOwnArticle);
-    }
-    if (isSubEditor) {
-      if (activeView === "reporters") {
-
-        return articles.filter((art) => !isOwnArticle(art));
-      }
-      return articles.filter(isOwnArticle);
-    }
-    if (activeView === "my") {
-      return articles.filter((art) => isOwnArticle(art) && art.status !== "rejected");
-    }
-
-    return articles.filter((art) => art.status !== "draft");
-  }, [articles, isReporter, isSubEditor, activeView, currentUser]);
-
   const computedCounts = useMemo(() => {
-    const counts = {
-      all: scopedArticles.length,
-      published: 0,
-      draft: 0,
-      pending: 0,
-      rejected: 0,
-      archived: 0,
+    return {
+      all: statusCounts.all || 0,
+      published: statusCounts.published || 0,
+      draft: statusCounts.draft || 0,
+      pending: (statusCounts.pending || 0) + (statusCounts.pending_approval || 0),
+      rejected: statusCounts.rejected || 0,
+      archived: statusCounts.archived || 0,
     };
-    scopedArticles.forEach((art) => {
-      const st = art.status === "pending_approval" ? "pending" : art.status;
-      if (counts[st] !== undefined) {
-        counts[st] += 1;
-      }
-    });
-    return counts;
-  }, [scopedArticles]);
+  }, [statusCounts]);
 
-  const filteredArticles = useMemo(() => {
-    return scopedArticles.filter((art) => {
-
-      if (selectedStatus !== "all") {
-        const artSt = art.status === "pending_approval" ? "pending" : art.status;
-        if (artSt !== selectedStatus) return false;
-      }
-
-      if (selectedCategory !== "all" && art.category_slug !== selectedCategory) {
-        return false;
-      }
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const matchHeadline = art.headline?.toLowerCase().includes(q);
-        const matchAuthor = (art.author_name || art.created_by)?.toLowerCase().includes(q);
-        if (!matchHeadline && !matchAuthor) return false;
-      }
-      return true;
-    });
-  }, [scopedArticles, selectedStatus, selectedCategory, searchQuery]);
+  const filteredArticles = articles;
 
   const executeStatusChange = (articleId, newStatus, rejectionReason = null) => {
     startTransition(async () => {
@@ -303,37 +325,29 @@ export function ArticleListTable({
         <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
           <button
             type="button"
-            onClick={() => {
-              setActiveView("all");
-              setSelectedStatus("all");
-            }}
+            onClick={() => handleViewChange("all")}
             className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
               activeView === "all"
                 ? "bg-slate-900 text-white shadow-xs"
                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
             }`}
           >
-            সকল আর্টিকেল ({articles.filter((art) => art.status !== "draft").length})
+            সকল আর্টিকেল ({computedCounts.all || 0})
           </button>
           <button
             type="button"
-            onClick={() => {
-              setActiveView("my");
-              setSelectedStatus("all");
-            }}
+            onClick={() => handleViewChange("my")}
             className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
               activeView === "my"
                 ? "bg-slate-900 text-white shadow-xs"
                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
             }`}
           >
-            আমার আর্টিকেল ({articles.filter((art) => isOwnArticle(art) && art.status !== "rejected").length})
+            আমার আর্টিকেল
           </button>
           <button
             type="button"
-            onClick={() => {
-              setActiveView("audit");
-            }}
+            onClick={() => handleViewChange("audit")}
             className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
               activeView === "audit"
                 ? "bg-slate-900 text-white shadow-xs"
@@ -341,7 +355,7 @@ export function ArticleListTable({
             }`}
           >
             <History className="w-3.5 h-3.5" />
-            আর্টিকেল অডিট ({auditLogs.length})
+            আর্টিকেল অডিট ({auditTotalCount || 0})
           </button>
         </div>
       )}
@@ -350,10 +364,7 @@ export function ArticleListTable({
         <div className="flex items-center gap-2 border-b border-slate-200 pb-2">
           <button
             type="button"
-            onClick={() => {
-              setActiveView("reporters");
-              setSelectedStatus("all");
-            }}
+            onClick={() => handleViewChange("reporters")}
             className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer flex items-center gap-1.5 ${
               activeView === "reporters"
                 ? "bg-slate-900 text-white shadow-xs"
@@ -361,37 +372,41 @@ export function ArticleListTable({
             }`}
           >
             <Send className="w-3.5 h-3.5 text-blue-500" />
-            প্রতিবেদকদের জমাকৃত সংবাদ ({articles.filter((art) => !isOwnArticle(art)).length})
+            প্রতিবেদকদের জমাকৃত সংবাদ
           </button>
           <button
             type="button"
-            onClick={() => {
-              setActiveView("my");
-              setSelectedStatus("all");
-            }}
+            onClick={() => handleViewChange("my")}
             className={`px-4 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
               activeView === "my"
                 ? "bg-slate-900 text-white shadow-xs"
                 : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
             }`}
           >
-            আমার আর্টিকেল ({articles.filter(isOwnArticle).length})
+            আমার আর্টিকেল
           </button>
         </div>
       )}
 
       {activeView === "audit" && !isLower ? (
-        <ArticleAuditLogsSection logs={auditLogs} />
+        <ArticleAuditLogsSection
+          logs={auditLogs}
+          currentPage={auditCurrentPage}
+          pageSize={auditPageSize}
+          totalCount={auditTotalCount}
+          selectedAction={auditSelectedAction}
+          searchQuery={auditSearchQuery}
+        />
       ) : (
         <>
 
           <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-100/80 rounded-xl border border-slate-200/60">
         <button
           type="button"
-          onClick={() => setSelectedStatus("all")}
+          onClick={() => handleStatusFilterChange("all")}
           className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
             selectedStatus === "all"
-              ? "bg-white text-slate-900 shadow-2xs"
+              ? "bg-white text-slate-900 shadow-2xs font-bold"
               : "text-slate-500 hover:text-slate-900"
           }`}
         >
@@ -400,10 +415,9 @@ export function ArticleListTable({
 
         {isLower ? (
           isSubEditor && activeView === "reporters" ? (
-
             <button
               type="button"
-              onClick={() => setSelectedStatus("pending")}
+              onClick={() => handleStatusFilterChange("pending")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 selectedStatus === "pending"
                   ? "bg-white text-amber-700 shadow-2xs font-bold"
@@ -413,11 +427,10 @@ export function ArticleListTable({
               পর্যালোচনার অপেক্ষায় ({computedCounts.pending || 0})
             </button>
           ) : (
-
             <>
               <button
                 type="button"
-                onClick={() => setSelectedStatus("draft")}
+                onClick={() => handleStatusFilterChange("draft")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   selectedStatus === "draft"
                     ? "bg-white text-slate-800 shadow-2xs font-bold"
@@ -428,7 +441,7 @@ export function ArticleListTable({
               </button>
               <button
                 type="button"
-                onClick={() => setSelectedStatus("pending")}
+                onClick={() => handleStatusFilterChange("pending")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   selectedStatus === "pending"
                     ? "bg-white text-amber-700 shadow-2xs font-bold"
@@ -439,7 +452,7 @@ export function ArticleListTable({
               </button>
               <button
                 type="button"
-                onClick={() => setSelectedStatus("published")}
+                onClick={() => handleStatusFilterChange("published")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   selectedStatus === "published"
                     ? "bg-white text-emerald-700 shadow-2xs font-bold"
@@ -450,7 +463,7 @@ export function ArticleListTable({
               </button>
               <button
                 type="button"
-                onClick={() => setSelectedStatus("rejected")}
+                onClick={() => handleStatusFilterChange("rejected")}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   selectedStatus === "rejected"
                     ? "bg-white text-rose-700 shadow-2xs font-bold"
@@ -462,11 +475,10 @@ export function ArticleListTable({
             </>
           )
         ) : activeView === "all" ? (
-
           <>
             <button
               type="button"
-              onClick={() => setSelectedStatus("pending")}
+              onClick={() => handleStatusFilterChange("pending")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 selectedStatus === "pending"
                   ? "bg-white text-amber-700 shadow-2xs font-bold"
@@ -477,7 +489,7 @@ export function ArticleListTable({
             </button>
             <button
               type="button"
-              onClick={() => setSelectedStatus("published")}
+              onClick={() => handleStatusFilterChange("published")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 selectedStatus === "published"
                   ? "bg-white text-emerald-700 shadow-2xs font-bold"
@@ -488,7 +500,7 @@ export function ArticleListTable({
             </button>
             <button
               type="button"
-              onClick={() => setSelectedStatus("rejected")}
+              onClick={() => handleStatusFilterChange("rejected")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 selectedStatus === "rejected"
                   ? "bg-white text-rose-700 shadow-2xs font-bold"
@@ -499,7 +511,7 @@ export function ArticleListTable({
             </button>
             <button
               type="button"
-              onClick={() => setSelectedStatus("archived")}
+              onClick={() => handleStatusFilterChange("archived")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 selectedStatus === "archived"
                   ? "bg-white text-zinc-700 shadow-2xs font-bold"
@@ -510,11 +522,10 @@ export function ArticleListTable({
             </button>
           </>
         ) : (
-
           <>
             <button
               type="button"
-              onClick={() => setSelectedStatus("published")}
+              onClick={() => handleStatusFilterChange("published")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 selectedStatus === "published"
                   ? "bg-white text-emerald-700 shadow-2xs font-bold"
@@ -525,7 +536,7 @@ export function ArticleListTable({
             </button>
             <button
               type="button"
-              onClick={() => setSelectedStatus("draft")}
+              onClick={() => handleStatusFilterChange("draft")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 selectedStatus === "draft"
                   ? "bg-white text-slate-700 shadow-2xs font-bold"
@@ -536,7 +547,7 @@ export function ArticleListTable({
             </button>
             <button
               type="button"
-              onClick={() => setSelectedStatus("pending")}
+              onClick={() => handleStatusFilterChange("pending")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 selectedStatus === "pending"
                   ? "bg-white text-amber-700 shadow-2xs font-bold"
@@ -547,7 +558,7 @@ export function ArticleListTable({
             </button>
             <button
               type="button"
-              onClick={() => setSelectedStatus("archived")}
+              onClick={() => handleStatusFilterChange("archived")}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 selectedStatus === "archived"
                   ? "bg-white text-zinc-700 shadow-2xs font-bold"
@@ -560,12 +571,12 @@ export function ArticleListTable({
         )}
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-3">
+      <form onSubmit={handleSearchSubmit} className="flex flex-col sm:flex-row items-center gap-3">
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <Input
             type="text"
-            placeholder="শিরোনাম বা সম্পাদকের নাম দিয়ে খুঁজুন..."
+            placeholder="শিরোনাম বা সম্পাদকের নাম দিয়ে খুঁজুন (Enter চাপুন)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 text-xs h-9 bg-white"
@@ -574,7 +585,7 @@ export function ArticleListTable({
 
         <select
           value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
+          onChange={(e) => handleCategoryFilterChange(e.target.value)}
           className="h-9 rounded-md border border-slate-200 bg-white px-3 text-xs text-slate-700 font-medium focus:outline-none focus:ring-1 focus:ring-slate-900 w-full sm:w-auto cursor-pointer"
         >
           <option value="all">সকল ক্যাটাগরি</option>
@@ -587,7 +598,7 @@ export function ArticleListTable({
             </option>
           ))}
         </select>
-      </div>
+      </form>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
@@ -923,6 +934,13 @@ export function ArticleListTable({
             </tbody>
           </table>
         </div>
+        <AdminPagination
+          currentPage={currentPage}
+          totalPages={Math.max(1, Math.ceil(totalCount / pageSize))}
+          totalCount={totalCount}
+          pageSize={pageSize}
+          pageParamName="page"
+        />
       </div>
       </>
       )}

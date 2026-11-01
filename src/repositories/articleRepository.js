@@ -644,12 +644,50 @@ export async function getRecentArticles({ authorId, createdBy, limit = 10 } = {}
   return rows || [];
 }
 
-export async function getAllArticles({ status, authorId, createdBy, forSubEditor, limit = 50, offset = 0 } = {}) {
-  const safeLimit = Math.min(Math.max(1, Number(limit) || 50), 200);
-  const safeOffset = Math.max(0, Number(offset) || 0);
-
+function buildArticleFilterConditions({
+  status,
+  categorySlug,
+  search,
+  authorId,
+  createdBy,
+  forSubEditor,
+  activeView,
+  isReporter,
+  isLower,
+} = {}) {
   const conditions = [];
   const params = [];
+
+  if (isReporter) {
+    conditions.push("(a.author_id = ? OR a.created_by = ? OR u.username = ?)");
+    params.push(authorId || "", createdBy || "", createdBy || "");
+  } else if (forSubEditor) {
+    if (activeView === "reporters") {
+      conditions.push("(a.author_id != ? AND (a.created_by != ? OR a.created_by IS NULL) AND (u.username != ? OR u.username IS NULL))");
+      params.push(authorId || "", createdBy || "", createdBy || "");
+      conditions.push("((a.status = 'pending' OR a.status = 'pending_approval') AND (u.role = 'reporter' OR u.role IS NULL OR a.is_passed_to_upper = 1))");
+    } else if (activeView === "my") {
+      conditions.push("(a.author_id = ? OR a.created_by = ? OR u.username = ?)");
+      params.push(authorId || "", createdBy || "", createdBy || "");
+    } else {
+      conditions.push(
+        "((a.author_id = ? OR a.created_by = ? OR u.username = ?) OR ((a.status = 'pending' OR a.status = 'pending_approval') AND (u.role = 'reporter' OR u.role IS NULL)))"
+      );
+      params.push(authorId || "", createdBy || "", createdBy || "");
+    }
+  } else if (isLower) {
+    conditions.push("(a.author_id = ? OR a.created_by = ? OR u.username = ?)");
+    params.push(authorId || "", createdBy || "", createdBy || "");
+  } else {
+    if (activeView === "my") {
+      conditions.push("(a.author_id = ? OR a.created_by = ? OR u.username = ?)");
+      params.push(authorId || "", createdBy || "", createdBy || "");
+      conditions.push("a.status != 'rejected'");
+    } else {
+      conditions.push("(a.status != 'draft' OR a.author_id = ? OR a.created_by = ? OR u.username = ?)");
+      params.push(authorId || "", createdBy || "", createdBy || "");
+    }
+  }
 
   if (status && status !== "all") {
     if (status === "pending") {
@@ -660,16 +698,29 @@ export async function getAllArticles({ status, authorId, createdBy, forSubEditor
     }
   }
 
-  if (forSubEditor && (authorId || createdBy)) {
-    conditions.push(
-      "((a.author_id = ? OR a.created_by = ? OR u.username = ?) OR ((a.status = 'pending' OR a.status = 'pending_approval') AND (u.role = 'reporter' OR u.role IS NULL)))"
-    );
-    params.push(authorId || "", createdBy || "", createdBy || "");
-  } else if (authorId || createdBy) {
-    conditions.push("(a.author_id = ? OR a.created_by = ? OR u.username = ?)");
-    params.push(authorId || "", createdBy || "", createdBy || "");
+  if (categorySlug && categorySlug !== "all") {
+    conditions.push("a.category_slug = ?");
+    params.push(categorySlug);
   }
 
+  if (search && search.trim()) {
+    const term = `%${search.trim().toLowerCase()}%`;
+    conditions.push("(LOWER(a.headline) LIKE ? OR LOWER(a.author_name) LIKE ? OR LOWER(a.created_by) LIKE ?)");
+    params.push(term, term, term);
+  }
+
+  return { conditions, params };
+}
+
+export async function getAllArticles(options = {}) {
+  const {
+    limit = 20,
+    offset = 0,
+  } = options;
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 200);
+  const safeOffset = Math.max(0, Number(offset) || 0);
+
+  const { conditions, params } = buildArticleFilterConditions(options);
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   const sql = `
     SELECT a.*, 
@@ -685,10 +736,23 @@ export async function getAllArticles({ status, authorId, createdBy, forSubEditor
     ${whereClause} 
     ORDER BY a.created_at DESC LIMIT ? OFFSET ?
   `;
-  params.push(safeLimit, safeOffset);
+  const queryParams = [...params, safeLimit, safeOffset];
 
-  const rows = await query(sql, params);
+  const rows = await query(sql, queryParams);
   return rows || [];
+}
+
+export async function getAllArticlesCount(options = {}) {
+  const { conditions, params } = buildArticleFilterConditions(options);
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const sql = `
+    SELECT COUNT(*) as total
+    FROM articles a
+    LEFT JOIN users u ON a.author_id = u.id
+    ${whereClause}
+  `;
+  const row = await queryOne(sql, params);
+  return Number(row?.total || 0);
 }
 
 export async function deleteArticle(id, editorId = "usr_superadmin", editorUsername = "admin") {
@@ -763,25 +827,99 @@ export async function deleteArticle(id, editorId = "usr_superadmin", editorUsern
   return result;
 }
 
-export async function getArticleAuditLogs(limit = 100) {
-  const safeLimit = Math.min(Math.max(1, Number(limit) || 100), 200);
-  const rows = await query(
-    `SELECT l.*, 
-            COALESCE(u.username, u.name, 'admin') as user_name, 
-            u.email as user_email, 
-            u.role as user_role,
-            a.headline as article_headline,
-            a.slug as article_slug
-     FROM audit_logs l
-     LEFT JOIN users u ON l.user_id = u.id
-     LEFT JOIN articles a ON l.target_id = a.id
-     WHERE l.target_type = 'article' 
-        OR l.action IN ('create_article', 'edit_article', 'update_status', 'delete_article')
-     ORDER BY l.created_at DESC
-     LIMIT ?`,
-    [safeLimit]
-  );
+export async function getArticleAuditLogs(optionsOrLimit = 20, optionalOffset = 0) {
+  let limit = 20;
+  let offset = 0;
+  let action = "all";
+  let search = "";
+
+  if (typeof optionsOrLimit === "number") {
+    limit = optionsOrLimit;
+    offset = optionalOffset || 0;
+  } else if (optionsOrLimit && typeof optionsOrLimit === "object") {
+    limit = optionsOrLimit.limit || 20;
+    offset = optionsOrLimit.offset || 0;
+    action = optionsOrLimit.action || "all";
+    search = optionsOrLimit.search || "";
+  }
+
+  const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 200);
+  const safeOffset = Math.max(0, Number(offset) || 0);
+
+  const conditions = [
+    "(l.target_type = 'article' OR l.action IN ('create_article', 'edit_article', 'update_status', 'delete_article'))",
+  ];
+  const params = [];
+
+  if (action && action !== "all") {
+    conditions.push("l.action = ?");
+    params.push(action);
+  }
+
+  if (search && search.trim()) {
+    const term = `%${search.trim().toLowerCase()}%`;
+    conditions.push(
+      "(LOWER(COALESCE(a.headline, '')) LIKE ? OR LOWER(COALESCE(u.username, u.name, '')) LIKE ? OR LOWER(l.action) LIKE ? OR LOWER(COALESCE(l.details, '')) LIKE ?)"
+    );
+    params.push(term, term, term, term);
+  }
+
+  const whereClause = `WHERE ${conditions.join(" AND ")}`;
+  const sql = `
+    SELECT l.*, 
+           COALESCE(u.username, u.name, 'admin') as user_name, 
+           u.email as user_email, 
+           u.role as user_role,
+           a.headline as article_headline,
+           a.slug as article_slug
+    FROM audit_logs l
+    LEFT JOIN users u ON l.user_id = u.id
+    LEFT JOIN articles a ON l.target_id = a.id
+    ${whereClause}
+    ORDER BY l.created_at DESC
+    LIMIT ? OFFSET ?
+  `;
+  const rows = await query(sql, [...params, safeLimit, safeOffset]);
   return rows || [];
+}
+
+export async function getArticleAuditLogsCount(options = {}) {
+  let action = "all";
+  let search = "";
+
+  if (options && typeof options === "object") {
+    action = options.action || "all";
+    search = options.search || "";
+  }
+
+  const conditions = [
+    "(l.target_type = 'article' OR l.action IN ('create_article', 'edit_article', 'update_status', 'delete_article'))",
+  ];
+  const params = [];
+
+  if (action && action !== "all") {
+    conditions.push("l.action = ?");
+    params.push(action);
+  }
+
+  if (search && search.trim()) {
+    const term = `%${search.trim().toLowerCase()}%`;
+    conditions.push(
+      "(LOWER(COALESCE(a.headline, '')) LIKE ? OR LOWER(COALESCE(u.username, u.name, '')) LIKE ? OR LOWER(l.action) LIKE ? OR LOWER(COALESCE(l.details, '')) LIKE ?)"
+    );
+    params.push(term, term, term, term);
+  }
+
+  const whereClause = `WHERE ${conditions.join(" AND ")}`;
+  const sql = `
+    SELECT COUNT(*) as total
+    FROM audit_logs l
+    LEFT JOIN users u ON l.user_id = u.id
+    LEFT JOIN articles a ON l.target_id = a.id
+    ${whereClause}
+  `;
+  const row = await queryOne(sql, params);
+  return Number(row?.total || 0);
 }
 
 export async function updateArticleStatus(id, status, editorId = "usr_superadmin", editorUsername = "admin", rejectionReason = null) {
