@@ -1,9 +1,3 @@
--- ============================================================
--- News Portal MySQL / TiDB Database Schema
--- Strict Unicode (utf8mb4) & InnoDB engine for workerd / TiDB compatibility
--- ============================================================
-
--- 1. Users table (Primary identity is unique immutable username)
 CREATE TABLE IF NOT EXISTS users (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
   username VARCHAR(64) NOT NULL,
@@ -27,7 +21,6 @@ CREATE TABLE IF NOT EXISTS users (
   INDEX idx_users_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 2. Admin Requests table (Requests from Admin to Super Admin)
 CREATE TABLE IF NOT EXISTS admin_requests (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
   requester_id VARCHAR(64) NOT NULL,
@@ -48,7 +41,6 @@ CREATE TABLE IF NOT EXISTS admin_requests (
   CONSTRAINT fk_admin_requests_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 3. Categories table (Permanent & Dynamic Categories)
 CREATE TABLE IF NOT EXISTS categories (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -62,7 +54,6 @@ CREATE TABLE IF NOT EXISTS categories (
   INDEX idx_categories_is_permanent (is_permanent)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 4. Subcategories table
 CREATE TABLE IF NOT EXISTS subcategories (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
   category_id VARCHAR(64) NOT NULL,
@@ -77,7 +68,6 @@ CREATE TABLE IF NOT EXISTS subcategories (
   CONSTRAINT fk_subcategories_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 5. Articles table
 CREATE TABLE IF NOT EXISTS articles (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
   headline VARCHAR(500) NOT NULL,
@@ -101,6 +91,12 @@ CREATE TABLE IF NOT EXISTS articles (
   is_lead TINYINT(1) NOT NULL DEFAULT 0,
   is_handpicked TINYINT(1) NOT NULL DEFAULT 0,
   rejection_reason TEXT NULL,
+  created_by VARCHAR(64) NULL,
+  last_edited_by VARCHAR(64) NULL,
+  last_edited_at TIMESTAMP NULL DEFAULT NULL,
+  is_passed_to_upper TINYINT(1) NOT NULL DEFAULT 0,
+  passed_by VARCHAR(64) NULL,
+  passed_at TIMESTAMP NULL DEFAULT NULL,
   view_count INT NOT NULL DEFAULT 0,
   published_at TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -116,13 +112,14 @@ CREATE TABLE IF NOT EXISTS articles (
   INDEX idx_articles_lead (is_lead, status, created_at),
   INDEX idx_articles_handpicked (is_handpicked, status, created_at),
   INDEX idx_articles_author (author_id),
+  INDEX idx_articles_created_by (created_by),
+  INDEX idx_articles_last_edited_by (last_edited_by),
   INDEX idx_articles_view_count (view_count),
   CONSTRAINT fk_articles_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
   CONSTRAINT fk_articles_subcategory FOREIGN KEY (subcategory_id) REFERENCES subcategories(id) ON DELETE SET NULL,
   CONSTRAINT fk_articles_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 6. Content History / Revision Control table
 CREATE TABLE IF NOT EXISTS article_revisions (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
   article_id VARCHAR(64) NOT NULL,
@@ -139,7 +136,6 @@ CREATE TABLE IF NOT EXISTS article_revisions (
   CONSTRAINT fk_revisions_editor FOREIGN KEY (editor_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 7. Curated Collections (Handpicked News & Breaking News lists)
 CREATE TABLE IF NOT EXISTS curated_news (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
   type VARCHAR(32) NOT NULL,
@@ -155,7 +151,6 @@ CREATE TABLE IF NOT EXISTS curated_news (
   CONSTRAINT fk_curated_article FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 8. Analytics & Manual View Counting table
 CREATE TABLE IF NOT EXISTS analytics_page_views (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
   path VARCHAR(500) NOT NULL,
@@ -173,7 +168,6 @@ CREATE TABLE IF NOT EXISTS analytics_page_views (
   CONSTRAINT fk_analytics_article FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 9. Audit Logs of Administrative Actions table
 CREATE TABLE IF NOT EXISTS audit_logs (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
   user_id VARCHAR(64) NULL,
@@ -189,7 +183,6 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   CONSTRAINT fk_audit_logs_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- 10. Comments table
 CREATE TABLE IF NOT EXISTS comments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   article_id VARCHAR(64) NOT NULL,
@@ -207,6 +200,22 @@ CREATE TABLE IF NOT EXISTS comments (
   CONSTRAINT fk_comments_article FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS notifications (
+  id VARCHAR(64) NOT NULL PRIMARY KEY,
+  user_id VARCHAR(64) NOT NULL,
+  type VARCHAR(64) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  target_type VARCHAR(64) NULL,
+  target_id VARCHAR(64) NULL,
+  target_slug VARCHAR(191) NULL,
+  action_by VARCHAR(64) NULL,
+  is_read TINYINT(1) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_notifications_user_created (user_id, created_at),
+  INDEX idx_notifications_user_read (user_id, is_read),
+  INDEX idx_notifications_type (type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS social_links (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
