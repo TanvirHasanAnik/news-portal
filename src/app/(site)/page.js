@@ -43,7 +43,7 @@ export default async function Home() {
           }
         })
       );
-      categorySections = catResults.filter((c) => c.articles && c.articles.length > 0);
+      categorySections = catResults.filter((c) => c.articles && c.articles.length > 0).slice(0, 4);
     }
   } catch (err) {
     console.error("Error loading db articles for homepage:", err);

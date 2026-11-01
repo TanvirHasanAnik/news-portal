@@ -7,6 +7,8 @@ export default function MostReadSection({
   listClassName = "h-[360px] sm:h-[400px] overflow-y-auto pr-2 divide-y divide-slate-100 custom-scrollbar overscroll-contain",
   title = "সর্বাধিক পঠিত",
 }) {
+  const displayList = (newsList || []).slice(0, 10);
+
   return (
     <div className={`flex flex-col ${className}`}>
       <div className="flex items-center gap-2.5 border-b-2 border-slate-900 pb-3 mb-3 shrink-0">
@@ -17,12 +19,12 @@ export default function MostReadSection({
       </div>
 
       <div className={listClassName}>
-        {!newsList || newsList.length === 0 ? (
+        {displayList.length === 0 ? (
           <p className="text-xs text-slate-400 py-8 text-center font-serif-bangla">
             কোনো প্রকাশিত সংবাদ পাওয়া যায়নি।
           </p>
         ) : (
-          newsList.map((item) => (
+          displayList.map((item) => (
             <NewsCard
               key={`${item.categorySlug || item.category}-${item.id}`}
               news={item}

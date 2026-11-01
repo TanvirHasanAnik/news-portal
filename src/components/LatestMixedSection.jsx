@@ -12,6 +12,7 @@ export default function LatestMixedSection({ dbArticles = [] }) {
     if (key && !seen.has(key)) {
       seen.add(key);
       sortedNews.push(item);
+      if (sortedNews.length === 9) break;
     }
   }
 
@@ -21,7 +22,7 @@ export default function LatestMixedSection({ dbArticles = [] }) {
   const firstColumnStories = sortedNews.slice(5, 9);
   const mobileGridStories = sortedNews.slice(1, 7);
   const mobileBottomStories = sortedNews.slice(7, 9);
-  const remainingCategoryStyleStories = sortedNews.slice(1);
+  const remainingCategoryStyleStories = sortedNews.slice(1, 9);
 
   return (
     <section id="latest" className="scroll-mt-14 py-6 sm:py-8 bg-white border-b border-slate-200">
@@ -112,24 +113,25 @@ export default function LatestMixedSection({ dbArticles = [] }) {
                 )}
 
                 <div className="hidden md:grid md:grid-cols-3 gap-6 lg:gap-8 items-stretch">
-                  <div className="md:col-span-1 flex flex-col justify-between h-full gap-4 lg:gap-5">
+                  <div className="md:col-span-1 grid grid-rows-4 gap-4 lg:gap-5 h-full">
                     {firstColumnStories.map((news) => (
                       <NewsCard
                         key={news.id}
                         news={news}
-                        variant="row-summary"
-                        imageWrapperClassName="w-24 h-16 sm:w-26 sm:h-18 md:w-20 md:h-16 lg:w-24 lg:h-18"
+                        variant="horizontal"
+                        imageWrapperClassName="w-24 h-16 sm:w-26 sm:h-18 md:w-20 md:h-16 lg:w-24 lg:h-18 shrink-0"
                         headlineTag="h3"
                         headlineSize="text-sm lg:text-[15px]"
                         showSummary={true}
                         summaryClamp="line-clamp-2"
-                        summarySize="text-xs sm:text-[13px] mt-2"
-                        className="flex-1 py-0.5"
+                        summarySize="text-xs sm:text-[13px] mt-1"
+                        contentWrapperClassName="justify-start"
+                        className="items-start"
                       />
                     ))}
                   </div>
 
-                  <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6 h-full content-between">
+                  <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-6 h-full content-start">
                     {secondColumnStories.map((news) => (
                       <NewsCard
                         key={news.id}

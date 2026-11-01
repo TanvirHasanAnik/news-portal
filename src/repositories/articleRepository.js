@@ -1,5 +1,6 @@
 import { query, queryOne, withTransaction } from "@/lib/db";
 import { deleteMultipleFromR2 } from "@/lib/r2";
+import { extractSummaryFromContent } from "@/utils/textUtils";
 
 function normalizeTimestamp(ts) {
   if (!ts) return null;
@@ -35,13 +36,15 @@ export function mapDbArticleToFrontend(dbRow) {
 
   const primaryImage = imagesArray[0] || dbRow.image || null;
   const isoTime = normalizeTimestamp(dbRow.published_at || dbRow.created_at) || new Date().toISOString();
+  const rawSummary = (dbRow.summary || "").trim();
+  const summary = rawSummary || extractSummaryFromContent(dbRow.content, 250);
 
   return {
     id: dbRow.slug || dbRow.id,
     dbId: dbRow.id,
     slug: dbRow.slug,
     headline: dbRow.headline || "",
-    summary: dbRow.summary || "",
+    summary,
     content: dbRow.content || "",
     category: dbRow.category_name || "অন্যান্য",
     categorySlug: dbRow.category_slug || "others",

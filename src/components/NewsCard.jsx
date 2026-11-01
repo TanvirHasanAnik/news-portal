@@ -3,6 +3,7 @@ import { Clock, MapPin } from "lucide-react";
 import NewsImage from "./NewsImage";
 import ArticleActions from "./ArticleActions";
 import { DEFAULT_NEWS_IMAGE, getNewsImageUrl, getOptimizedNewsImage, getYouTubeThumbnail } from "../utils/imageUtils";
+import { extractSummaryFromContent } from "../utils/textUtils";
 
 export default function NewsCard({
   news,
@@ -41,7 +42,8 @@ export default function NewsCard({
     id,
     headline,
     image,
-    summary,
+    summary: rawSummary,
+    content,
     category,
     categorySlug,
     subcategory,
@@ -51,6 +53,13 @@ export default function NewsCard({
     location,
     isMostRecent,
   } = news;
+
+  const summary =
+    rawSummary && rawSummary.trim()
+      ? rawSummary.trim()
+      : content
+      ? extractSummaryFromContent(content, 250)
+      : "";
 
   const linkHref = href || (id ? `/article/${id}` : "#");
   const youtubeThumb = news.youtubeUrl ? getYouTubeThumbnail(news.youtubeUrl) : null;

@@ -3,7 +3,7 @@
 import { loginAction } from "@/actions/authActions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Eye, EyeOff, Lock, LogIn, ShieldCheck, User } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, Lock, LogIn, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState, useTransition } from "react";
@@ -48,7 +48,7 @@ function LoginForm() {
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-2xl border border-slate-100">
+    <div className="bg-white rounded-2xl p-6 sm:p-8 shadow-xl shadow-slate-200/50 border border-slate-200/80">
       {errorMessage && (
         <div className="mb-5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-semibold flex items-start gap-2.5 animate-in fade-in duration-200">
           <span className="shrink-0 mt-0.5 font-bold">✕</span>
@@ -122,37 +122,32 @@ function LoginForm() {
 
 export default function AdminLoginPage() {
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col justify-center items-center p-4 sm:p-6 selection:bg-slate-700 selection:text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-800 via-slate-900 to-black pointer-events-none" />
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-center items-center p-4 sm:p-6 selection:bg-slate-200 selection:text-slate-900">
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-white via-slate-50 to-slate-100/80 pointer-events-none" />
 
       <div className="relative w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <Link
             href="/"
-            className="inline-flex items-center justify-center p-3.5 bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-200"
+            className="inline-flex items-center justify-center p-3 bg-white rounded-2xl shadow-xs border border-slate-200/80 hover:shadow-sm transition-all duration-200"
           >
-
             <img
               src="/brand-logo.svg"
               alt="আমাদের সংবাদ"
               className="h-10 sm:h-11 w-auto object-contain"
             />
           </Link>
-          <div className="mt-4 flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-3 py-1 rounded-full w-fit mx-auto">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            <span>নিরাপদ অ্যাডমিন কন্ট্রোল প্যানেল</span>
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white mt-3 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-4 tracking-tight">
             অ্যাডমিন প্যানেলে প্রবেশ
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
             আলো আসবে সংবাদ ব্যবস্থাপনা পোর্টালে আপনার অ্যাকাউন্টে লগইন করুন
           </p>
         </div>
 
         <Suspense
           fallback={
-            <div className="bg-white rounded-2xl p-8 shadow-2xl border border-slate-100 flex items-center justify-center min-h-[250px]">
+            <div className="bg-white rounded-2xl p-8 shadow-xl shadow-slate-200/50 border border-slate-200/80 flex items-center justify-center min-h-[250px]">
               <div className="w-6 h-6 border-2 border-slate-900 border-t-transparent rounded-full animate-spin" />
             </div>
           }
@@ -163,7 +158,7 @@ export default function AdminLoginPage() {
         <div className="text-center mt-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>মূল ওয়েবসাইটে ফিরে যান</span>

@@ -110,7 +110,7 @@ export default async function CategoryPage({ params, searchParams }) {
     }
   }
 
-  const PAGE_SIZE = 10;
+  const PAGE_SIZE = 5;
   const rawPageNum = parseInt(resolvedSearchParams.page, 10);
   const requestedPage = Number.isInteger(rawPageNum) && rawPageNum > 0 ? rawPageNum : 1;
 

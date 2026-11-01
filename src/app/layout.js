@@ -19,8 +19,8 @@ const solaimanLipi = localFont({
 });
 
 export const metadata = {
-  title: "আমাদের সংবাদ | শীর্ষস্থানীয় বাংলা জাতীয় দৈনিক",
-  description: "সত্য, নিরপেক্ষ ও বস্তুনিষ্ঠ সংবাদ সবার আগে - জাতীয়, রাজনীতি, আন্তর্জাতিক, অর্থনীতি, খেলাধুলা ও বিনোদনের তাজা খবর।",
+  title: "আলো আসবে",
+  description: "সত্যের পথে, মানুষের সাথে",
 };
 
 export default function RootLayout({ children }) {
