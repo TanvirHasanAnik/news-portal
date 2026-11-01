@@ -1,5 +1,4 @@
 import { getDb, query, queryOne, withTransaction } from "@/lib/db";
-import bcrypt from "bcryptjs";
 
 export async function getAllAdminRequests({ status = "all", search = "", limit = 20, offset = 0 } = {}) {
   const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 100);
@@ -71,6 +70,13 @@ export async function getAdminRequestsCount({ status = "all", search = "" } = {}
   return Number(row?.total || 0);
 }
 
+export async function getPendingAdminRequestsCount() {
+  const row = await queryOne(
+    "SELECT COUNT(*) as total FROM admin_requests WHERE status = 'pending'"
+  );
+  return Number(row?.total || 0);
+}
+
 export async function createAdminRequest({
   requesterId = "usr_reporter",
   requestType,
@@ -107,29 +113,6 @@ export async function updateAdminRequestStatus(id, { status, reviewedBy = "usr_s
             await tx.query("UPDATE users SET status = 'disabled' WHERE id = ?", [req.target_user_id]);
           } else if (req.request_type === "role_change" && req.target_user_id && details.newRole) {
             await tx.query("UPDATE users SET role = ? WHERE id = ?", [details.newRole, req.target_user_id]);
-          } else if (req.request_type === "new_user" && details.name) {
-            const newUserId = `usr_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
-            const baseUsername = (details.username || details.name || (details.email ? details.email.split("@")[0] : null) || "user")
-              .toLowerCase()
-              .replace(/[^a-z0-9_.-]/g, "")
-              .substring(0, 30);
-            const fallbackUsername = `${baseUsername || "user"}_${Date.now().toString(36).slice(-4)}`;
-            const tempPlainPassword = `Temp@${Math.random().toString(36).slice(2, 8)}!`;
-            const hashedTempPassword = await bcrypt.hash(tempPlainPassword, 12);
-
-            await tx.query(
-              `INSERT INTO users (id, username, full_name, name, email, password, role, status, must_change_password, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, 'active', 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-              [
-                newUserId,
-                fallbackUsername,
-                details.name,
-                details.name,
-                details.email ? details.email.toLowerCase().trim() : null,
-                hashedTempPassword,
-                details.newRole || details.role || "reporter",
-              ]
-            );
           }
         } catch (parseErr) {
           console.error("Admin request processing error:", parseErr);
@@ -139,11 +122,13 @@ export async function updateAdminRequestStatus(id, { status, reviewedBy = "usr_s
       if (req.requester_id) {
         const isApproved = status === "approved";
         const typeLabels = {
-          new_user: "নতুন ব্যবহারকারী তৈরির আবেদন",
-          disable_user: "ব্যবহারকারী নিষ্ক্রিয়করণের আবেদন",
-          role_change: "রোল পরিবর্তনের আবেদন",
+          new_user: "নতুন সদস্য তৈরির আবেদন",
+          disable_user: "সদস্য নিষ্ক্রিয়করণের আবেদন",
+          role_change: "দায়িত্ব/রোল পরিবর্তনের আবেদন",
+          curation_change: "কিউরেশন পরিবর্তনের আবেদন",
         };
         const reqLabel = typeLabels[req.request_type] || "প্রশাসনিক আবেদন";
+        const noteSuffix = reviewerNote ? ` (মন্তব্য: ${reviewerNote})` : "";
         await tx.query(
           `INSERT INTO notifications (id, user_id, type, title, message, target_type, target_id, action_by, is_read, created_at)
            VALUES (?, ?, ?, ?, ?, 'request', ?, ?, 0, CURRENT_TIMESTAMP)`,
@@ -153,8 +138,8 @@ export async function updateAdminRequestStatus(id, { status, reviewedBy = "usr_s
             isApproved ? "request_approved" : "request_rejected",
             isApproved ? "প্রশাসনিক আবেদন অনুমোদিত হয়েছে" : "প্রশাসনিক আবেদন প্রত্যাখ্যাত হয়েছে",
             isApproved
-              ? `আপনার "${reqLabel}" সুপার অ্যাডমিন কর্তৃক অনুমোদিত হয়েছে।`
-              : `আপনার "${reqLabel}" প্রত্যাখ্যাত হয়েছে। ${reviewerNote ? `নোট: ${reviewerNote}` : ""}`,
+              ? `আপনার "${reqLabel}" সুপার অ্যাডমিন কর্তৃক অনুমোদিত হয়েছে।${noteSuffix}`
+              : `আপনার "${reqLabel}" প্রত্যাখ্যাত হয়েছে।${noteSuffix}`,
             id,
             reviewedBy,
           ]

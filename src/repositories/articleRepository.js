@@ -37,7 +37,7 @@ export function mapDbArticleToFrontend(dbRow) {
   const primaryImage = imagesArray[0] || dbRow.image || null;
   const isoTime = normalizeTimestamp(dbRow.published_at || dbRow.created_at) || new Date().toISOString();
   const rawSummary = (dbRow.summary || "").trim();
-  const headline = (dbRow.headline || "").trim();
+  const headline = (dbRow.curation_custom_title || dbRow.custom_title || dbRow.headline || "").trim();
   const isHeadlineAsSummary = rawSummary && (rawSummary === headline || rawSummary === headline.substring(0, 150));
   const summary = (!isHeadlineAsSummary && rawSummary) || extractSummaryFromContent(dbRow.content, 250);
 
@@ -101,7 +101,10 @@ export function mapDbArticleToFrontend(dbRow) {
     status: dbRow.status === "pending_approval" ? "pending" : (dbRow.status || "published"),
     isLead: Boolean(dbRow.is_lead),
     isBreaking: Boolean(dbRow.is_breaking),
-    isHandpicked: Boolean(dbRow.is_handpicked),
+    isHandpicked: Boolean(
+      dbRow.is_handpicked ||
+      (dbRow.curation_priority !== undefined && dbRow.curation_priority !== null)
+    ),
   };
 }
 
@@ -507,12 +510,45 @@ export async function getPublishedArticles({ categorySlug, subcategoryName, limi
     const safeLimit = Math.min(Math.max(1, Number(limit) || 20), 100);
     const safeOffset = Math.max(0, Number(offset) || 0);
 
+    if (categorySlug === "handpicked") {
+      const conditions = [
+        "a.status = 'published'",
+        "(c.article_id IS NOT NULL OR (a.is_handpicked = 1 AND a.id NOT IN (SELECT article_id FROM curated_news WHERE type = 'handpicked' AND is_active = 0 AND article_id IS NOT NULL)))",
+      ];
+      const params = [];
+
+      if (subcategoryName) {
+        conditions.push("a.subcategory_name = ?");
+        params.push(subcategoryName);
+      }
+
+      const sql = `
+        SELECT a.*, c.priority AS curation_priority, c.custom_title AS curation_custom_title
+        FROM articles a
+        LEFT JOIN (
+          SELECT article_id, MAX(priority) AS priority, MAX(custom_title) AS custom_title, MAX(created_at) AS created_at
+          FROM curated_news
+          WHERE type = 'handpicked' AND is_active = 1
+          GROUP BY article_id
+        ) c ON c.article_id = a.id
+        WHERE ${conditions.join(" AND ")}
+        ORDER BY 
+          (c.article_id IS NOT NULL) DESC,
+          c.priority DESC,
+          c.created_at DESC,
+          COALESCE(a.published_at, a.created_at) DESC
+        LIMIT ? OFFSET ?
+      `;
+      params.push(safeLimit, safeOffset);
+
+      const rows = await query(sql, params);
+      return rows || [];
+    }
+
     const conditions = ["status = 'published'"];
     const params = [];
 
-    if (categorySlug === "handpicked") {
-      conditions.push("is_handpicked = 1");
-    } else if (categorySlug && categorySlug !== "all" && categorySlug !== "latest") {
+    if (categorySlug && categorySlug !== "all" && categorySlug !== "latest") {
       conditions.push("category_slug = ?");
       params.push(categorySlug);
     }
@@ -540,12 +576,37 @@ export async function getPublishedArticles({ categorySlug, subcategoryName, limi
 
 export async function getPublishedArticlesCount({ categorySlug, subcategoryName } = {}) {
   try {
+    if (categorySlug === "handpicked") {
+      const conditions = [
+        "a.status = 'published'",
+        "(c.article_id IS NOT NULL OR (a.is_handpicked = 1 AND a.id NOT IN (SELECT article_id FROM curated_news WHERE type = 'handpicked' AND is_active = 0 AND article_id IS NOT NULL)))",
+      ];
+      const params = [];
+
+      if (subcategoryName) {
+        conditions.push("a.subcategory_name = ?");
+        params.push(subcategoryName);
+      }
+
+      const sql = `
+        SELECT COUNT(*) as count FROM articles a
+        LEFT JOIN (
+          SELECT article_id
+          FROM curated_news
+          WHERE type = 'handpicked' AND is_active = 1
+          GROUP BY article_id
+        ) c ON c.article_id = a.id
+        WHERE ${conditions.join(" AND ")}
+      `;
+
+      const row = await queryOne(sql, params);
+      return Number(row?.count || 0);
+    }
+
     const conditions = ["status = 'published'"];
     const params = [];
 
-    if (categorySlug === "handpicked") {
-      conditions.push("is_handpicked = 1");
-    } else if (categorySlug && categorySlug !== "all" && categorySlug !== "latest") {
+    if (categorySlug && categorySlug !== "all" && categorySlug !== "latest") {
       conditions.push("category_slug = ?");
       params.push(categorySlug);
     }

@@ -8,6 +8,8 @@ import {
   updateUserStatus,
   getUserById,
 } from "@/repositories/userRepository";
+import { notifyAdmins } from "@/repositories/notificationRepository";
+import { updateAdminRequestStatus } from "@/repositories/requestRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
 import {
   createUserSchema,
@@ -69,6 +71,30 @@ export async function createUserAction(prevState, formData) {
       targetId: created.id,
       details: { username: validated.username, role: validated.role },
     });
+
+    const linkedRequestId = formData.get("requestId")?.toString().trim();
+    if (linkedRequestId) {
+      try {
+        await updateAdminRequestStatus(linkedRequestId, {
+          status: "approved",
+          reviewedBy: currentUser.id,
+          reviewerNote: `নতুন ব্যবহারকারী @${validated.username} তৈরি করে আবেদনটি অনুমোদন করা হয়েছে।`,
+        });
+      } catch (reqErr) {
+        console.error("Error approving linked admin request:", reqErr);
+      }
+    }
+
+    if (currentUser.role === "super_admin" || currentUser.role === "superadmin") {
+      await notifyAdmins({
+        type: "admin_user_created",
+        title: "নতুন সদস্য যুক্ত করা হয়েছে",
+        message: `সুপার অ্যাডমিন কর্তৃক নতুন সদস্য @${validated.username} (${validated.role}) তৈরি করা হয়েছে।`,
+        targetType: "user",
+        targetId: created.id,
+        actionBy: currentUser.username,
+      });
+    }
 
     revalidatePath("/admin");
 
@@ -133,6 +159,17 @@ export async function updateUserRoleAction(userId, newRole) {
       details: { newRole: validated.role },
     });
 
+    if (currentUser.role === "super_admin" || currentUser.role === "superadmin") {
+      await notifyAdmins({
+        type: "admin_user_role_updated",
+        title: "সদস্যের দায়িত্ব (রোল) পরিবর্তন",
+        message: `সুপার অ্যাডমিন কর্তৃক @${targetUser.username}-এর দায়িত্ব "${validated.role}" হিসেবে হালনাগাদ করা হয়েছে।`,
+        targetType: "user",
+        targetId: validated.userId,
+        actionBy: currentUser.username,
+      });
+    }
+
     revalidatePath("/admin");
 
     return { success: true, message: "ব্যবহারকারীর দায়িত্ব সফলভাবে আপডেট করা হয়েছে।" };
@@ -178,6 +215,18 @@ export async function toggleUserStatusAction(userId, currentStatus) {
       targetId: validated.userId,
       details: { newStatus },
     });
+
+    if (currentUser.role === "super_admin" || currentUser.role === "superadmin") {
+      const statusBn = newStatus === "active" ? "পুনরায় সক্রিয়" : "সাময়িক নিষ্ক্রিয়";
+      await notifyAdmins({
+        type: "admin_user_status_updated",
+        title: "সদস্য অ্যাকাউন্ট স্ট্যাটাস পরিবর্তন",
+        message: `সুপার অ্যাডমিন কর্তৃক @${targetUser.username}-এর অ্যাকাউন্ট ${statusBn} করা হয়েছে।`,
+        targetType: "user",
+        targetId: validated.userId,
+        actionBy: currentUser.username,
+      });
+    }
 
     revalidatePath("/admin");
 

@@ -4,6 +4,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { getCurrentUser } from "@/lib/auth/server";
 import { getUnreadNotificationCount } from "@/repositories/notificationRepository";
 import { getPendingArticlesCountForUpperRoles } from "@/repositories/articleRepository";
+import { getPendingAdminRequestsCount } from "@/repositories/requestRepository";
 import { isUpperRole } from "@/config/roles";
 
 export const metadata = {
@@ -15,6 +16,7 @@ export default async function AdminLayout({ children }) {
   const user = await getCurrentUser();
   let unreadNotificationsCount = 0;
   let pendingArticlesCount = 0;
+  let pendingAdminRequestsCount = 0;
 
   if (user?.id) {
     try {
@@ -23,10 +25,19 @@ export default async function AdminLayout({ children }) {
         user?.role && isUpperRole(user.role)
           ? getPendingArticlesCountForUpperRoles()
           : Promise.resolve(0);
+      const isSuper = user?.role === "super_admin" || user?.role === "superadmin";
+      const adminReqPromise = isSuper
+        ? getPendingAdminRequestsCount()
+        : Promise.resolve(0);
 
-      const [unread, pending] = await Promise.all([notifPromise, pendingPromise]);
+      const [unread, pending, adminReqs] = await Promise.all([
+        notifPromise,
+        pendingPromise,
+        adminReqPromise,
+      ]);
       unreadNotificationsCount = unread || 0;
       pendingArticlesCount = pending || 0;
+      pendingAdminRequestsCount = adminReqs || 0;
     } catch (_e) {}
   }
 
@@ -45,6 +56,7 @@ export default async function AdminLayout({ children }) {
         initialUser={user}
         initialUnreadNotificationsCount={unreadNotificationsCount}
         initialPendingArticlesCount={pendingArticlesCount}
+        initialPendingAdminRequestsCount={pendingAdminRequestsCount}
       >
         <AdminShell>{children}</AdminShell>
       </AuthProvider>

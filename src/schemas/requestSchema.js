@@ -11,21 +11,15 @@ export const createAdminRequestSchema = z.object({
   ),
   targetUserId: z.string().trim().optional().nullable(),
   requestedName: safeString({
-    label: "আবেদনকারীর নাম",
+    label: "সদস্যের পুরো নাম",
     min: 0,
-    max: 60,
+    max: 100,
     required: false,
     allowEmpty: true,
   })
-    .refine((val) => !val || /^[a-zA-Z0-9_\s.-]+$/.test(val), {
-      message: "ব্যবহারকারীর নাম শুধুমাত্র ইংরেজি অক্ষরে হতে হবে।",
+    .refine((val) => !val || /^[a-zA-Z\s.-]*$/.test(val), {
+      message: "ব্যবহারকারীর পূর্ণ নাম শুধুমাত্র ইংরেজি অক্ষরে হতে হবে।",
     })
-    .optional()
-    .nullable(),
-  requestedEmail: safeEmail({
-    label: "ইমেইল",
-    required: false,
-  })
     .optional()
     .nullable(),
   requestedRole: z

@@ -83,6 +83,7 @@ export function UserManager({
   const [selectedRole, setSelectedRole] = useState(initialRole);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [linkedRequestId, setLinkedRequestId] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
@@ -93,6 +94,24 @@ export function UserManager({
   const [showResetPassword, setShowResetPassword] = useState(false);
   const [resetError, setResetError] = useState("");
   const [isResetPending, startResetTransition] = useTransition();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(createUserSchema),
+    mode: "onChange",
+    defaultValues: {
+      username: "",
+      fullName: "",
+      email: "",
+      phone: "",
+      password: "",
+      role: USER_ROLES.REPORTER,
+    },
+  });
 
   useEffect(() => {
     setUsers(sortUsersByRole(initialUsers));
@@ -105,6 +124,25 @@ export function UserManager({
   useEffect(() => {
     setSearchQuery(initialSearchQuery);
   }, [initialSearchQuery]);
+
+  useEffect(() => {
+    if (searchParams?.get("create") === "true") {
+      const prefillFullName = searchParams.get("fullName") || "";
+      const prefillRole = searchParams.get("role");
+      const reqId = searchParams.get("requestId");
+
+      setLinkedRequestId(reqId || null);
+      reset({
+        username: "",
+        fullName: prefillFullName,
+        email: "",
+        phone: "",
+        password: "",
+        role: prefillRole && ASSIGNABLE_ROLE_LABELS[prefillRole] ? prefillRole : USER_ROLES.REPORTER,
+      });
+      setShowAddModal(true);
+    }
+  }, [searchParams, reset]);
 
   const updateUrlParams = (roleVal, searchVal) => {
     const params = new URLSearchParams(searchParams ? searchParams.toString() : "");
@@ -132,25 +170,6 @@ export function UserManager({
     updateUrlParams(selectedRole, searchQuery);
   };
 
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(createUserSchema),
-    mode: "onChange",
-    defaultValues: {
-      username: "",
-      fullName: "",
-      email: "",
-      phone: "",
-      password: "",
-      role: USER_ROLES.REPORTER,
-    },
-  });
-
   const onCreateUser = (data) => {
     if (isSingleUserRole(data.role)) {
       setFeedback({ type: "error", message: "এই পদে নতুন ব্যবহারকারী যোগ করা সম্ভব নয়।" });
@@ -166,6 +185,9 @@ export function UserManager({
       formData.append("password", data.password.trim());
       formData.append("role", data.role);
       formData.append("bio", "");
+      if (linkedRequestId) {
+        formData.append("requestId", linkedRequestId);
+      }
 
       const res = await createUserAction(null, formData);
       if (res.success) {
@@ -191,7 +213,9 @@ export function UserManager({
           password: "",
           role: USER_ROLES.REPORTER,
         });
+        setLinkedRequestId(null);
         setShowAddModal(false);
+        router.replace("/admin?tab=users");
         router.refresh();
       } else {
         setFeedback({ type: "error", message: res.message });
@@ -321,6 +345,7 @@ export function UserManager({
         {canCreateUser ? (
           <Button
             onClick={() => {
+              setLinkedRequestId(null);
               reset({
                 username: "",
                 fullName: "",
@@ -542,7 +567,11 @@ export function UserManager({
                 </h3>
               </div>
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setLinkedRequestId(null);
+                  setShowAddModal(false);
+                  router.replace("/admin?tab=users");
+                }}
                 className="text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -550,6 +579,11 @@ export function UserManager({
             </div>
 
             <form onSubmit={handleSubmit(onCreateUser)} className="p-5 space-y-3.5">
+              {linkedRequestId && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-xs text-amber-800">
+                  অ্যাডমিনের আবেদন অনুযায়ী নতুন সদস্য যোগ করা হচ্ছে।
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -655,7 +689,11 @@ export function UserManager({
                   type="button"
                   variant="outline"
                   size="sm"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => {
+                    setLinkedRequestId(null);
+                    setShowAddModal(false);
+                    router.replace("/admin?tab=users");
+                  }}
                 >
                   বাতিল
                 </Button>

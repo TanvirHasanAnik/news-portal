@@ -20,6 +20,7 @@ import { createJwtToken } from "@/lib/auth/jwt";
 import { setAuthCookie, removeAuthCookie } from "@/lib/auth/cookies";
 import { getCurrentUser } from "@/lib/auth/server";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
+import { notifyAdmins } from "@/repositories/notificationRepository";
 import { getFallbackPasswordForRole } from "@/lib/db/bootstrap";
 
 const BCRYPT_SALT_ROUNDS = 12;
@@ -283,6 +284,17 @@ export async function adminResetStaffPasswordAction(prevState, formData) {
       });
     } catch (_err) {
 
+    }
+
+    if (currentUser.role === "super_admin" || currentUser.role === "superadmin") {
+      await notifyAdmins({
+        type: "admin_user_password_reset",
+        title: "সদস্যের পাসওয়ার্ড পরিবর্তন",
+        message: `সুপার অ্যাডমিন কর্তৃক @${targetUser.username}-এর পাসওয়ার্ড পরিবর্তন করা হয়েছে।`,
+        targetType: "user",
+        targetId: targetUser.id,
+        actionBy: currentUser.username,
+      });
     }
 
     revalidatePath("/admin");

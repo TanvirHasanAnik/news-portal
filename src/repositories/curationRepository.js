@@ -212,14 +212,14 @@ export async function getActiveHandpickedArticles(limit = 4) {
               a.*
        FROM curated_news c
        LEFT JOIN articles a ON c.article_id = a.id
-       WHERE c.type = 'handpicked' AND c.is_active = 1
+       WHERE c.type = 'handpicked' AND c.is_active = 1 AND (a.status = 'published' OR a.id IS NULL)
        ORDER BY c.priority DESC, c.created_at DESC
        LIMIT ?`,
       [safeLimit]
     );
 
     const curatedArticles = (curatedRows || []).map((row) => {
-      if (row.id && row.status) {
+      if (row.id && row.status === "published") {
         const mapped = mapDbArticleToFrontend(row);
         if (row.custom_title) {
           mapped.headline = row.custom_title;
@@ -254,6 +254,7 @@ export async function getActiveHandpickedArticles(limit = 4) {
       const directRows = await query(
         `SELECT * FROM articles 
          WHERE status = 'published' AND is_handpicked = 1 
+           AND id NOT IN (SELECT article_id FROM curated_news WHERE type = 'handpicked' AND is_active = 0 AND article_id IS NOT NULL)
          ORDER BY created_at DESC 
          LIMIT ?`,
         [needed + 5]

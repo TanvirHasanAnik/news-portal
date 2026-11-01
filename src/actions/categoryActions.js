@@ -9,6 +9,7 @@ import {
   saveCategoriesBatch,
 } from "@/repositories/categoryRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
+import { notifyAdmins } from "@/repositories/notificationRepository";
 import {
   categorySchema,
   subcategorySchema,
@@ -39,6 +40,14 @@ export async function createCategoryAction(prevState, formData) {
       action: "create_category",
       targetType: "category",
       details: { name: validated.name, slug: validated.slug },
+    });
+
+    await notifyAdmins({
+      type: "admin_category_created",
+      title: "নতুন ক্যাটাগরি তৈরি",
+      message: `সুপার অ্যাডমিন কর্তৃক নতুন ক্যাটাগরি "${validated.name}" তৈরি করা হয়েছে।`,
+      targetType: "category",
+      actionBy: currentUser.username,
     });
 
     revalidatePath("/", "layout");
@@ -72,6 +81,14 @@ export async function deleteCategoryAction(categoryId) {
       action: "delete_category",
       targetType: "category",
       targetId: categoryId,
+    });
+
+    await notifyAdmins({
+      type: "admin_category_deleted",
+      title: "ক্যাটাগরি মুছে ফেলা হয়েছে",
+      message: "সুপার অ্যাডমিন কর্তৃক ক্যাটাগরি মুছে ফেলা হয়েছে।",
+      targetType: "category",
+      actionBy: currentUser.username,
     });
 
     revalidatePath("/", "layout");
@@ -109,6 +126,14 @@ export async function createSubcategoryAction(prevState, formData) {
       details: { categoryId: validated.categoryId, name: validated.name, slug: validated.slug },
     });
 
+    await notifyAdmins({
+      type: "admin_subcategory_created",
+      title: "নতুন উপ-বিভাগ তৈরি",
+      message: `সুপার অ্যাডমিন কর্তৃক নতুন উপ-বিভাগ "${validated.name}" তৈরি করা হয়েছে।`,
+      targetType: "subcategory",
+      actionBy: currentUser.username,
+    });
+
     revalidatePath("/", "layout");
     revalidatePath("/");
     revalidatePath("/admin");
@@ -139,6 +164,14 @@ export async function deleteSubcategoryAction(subcategoryId) {
       targetId: subcategoryId,
     });
 
+    await notifyAdmins({
+      type: "admin_subcategory_deleted",
+      title: "উপ-বিভাগ মুছে ফেলা হয়েছে",
+      message: "সুপার অ্যাডমিন কর্তৃক উপ-বিভাগ মুছে ফেলা হয়েছে।",
+      targetType: "subcategory",
+      actionBy: currentUser.username,
+    });
+
     revalidatePath("/", "layout");
     revalidatePath("/");
     revalidatePath("/admin");
@@ -165,6 +198,14 @@ export async function saveCategoriesBatchAction(categories) {
       action: "batch_update_categories",
       targetType: "categories",
       details: { count: validatedCategories.length },
+    });
+
+    await notifyAdmins({
+      type: "admin_categories_updated",
+      title: "ক্যাটাগরি বিন্যাস হালনাগাদ",
+      message: "সুপার অ্যাডমিন কর্তৃক ক্যাটাগরি ও উপ-বিভাগের তালিকা হালনাগাদ করা হয়েছে।",
+      targetType: "categories",
+      actionBy: currentUser.username,
     });
 
     revalidatePath("/", "layout"); 

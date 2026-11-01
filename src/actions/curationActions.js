@@ -9,6 +9,7 @@ import {
   saveCuratedNewsBatch,
 } from "@/repositories/curationRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
+import { notifyAdmins } from "@/repositories/notificationRepository";
 import { curatedItemSchema, curatedBatchSchema, formatZodError } from "@/schemas";
 import { getCurrentUser } from "@/lib/auth/server";
 
@@ -175,6 +176,17 @@ export async function saveCuratedBatchAction(type, items) {
       targetType: "curated_news",
       details: { type, count: validatedItems.length },
     });
+
+    if (currentUser.role === "super_admin" || currentUser.role === "superadmin") {
+      const typeBn = type === "handpicked" ? "বাছাইকৃত সংবাদ" : "জরুরি সংবাদ";
+      await notifyAdmins({
+        type: "admin_curation_updated",
+        title: `${typeBn} তালিকা হালনাগাদ`,
+        message: `সুপার অ্যাডমিন কর্তৃক ${typeBn} তালিকা হালনাগাদ করা হয়েছে।`,
+        targetType: "curated_news",
+        actionBy: currentUser.username,
+      });
+    }
 
     revalidatePath("/");
     revalidatePath("/admin");

@@ -9,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { usePermissions } from "@/contexts/AuthContext";
 import { ASSIGNABLE_ROLE_LABELS, isSingleUserRole, ROLE_LABELS, USER_ROLES } from "@/lib/auth";
@@ -51,6 +52,8 @@ export function RequestManager({
   const [activeStatus, setActiveStatus] = useState(initialStatus);
   const [searchQuery, setSearchQuery] = useState(initialSearchQuery);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [rejectModalConfig, setRejectModalConfig] = useState(null);
+  const [rejectionReasonText, setRejectionReasonText] = useState("");
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
 
@@ -134,10 +137,7 @@ export function RequestManager({
     });
   };
 
-  const handleUpdateStatus = (id, newStatus) => {
-    const reviewerNote = prompt(`আবেদনের জন্য মন্তব্য লিখুন (ঐচ্ছিক):`, "");
-    if (reviewerNote === null) return;
-
+  const handleUpdateStatus = (id, newStatus, reviewerNote = "") => {
     startTransition(async () => {
       const res = await updateAdminRequestStatusAction(id, newStatus, reviewerNote);
       if (res.success) {
@@ -153,6 +153,27 @@ export function RequestManager({
       }
       setTimeout(() => setFeedback(null), 3000);
     });
+  };
+
+  const handleAcceptNewUserRequest = (req, parsedPayload = {}) => {
+    const fullName = parsedPayload.fullName || parsedPayload.name || "";
+    const role = parsedPayload.newRole || parsedPayload.role || USER_ROLES.REPORTER;
+    const params = new URLSearchParams();
+    params.set("tab", "users");
+    params.set("create", "true");
+    if (fullName) {
+      params.set("fullName", fullName);
+    }
+    if (role) {
+      params.set("role", role);
+    }
+    params.set("requestId", req.id);
+    router.push(`/admin?${params.toString()}`);
+  };
+
+  const openRejectModal = (id) => {
+    setRejectionReasonText("");
+    setRejectModalConfig({ requestId: id });
   };
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
@@ -333,18 +354,30 @@ export function RequestManager({
                     {req.status === "pending" ? (
                       canReviewRequests ? (
                         <>
+                          {req.request_type === "new_user" ? (
+                            <button
+                              type="button"
+                              onClick={() => handleAcceptNewUserRequest(req, parsedPayload)}
+                              disabled={isPending}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              অনুমোদন
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateStatus(req.id, "approved")}
+                              disabled={isPending}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
+                            >
+                              <CheckCircle className="w-3.5 h-3.5" />
+                              অনুমোদন
+                            </button>
+                          )}
                           <button
                             type="button"
-                            onClick={() => handleUpdateStatus(req.id, "approved")}
-                            disabled={isPending}
-                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer shadow-xs"
-                          >
-                            <CheckCircle className="w-3.5 h-3.5" />
-                            অনুমোদন
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleUpdateStatus(req.id, "rejected")}
+                            onClick={() => openRejectModal(req.id)}
                             disabled={isPending}
                             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 text-xs font-semibold cursor-pointer"
                           >
@@ -423,10 +456,12 @@ export function RequestManager({
               {requestType === "new_user" && (
                 <>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">প্রস্তাবিত সদস্যের নাম (ইংরেজি)</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      প্রস্তাবিত সদস্যের পুরো নাম (Full Name) (ঐচ্ছিক)
+                    </label>
                     <Input
                       type="text"
-                      placeholder="প্রস্তাবিত ব্যবহারকারীর পূর্ণ ইংরেজি নাম বা ইউজারনেম লিখুন"
+                      placeholder="সদস্যের পূর্ণ ইংরেজি নাম লিখুন (ঐচ্ছিক)"
                       {...register("requestedName")}
                       className={`text-xs h-9 ${errors.requestedName ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                     />
@@ -532,6 +567,39 @@ export function RequestManager({
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={Boolean(rejectModalConfig)}
+        onClose={() => {
+          setRejectModalConfig(null);
+          setRejectionReasonText("");
+        }}
+        onConfirm={() => {
+          if (!rejectModalConfig) return;
+          const { requestId } = rejectModalConfig;
+          const note = rejectionReasonText.trim();
+          setRejectModalConfig(null);
+          setRejectionReasonText("");
+          handleUpdateStatus(requestId, "rejected", note);
+        }}
+        message="আপনি কি নিশ্চিতভাবে এই প্রশাসনিক আবেদনটি প্রত্যাখ্যান করতে চান?"
+        confirmText="প্রত্যাখ্যান নিশ্চিত করুন"
+        cancelText="বাতিল"
+        confirmVariant="destructive"
+      >
+        <div className="space-y-1.5 pt-1 text-left">
+          <label className="block text-xs font-semibold text-slate-700">
+            প্রত্যাখ্যানের কারণ বা মন্তব্য (ঐচ্ছিক):
+          </label>
+          <textarea
+            value={rejectionReasonText}
+            onChange={(e) => setRejectionReasonText(e.target.value)}
+            placeholder="প্রত্যাখ্যানের কারণ বা মন্তব্য লিখুন (ঐচ্ছিক)..."
+            rows={3}
+            className="w-full rounded-lg border border-slate-200 p-2.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent resize-none"
+          />
+        </div>
+      </ConfirmModal>
     </div>
   );
 }

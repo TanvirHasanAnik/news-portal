@@ -19,6 +19,7 @@ function SidebarContent({
   onLogout,
   unreadNotificationsCount = 0,
   pendingArticlesCount = 0,
+  pendingAdminRequestsCount = 0,
 }) {
   const initialChar = user?.username ? user.username.trim().charAt(0).toUpperCase() : (user?.name ? user.name.trim().charAt(0) : "U");
 
@@ -104,6 +105,19 @@ function SidebarContent({
                         ? "৯৯+"
                         : pendingArticlesCount.toLocaleString("bn-BD")}
                     </span>
+                  ) : item.id === "requests" && (user?.role === "super_admin" || user?.role === "superadmin") && pendingAdminRequestsCount > 0 ? (
+                    <span
+                      className={cn(
+                        "flex items-center justify-center min-w-[20px] h-5 px-1.5 text-[10px] font-bold rounded-full shadow-2xs",
+                        isActive
+                          ? "bg-amber-400 text-slate-900"
+                          : "bg-rose-600 text-white"
+                      )}
+                    >
+                      {pendingAdminRequestsCount > 99
+                        ? "৯৯+"
+                        : pendingAdminRequestsCount.toLocaleString("bn-BD")}
+                    </span>
                   ) : item.badge ? (
                     <Badge
                       variant={isActive ? "secondary" : "outline"}
@@ -161,6 +175,7 @@ export default function AdminSidebar({ mobileOpen = false, onCloseMobile }) {
     unreadNotificationsCount,
     clearUnreadNotifications,
     pendingArticlesCount,
+    pendingAdminRequestsCount,
   } = useAuth();
 
   const activeModules = adminNavItems.filter((item) => canAccessTab(item.id));
@@ -196,6 +211,7 @@ export default function AdminSidebar({ mobileOpen = false, onCloseMobile }) {
           onLogout={logout}
           unreadNotificationsCount={unreadNotificationsCount}
           pendingArticlesCount={pendingArticlesCount}
+          pendingAdminRequestsCount={pendingAdminRequestsCount}
         />
       </aside>
 
@@ -247,6 +263,7 @@ export default function AdminSidebar({ mobileOpen = false, onCloseMobile }) {
                 onLogout={logout}
                 unreadNotificationsCount={unreadNotificationsCount}
                 pendingArticlesCount={pendingArticlesCount}
+                pendingAdminRequestsCount={pendingAdminRequestsCount}
               />
             </div>
           </div>

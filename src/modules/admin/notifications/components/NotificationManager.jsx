@@ -14,6 +14,11 @@ import {
   Search,
   Clock,
   Send,
+  ShieldAlert,
+  Users,
+  FolderTree,
+  Share2,
+  Sparkles,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,7 +41,7 @@ export function NotificationManager({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { clearUnreadNotifications } = useAuth();
+  const { clearUnreadNotifications, canAccessTab } = useAuth();
 
   const [notifications, setNotifications] = useState(initialNotifications);
   const [filter, setFilter] = useState(initialFilter);
@@ -122,6 +127,13 @@ export function NotificationManager({
       return (
         <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
           <Send className="w-4 h-4 text-amber-600" />
+        </div>
+      );
+    }
+    if (type.startsWith("admin_")) {
+      return (
+        <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+          <ShieldAlert className="w-4 h-4 text-indigo-600" />
         </div>
       );
     }
@@ -262,6 +274,11 @@ export function NotificationManager({
                               নতুন জমাকৃত
                             </Badge>
                           )}
+                          {notif.type?.startsWith("admin_") && (
+                            <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] py-0 px-1.5 font-medium">
+                              প্রশাসনিক
+                            </Badge>
+                          )}
                         </div>
 
                         <p className="text-xs text-slate-600 leading-relaxed">
@@ -291,12 +308,48 @@ export function NotificationManager({
                         </Link>
                       )}
 
-                      {isRequest && (
+                      {isRequest && canAccessTab?.("requests") && (
                         <Link
                           href="/admin?tab=requests"
                           className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-semibold transition-colors"
                         >
                           <ClipboardList className="w-3 h-3" /> আবেদন দেখুন
+                        </Link>
+                      )}
+
+                      {notif.target_type === "user" && canAccessTab?.("users") && (
+                        <Link
+                          href="/admin?tab=users"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-semibold transition-colors"
+                        >
+                          <Users className="w-3 h-3" /> সদস্য তালিকা
+                        </Link>
+                      )}
+
+                      {(notif.target_type === "category" || notif.target_type === "subcategory" || notif.target_type === "categories") && canAccessTab?.("categories") && (
+                        <Link
+                          href="/admin?tab=categories"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-semibold transition-colors"
+                        >
+                          <FolderTree className="w-3 h-3" /> ক্যাটাগরি
+                        </Link>
+                      )}
+
+                      {notif.target_type === "social_links" && canAccessTab?.("social-links") && (
+                        <Link
+                          href="/admin?tab=social-links"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-semibold transition-colors"
+                        >
+                          <Share2 className="w-3 h-3" /> সোশ্যাল লিংক
+                        </Link>
+                      )}
+
+                      {notif.target_type === "curated_news" && canAccessTab?.("curation") && (
+                        <Link
+                          href="/admin?tab=curation"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-semibold transition-colors"
+                        >
+                          <Sparkles className="w-3 h-3" /> কিউরেশন
                         </Link>
                       )}
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth/server";
 import { updateSocialLinks } from "@/repositories/socialLinksRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
+import { notifyAdmins } from "@/repositories/notificationRepository";
 import { socialLinksSchema, formatZodError } from "@/schemas";
 
 export async function saveSocialLinksAction(prevState, formData) {
@@ -54,6 +55,14 @@ export async function saveSocialLinksAction(prevState, formData) {
     } catch (auditErr) {
       console.error("Audit log error:", auditErr);
     }
+
+    await notifyAdmins({
+      type: "admin_social_links_updated",
+      title: "সোশ্যাল মিডিয়া লিংক হালনাগাদ",
+      message: "সুপার অ্যাডমিন কর্তৃক সামাজিক যোগাযোগ মাধ্যমের লিংক পরিবর্তন করা হয়েছে।",
+      targetType: "social_links",
+      actionBy: currentUser.username,
+    });
 
     revalidatePath("/", "layout");
     revalidatePath("/");

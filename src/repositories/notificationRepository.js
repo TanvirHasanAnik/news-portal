@@ -36,7 +36,7 @@ export async function getUserNotifications(userId, { limit = 20, offset = 0, fil
   } else if (filter === "articles") {
     whereClauses.push("type LIKE 'article_%'");
   } else if (filter === "requests") {
-    whereClauses.push("type LIKE 'request_%'");
+    whereClauses.push("(type LIKE 'request_%' OR type LIKE 'admin_%')");
   }
 
   if (search && search.trim()) {
@@ -69,7 +69,7 @@ export async function getUserNotificationsCount(userId, { filter = "all", search
   } else if (filter === "articles") {
     whereClauses.push("type LIKE 'article_%'");
   } else if (filter === "requests") {
-    whereClauses.push("type LIKE 'request_%'");
+    whereClauses.push("(type LIKE 'request_%' OR type LIKE 'admin_%')");
   }
 
   if (search && search.trim()) {
@@ -146,4 +146,76 @@ export async function notifySubEditorsOfReporterArticle({
     return [];
   }
 }
+
+export async function notifyAdmins({
+  type,
+  title,
+  message,
+  targetType = null,
+  targetId = null,
+  targetSlug = null,
+  actionBy = null,
+  excludeUserId = null,
+}) {
+  try {
+    let sql = "SELECT id FROM users WHERE role = 'admin' AND status = 'active'";
+    const params = [];
+    if (excludeUserId) {
+      sql += " AND id != ?";
+      params.push(excludeUserId);
+    }
+    const admins = await query(sql, params);
+    if (!admins || admins.length === 0) return [];
+
+    const createdIds = [];
+    for (const admin of admins) {
+      const id = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      await query(
+        `INSERT INTO notifications (
+          id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+        [id, admin.id, type, title, message, targetType, targetId, targetSlug, actionBy]
+      );
+      createdIds.push(id);
+    }
+    return createdIds;
+  } catch (err) {
+    console.error("[notifyAdmins error]:", err);
+    return [];
+  }
+}
+
+export async function notifySuperAdmins({
+  type,
+  title,
+  message,
+  targetType = null,
+  targetId = null,
+  targetSlug = null,
+  actionBy = null,
+}) {
+  try {
+    const superAdmins = await query(
+      "SELECT id FROM users WHERE (role = 'super_admin' OR role = 'superadmin') AND status = 'active'"
+    );
+    if (!superAdmins || superAdmins.length === 0) return [];
+
+    const createdIds = [];
+    for (const sa of superAdmins) {
+      const id = `notif_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      await query(
+        `INSERT INTO notifications (
+          id, user_id, type, title, message, target_type, target_id, target_slug, action_by, is_read, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+        [id, sa.id, type, title, message, targetType, targetId, targetSlug, actionBy]
+      );
+      createdIds.push(id);
+    }
+    return createdIds;
+  } catch (err) {
+    console.error("[notifySuperAdmins error]:", err);
+    return [];
+  }
+}
+
 

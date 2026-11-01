@@ -17,6 +17,7 @@ export function AuthProvider({
   initialUser = null,
   initialUnreadNotificationsCount = 0,
   initialPendingArticlesCount = 0,
+  initialPendingAdminRequestsCount = 0,
 }) {
   const router = useRouter();
   const user = initialUser;
@@ -27,6 +28,9 @@ export function AuthProvider({
   );
   const [pendingArticlesCount, setPendingArticlesCount] = useState(
     initialPendingArticlesCount || 0
+  );
+  const [pendingAdminRequestsCount, setPendingAdminRequestsCount] = useState(
+    initialPendingAdminRequestsCount || 0
   );
 
   const clearUnreadNotifications = useCallback(() => {
@@ -91,6 +95,8 @@ export function AuthProvider({
       clearUnreadNotifications,
       pendingArticlesCount,
       setPendingArticlesCount,
+      pendingAdminRequestsCount,
+      setPendingAdminRequestsCount,
     }),
     [
       user,
@@ -104,6 +110,7 @@ export function AuthProvider({
       unreadNotificationsCount,
       clearUnreadNotifications,
       pendingArticlesCount,
+      pendingAdminRequestsCount,
     ]
   );
 

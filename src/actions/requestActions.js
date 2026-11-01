@@ -5,6 +5,7 @@ import {
   createAdminRequest,
   updateAdminRequestStatus,
 } from "@/repositories/requestRepository";
+import { notifySuperAdmins } from "@/repositories/notificationRepository";
 import { getUserById } from "@/repositories/userRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
 import {
@@ -30,7 +31,6 @@ export async function createAdminRequestAction(prevState, formData) {
       targetUserId: formData.get("targetUserId")?.toString().trim() || null,
       note: formData.get("note")?.toString().trim() || "",
       requestedRole: formData.get("requestedRole")?.toString().trim() || null,
-      requestedEmail: formData.get("requestedEmail")?.toString().trim() || null,
       requestedName: formData.get("requestedName")?.toString().trim() || null,
     };
 
@@ -57,11 +57,11 @@ export async function createAdminRequestAction(prevState, formData) {
     const payload = {
       note: validated.note,
       newRole: validated.requestedRole,
-      email: validated.requestedEmail,
-      name: validated.requestedName,
+      name: validated.requestedName || "",
+      fullName: validated.requestedName || "",
     };
 
-    await createAdminRequest({
+    const createdReq = await createAdminRequest({
       requesterId: currentUser.id,
       requestType: validated.requestType,
       targetUserId: validated.targetUserId,
@@ -73,6 +73,23 @@ export async function createAdminRequestAction(prevState, formData) {
       action: "submit_admin_request",
       targetType: "admin_request",
       details: { requestType: validated.requestType, targetUserId: validated.targetUserId },
+    });
+
+    const requestTypeLabels = {
+      new_user: "নতুন সদস্যের আবেদন",
+      role_change: "দায়িত্ব/রোল পরিবর্তনের আবেদন",
+      disable_user: "সদস্য নিষ্ক্রিয়করণের আবেদন",
+      curation_change: "কিউরেশন পরিবর্তনের আবেদন",
+    };
+    const reqTypeBn = requestTypeLabels[validated.requestType] || "প্রশাসনিক আবেদন";
+
+    await notifySuperAdmins({
+      type: "request_submitted",
+      title: "নতুন প্রশাসনিক আবেদন জমা পড়েছে",
+      message: `অ্যাডমিন @${currentUser.username} কর্তৃক নতুন "${reqTypeBn}" জমা দেওয়া হয়েছে।`,
+      targetType: "admin_request",
+      targetId: createdReq.id,
+      actionBy: currentUser.username,
     });
 
     revalidatePath("/admin");
