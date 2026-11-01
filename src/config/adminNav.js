@@ -9,6 +9,7 @@ import {
   Sparkles,
   UserCircle,
   Users,
+  Share2,
 } from "lucide-react";
 
 export const adminNavItems = [
@@ -51,6 +52,11 @@ export const adminNavItems = [
     id: "notifications",
     label: "নোটিফিকেশন",
     icon: Bell,
+  },
+  {
+    id: "social-links",
+    label: "সোশ্যাল মিডিয়া লিংক",
+    icon: Share2,
   },
   {
     id: "profile",

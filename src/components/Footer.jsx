@@ -3,15 +3,9 @@
 import React from "react";
 import Link from "next/link";
 import { Phone, Mail, ArrowUp } from "lucide-react";
-import {
-  FacebookIcon,
-  YoutubeIcon,
-  TwitterXIcon,
-  InstagramIcon,
-  LinkedinIcon,
-} from "./SocialIcons";
+import SocialMediaLinks from "./SocialMediaLinks";
 
-export default function Footer() {
+export default function Footer({ socialLinks = {} }) {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -29,43 +23,7 @@ export default function Footer() {
           </Link>
 
           <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center gap-2 text-slate-500">
-              <a
-                href="https://facebook.com"
-                aria-label="Facebook"
-                className="p-2 rounded-full bg-slate-100 hover:bg-red-600 hover:text-white text-slate-600 transition-colors border border-slate-200"
-              >
-                <FacebookIcon className="w-4 h-4" />
-              </a>
-              <a
-                href="https://youtube.com"
-                aria-label="YouTube"
-                className="p-2 rounded-full bg-slate-100 hover:bg-red-600 hover:text-white text-slate-600 transition-colors border border-slate-200"
-              >
-                <YoutubeIcon className="w-4 h-4" />
-              </a>
-              <a
-                href="https://twitter.com"
-                aria-label="Twitter / X"
-                className="p-2 rounded-full bg-slate-100 hover:bg-red-600 hover:text-white text-slate-600 transition-colors border border-slate-200"
-              >
-                <TwitterXIcon className="w-4 h-4" />
-              </a>
-              <a
-                href="https://instagram.com"
-                aria-label="Instagram"
-                className="p-2 rounded-full bg-slate-100 hover:bg-red-600 hover:text-white text-slate-600 transition-colors border border-slate-200"
-              >
-                <InstagramIcon className="w-4 h-4" />
-              </a>
-              <a
-                href="https://linkedin.com"
-                aria-label="LinkedIn"
-                className="p-2 rounded-full bg-slate-100 hover:bg-red-600 hover:text-white text-slate-600 transition-colors border border-slate-200"
-              >
-                <LinkedinIcon className="w-4 h-4" />
-              </a>
-            </div>
+            <SocialMediaLinks links={socialLinks} variant="footer" />
 
             <button
               onClick={scrollToTop}

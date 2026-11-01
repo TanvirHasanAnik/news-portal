@@ -212,6 +212,15 @@ const TABLE_DEFINITIONS = [
     INDEX idx_notifications_user_read (user_id, is_read),
     INDEX idx_notifications_type (type)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+
+  `CREATE TABLE IF NOT EXISTS social_links (
+    id VARCHAR(64) NOT NULL PRIMARY KEY,
+    facebook VARCHAR(500) NULL,
+    youtube VARCHAR(500) NULL,
+    twitter VARCHAR(500) NULL,
+    instagram VARCHAR(500) NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
 ];
 
 const DEFAULT_CATEGORIES = [

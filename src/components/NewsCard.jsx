@@ -54,9 +54,12 @@ export default function NewsCard({
     isMostRecent,
   } = news;
 
+  const headlineText = (headline || "").trim();
+  const rawSummaryText = (rawSummary || "").trim();
+  const isHeadlineAsSummary = rawSummaryText && (rawSummaryText === headlineText || rawSummaryText === headlineText.substring(0, 150));
   const summary =
-    rawSummary && rawSummary.trim()
-      ? rawSummary.trim()
+    (!isHeadlineAsSummary && rawSummaryText)
+      ? rawSummaryText
       : content
       ? extractSummaryFromContent(content, 250)
       : "";

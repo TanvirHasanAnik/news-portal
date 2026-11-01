@@ -10,12 +10,7 @@ import {
 } from "lucide-react";
 import MobileDrawer from "./MobileDrawer";
 import NewsTickerSection from "./NewsTickerSection";
-import {
-  FacebookIcon,
-  TwitterXIcon,
-  YoutubeIcon,
-  InstagramIcon,
-} from "./SocialIcons";
+import SocialMediaLinks from "./SocialMediaLinks";
 import {
   getEnglishDateBangla,
   getBanglaDate,
@@ -23,7 +18,7 @@ import {
 } from "../utils/dateUtils";
 
 
-export default function Header({ breakingNewsList = [], latestHeadlines = [], categories: propCategories = [] }) {
+export default function Header({ breakingNewsList = [], latestHeadlines = [], categories: propCategories = [], socialLinks = {} }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dates, setDates] = useState({
@@ -246,50 +241,7 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
 
 
           <div className="flex items-center justify-end">
-
-
-            <div className="flex items-center gap-2">
-              <a
-                href="https://facebook.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Facebook"
-                title="Facebook"
-                className="w-7 h-7 rounded-full bg-[#1877F2] text-white hover:bg-[#166fe5] hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-xs"
-              >
-                <FacebookIcon className="w-3.5 h-3.5" />
-              </a>
-              <a
-                href="https://twitter.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Twitter"
-                title="Twitter"
-                className="w-7 h-7 rounded-full bg-slate-900 text-white hover:bg-black hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-xs"
-              >
-                <TwitterXIcon className="w-3.5 h-3.5" />
-              </a>
-              <a
-                href="https://youtube.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="YouTube"
-                title="YouTube"
-                className="w-7 h-7 rounded-full bg-[#FF0000] text-white hover:bg-[#e60000] hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-xs"
-              >
-                <YoutubeIcon className="w-3.5 h-3.5" />
-              </a>
-              <a
-                href="https://instagram.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Instagram"
-                title="Instagram"
-                className="w-7 h-7 rounded-full bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white hover:opacity-90 hover:scale-110 flex items-center justify-center transition-all duration-200 shadow-xs"
-              >
-                <InstagramIcon className="w-3.5 h-3.5" />
-              </a>
-            </div>
+            <SocialMediaLinks links={socialLinks} variant="header" />
           </div>
         </div>
       </div>

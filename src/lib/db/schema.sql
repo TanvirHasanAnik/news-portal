@@ -206,3 +206,13 @@ CREATE TABLE IF NOT EXISTS comments (
   INDEX idx_comments_parent_id (parent_id),
   CONSTRAINT fk_comments_article FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS social_links (
+  id VARCHAR(64) NOT NULL PRIMARY KEY,
+  facebook VARCHAR(500) NULL,
+  youtube VARCHAR(500) NULL,
+  twitter VARCHAR(500) NULL,
+  instagram VARCHAR(500) NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

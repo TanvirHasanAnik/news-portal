@@ -11,6 +11,7 @@ export const PERMISSIONS = {
   TAB_REQUESTS: "tabs:requests",
   TAB_NOTIFICATIONS: "tabs:notifications",
   TAB_PROFILE: "tabs:profile",
+  TAB_SOCIAL_LINKS: "tabs:social-links",
 
   PROFILE_EDIT_OWN: "profile:edit_own",
 
@@ -149,6 +150,7 @@ export const TAB_PERMISSION_MAP = {
   requests: PERMISSIONS.TAB_REQUESTS,
   notifications: PERMISSIONS.TAB_NOTIFICATIONS,
   profile: PERMISSIONS.TAB_PROFILE,
+  "social-links": PERMISSIONS.TAB_SOCIAL_LINKS,
 };
 
 export function hasPermission(role, permission) {

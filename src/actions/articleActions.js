@@ -15,6 +15,7 @@ import { getCategoryBySlug, getAllCategoriesWithSubcategories, ensureValidCatego
 import { articleCreateSchema } from "@/schemas/articleSchema";
 import { getCurrentUser } from "@/lib/auth/server";
 import { isUpperRole, isLowerRole } from "@/config/roles";
+import { extractSummaryFromContent } from "@/utils/textUtils";
 
 function calculateReadTime(text) {
   if (!text) return "১ মিনিট পাঠ";
@@ -160,7 +161,7 @@ export async function createArticleAction(prevState, formData) {
     const result = await createArticle({
       headline: validated.headline,
       slug,
-      summary: validated.summary || validated.headline.substring(0, 150),
+      summary: validated.summary ? validated.summary.trim() : (extractSummaryFromContent(validated.content, 250) || ""),
       content: validated.content || "",
       categoryId,
       categoryName,
@@ -380,7 +381,7 @@ export async function updateArticleAction(prevState, formData) {
 
     const updateResult = await updateArticle(articleId, {
       headline: validated.headline,
-      summary: validated.summary || validated.headline.substring(0, 150),
+      summary: validated.summary ? validated.summary.trim() : (extractSummaryFromContent(validated.content, 250) || ""),
       content: validated.content || "",
       categoryId,
       categoryName,

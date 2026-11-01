@@ -5,5 +5,4 @@ export * from "./curationSchema.js";
 export * from "./userSchema.js";
 export * from "./requestSchema.js";
 export * from "./authSchema.js";
-export * from "./authSchema.js";
-
+export * from "./socialLinksSchema.js";

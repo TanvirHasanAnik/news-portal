@@ -37,7 +37,9 @@ export function mapDbArticleToFrontend(dbRow) {
   const primaryImage = imagesArray[0] || dbRow.image || null;
   const isoTime = normalizeTimestamp(dbRow.published_at || dbRow.created_at) || new Date().toISOString();
   const rawSummary = (dbRow.summary || "").trim();
-  const summary = rawSummary || extractSummaryFromContent(dbRow.content, 250);
+  const headline = (dbRow.headline || "").trim();
+  const isHeadlineAsSummary = rawSummary && (rawSummary === headline || rawSummary === headline.substring(0, 150));
+  const summary = (!isHeadlineAsSummary && rawSummary) || extractSummaryFromContent(dbRow.content, 250);
 
   return {
     id: dbRow.slug || dbRow.id,

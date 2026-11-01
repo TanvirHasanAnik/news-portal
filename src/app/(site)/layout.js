@@ -3,20 +3,31 @@ import Footer from "@/components/Footer";
 import { getActiveBreakingNews } from "@/repositories/curationRepository";
 import { getAllCategoriesWithSubcategories } from "@/repositories/categoryRepository";
 import { getPublishedArticles, mapDbArticleToFrontend } from "@/repositories/articleRepository";
+import { getSocialLinks } from "@/repositories/socialLinksRepository";
 
 export default async function SiteLayout({ children }) {
   let breakingNewsList = [];
   let dbCategories = [];
   let latestHeadlines = [];
+  let socialLinks = {
+    facebook: "",
+    youtube: "",
+    twitter: "",
+    instagram: "",
+  };
   try {
-    const [breaking, cats, rawHeadlines] = await Promise.all([
+    const [breaking, cats, rawHeadlines, sLinks] = await Promise.all([
       getActiveBreakingNews(10),
       getAllCategoriesWithSubcategories(),
       getPublishedArticles({ limit: 3 }),
+      getSocialLinks(),
     ]);
     breakingNewsList = breaking || [];
     dbCategories = cats || [];
     latestHeadlines = (rawHeadlines || []).map(mapDbArticleToFrontend);
+    if (sLinks) {
+      socialLinks = sLinks;
+    }
   } catch (err) {
     console.error("Error loading layout data:", err);
   }
@@ -27,11 +38,12 @@ export default async function SiteLayout({ children }) {
         breakingNewsList={breakingNewsList}
         latestHeadlines={latestHeadlines}
         categories={dbCategories}
+        socialLinks={socialLinks}
       />
       <div className="flex-1">
         {children}
       </div>
-      <Footer categories={dbCategories} />
+      <Footer categories={dbCategories} socialLinks={socialLinks} />
     </>
   );
 }

@@ -8,6 +8,7 @@ import UsersModule from "@/modules/admin/users";
 import RequestsModule from "@/modules/admin/requests";
 import NotificationsModule from "@/modules/admin/notifications";
 import ProfileModule from "@/modules/admin/profile";
+import SocialLinksModule from "@/modules/admin/social-links";
 import { canUserAccessModule } from "@/lib/auth";
 
 const moduleComponents = {
@@ -20,6 +21,7 @@ const moduleComponents = {
   requests: RequestsModule,
   notifications: NotificationsModule,
   profile: ProfileModule,
+  "social-links": SocialLinksModule,
 };
 
 export const adminModules = adminNavItems.map((item) => ({
