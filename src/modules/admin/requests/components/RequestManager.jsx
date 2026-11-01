@@ -105,7 +105,6 @@ export function RequestManager({
       requestType: "new_user",
       targetUserId: "",
       requestedName: "",
-      requestedEmail: "",
       requestedRole: USER_ROLES.REPORTER,
       note: "",
     },
@@ -119,7 +118,6 @@ export function RequestManager({
       formData.append("requestType", data.requestType);
       formData.append("targetUserId", data.targetUserId || "");
       formData.append("requestedName", data.requestedName || "");
-      formData.append("requestedEmail", data.requestedEmail || "");
       formData.append("requestedRole", data.requestedRole || "");
       formData.append("note", data.note.trim());
 
@@ -306,7 +304,10 @@ export function RequestManager({
                       <div className="mt-1 text-xs text-slate-600 space-y-0.5">
                         {parsedPayload.name && (
                           <p>
-                            সদস্যের নাম: <strong className="text-slate-900">{parsedPayload.name}</strong> ({parsedPayload.email || "ইমেইল নেই"})
+                            সদস্যের নাম: <strong className="text-slate-900">{parsedPayload.name}</strong>
+                            {parsedPayload.email ? (
+                              <span className="text-slate-500"> ({parsedPayload.email})</span>
+                            ) : null}
                           </p>
                         )}
                         {parsedPayload.newRole && (
@@ -425,27 +426,12 @@ export function RequestManager({
                     <label className="block text-xs font-semibold text-slate-700 mb-1">প্রস্তাবিত সদস্যের নাম (ইংরেজি)</label>
                     <Input
                       type="text"
-                      placeholder="প্রস্তাবিত ব্যবহারকারীর পূর্ণ ইংরেজি নাম লিখুন"
+                      placeholder="প্রস্তাবিত ব্যবহারকারীর পূর্ণ ইংরেজি নাম বা ইউজারনেম লিখুন"
                       {...register("requestedName")}
                       className={`text-xs h-9 ${errors.requestedName ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                     />
                     {errors.requestedName && (
                       <p className="text-[11px] text-red-500 font-medium mt-1">{errors.requestedName.message}</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      ইমেইল
-                    </label>
-                    <Input
-                      type="email"
-                      placeholder="প্রস্তাবিত ব্যবহারকারীর ইমেইল লিখুন"
-                      {...register("requestedEmail")}
-                      className={`text-xs h-9 ${errors.requestedEmail ? "border-red-400 focus-visible:ring-red-400" : ""}`}
-                    />
-                    {errors.requestedEmail && (
-                      <p className="text-[11px] text-red-500 font-medium mt-1">{errors.requestedEmail.message}</p>
                     )}
                   </div>
 

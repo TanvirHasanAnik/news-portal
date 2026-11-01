@@ -107,9 +107,9 @@ export async function updateAdminRequestStatus(id, { status, reviewedBy = "usr_s
             await tx.query("UPDATE users SET status = 'disabled' WHERE id = ?", [req.target_user_id]);
           } else if (req.request_type === "role_change" && req.target_user_id && details.newRole) {
             await tx.query("UPDATE users SET role = ? WHERE id = ?", [details.newRole, req.target_user_id]);
-          } else if (req.request_type === "new_user" && details.email && details.name) {
+          } else if (req.request_type === "new_user" && details.name) {
             const newUserId = `usr_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
-            const baseUsername = (details.username || details.email.split("@")[0] || "user")
+            const baseUsername = (details.username || details.name || (details.email ? details.email.split("@")[0] : null) || "user")
               .toLowerCase()
               .replace(/[^a-z0-9_.-]/g, "")
               .substring(0, 30);
@@ -125,9 +125,9 @@ export async function updateAdminRequestStatus(id, { status, reviewedBy = "usr_s
                 fallbackUsername,
                 details.name,
                 details.name,
-                details.email.toLowerCase().trim(),
+                details.email ? details.email.toLowerCase().trim() : null,
                 hashedTempPassword,
-                details.role || "reporter",
+                details.newRole || details.role || "reporter",
               ]
             );
           }
