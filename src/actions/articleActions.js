@@ -399,7 +399,6 @@ export async function updateArticleAction(prevState, formData) {
       isHandpicked: validated.isHandpicked,
       lastEditedBy: currentUser.username,
       editorId: currentUser.id,
-      changeSummary: `সংবাদ সম্পাদনা করেছেন: @${currentUser.username}`,
       passToUpper: isSubEditorReview ? passToUpper : false,
     });
 

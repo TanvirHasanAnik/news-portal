@@ -193,20 +193,6 @@ export async function createArticle(data) {
     await tx.query(insertSql, bindParams);
 
     await tx.query(
-      `INSERT INTO article_revisions (id, article_id, editor_id, headline, summary, content, change_summary, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-      [
-        `rev_${Date.now()}`,
-        id,
-        data.authorId || "usr_reporter",
-        data.headline,
-        data.summary || "",
-        data.content || "",
-        "Initial publication / creation",
-      ]
-    );
-
-    await tx.query(
       `INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, created_at)
        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
       [
@@ -363,21 +349,6 @@ export async function updateArticle(id, data) {
   await withTransaction(async (tx) => {
 
     await tx.query(updateSql, bindParams);
-
-    if (hasContentChanged) {
-      await tx.query(
-        `INSERT INTO article_revisions (id, article_id, editor_id, headline, summary, content, change_summary, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [
-          `rev_${Date.now()}`,
-          editorId,
-          data.headline || current.headline,
-          data.summary || current.summary || "",
-          data.content || current.content || "",
-          data.changeSummary || `সম্পাদনা করেছেন: ${editorUsername}`,
-        ]
-      );
-    }
 
     await tx.query(
       `INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, created_at)
@@ -797,7 +768,6 @@ export async function deleteArticle(id, editorId = "usr_superadmin", editorUsern
       imagesToDelete = Array.from(imageSet);
     }
 
-    await tx.query("DELETE FROM article_revisions WHERE article_id = ?", [id]);
     await tx.query("DELETE FROM curated_news WHERE article_id = ?", [id]);
     await tx.query("DELETE FROM analytics_page_views WHERE article_id = ?", [id]);
     const deleteResult = await tx.query("DELETE FROM articles WHERE id = ?", [id]);
@@ -976,26 +946,6 @@ export async function updateArticleStatus(id, status, editorId = "usr_superadmin
       ]
     );
 
-    const statusLabels = {
-      published: "প্রকাশিত",
-      draft: "খসড়া",
-      pending: "পর্যালোচনার অপেক্ষায়",
-      rejected: "প্রত্যাখ্যাত",
-      archived: "আর্কাইভকৃত",
-    };
-
-    await tx.query(
-      `INSERT INTO article_revisions (id, article_id, editor_id, headline, summary, content, change_summary, created_at)
-       SELECT ?, id, ?, headline, summary, content, ?, CURRENT_TIMESTAMP
-       FROM articles WHERE id = ?`,
-      [
-        `rev_${Date.now()}`,
-        editorId,
-        `স্ট্যাটাস পরিবর্তন: ${statusLabels[status] || status} (দ্বারা: @${editorUsername})`,
-        id,
-      ]
-    );
-
     await tx.query(
       `INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, created_at)
        VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
@@ -1117,18 +1067,6 @@ export async function toggleArticleFlag(id, flagName) {
   );
 
   return { [flagName]: newVal === 1 };
-}
-
-export async function getArticleRevisions(articleId) {
-  const rows = await query(
-    `SELECT r.*, u.name as editor_name, u.username as editor_username
-     FROM article_revisions r 
-     LEFT JOIN users u ON r.editor_id = u.id 
-     WHERE r.article_id = ? 
-     ORDER BY r.created_at DESC`,
-    [articleId]
-  );
-  return rows || [];
 }
 
 export async function getArticleStatusCounts({ authorId, createdBy } = {}) {
