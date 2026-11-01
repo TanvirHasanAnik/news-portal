@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { hasScriptInjection } from "./baseSchema.js";
+import { hasScriptInjection, safeEmail, safePhone } from "./baseSchema.js";
 import { ASSIGNABLE_ROLE_IDS } from "../config/roles.js";
 
 export const createUserSchema = z.object({
@@ -14,23 +14,21 @@ export const createUserSchema = z.object({
   fullName: z
     .string()
     .trim()
-    .min(1, { message: "ব্যবহারকারীর পূর্ণ ইংরেজি নাম আবশ্যক।" })
     .max(100, { message: "নাম সর্বোচ্চ ১০০ অক্ষরের হতে হবে।" })
-    .regex(/^[a-zA-Z\s.-]+$/, {
+    .regex(/^[a-zA-Z\s.-]*$/, {
       message: "ব্যবহারকারীর পূর্ণ নাম শুধুমাত্র ইংরেজি অক্ষরে হতে হবে।",
-    }),
+    })
+    .optional()
+    .or(z.literal("")),
   email: z
     .string()
     .trim()
-    .email({ message: "সঠিক ইমেইল ঠিকানা প্রদান করুন।" })
+    .refine((val) => !val || /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(val), {
+      message: "সঠিক ইমেইল ঠিকানা প্রদান করুন।",
+    })
     .optional()
     .or(z.literal("")),
-  phone: z
-    .string()
-    .trim()
-    .max(25, { message: "ফোন নম্বর সর্বোচ্চ ২৫ অক্ষরের হতে হবে।" })
-    .optional()
-    .or(z.literal("")),
+  phone: safePhone({ required: false }),
   password: z
     .string()
     .trim()

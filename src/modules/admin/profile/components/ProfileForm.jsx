@@ -21,6 +21,7 @@ import {
   User,
 } from "lucide-react";
 import { useState, useTransition } from "react";
+import { isValidPhoneNumber } from "@/schemas";
 
 export function ProfileForm({ user }) {
 
@@ -50,7 +51,11 @@ export function ProfileForm({ user }) {
     e.preventDefault();
     setProfileMessage(null);
 
-    if (fullName && !/^[a-zA-Z\s.-]+$/.test(fullName)) {
+    const trimmedFullName = (fullName || "").trim();
+    const trimmedEmail = (email || "").trim();
+    const trimmedPhone = (phone || "").trim();
+
+    if (trimmedFullName && !/^[a-zA-Z\s.-]+$/.test(trimmedFullName)) {
       setProfileMessage({
         type: "error",
         text: "ব্যবহারকারীর পূর্ণ নাম শুধুমাত্র ইংরেজি অক্ষরে হতে হবে।",
@@ -58,12 +63,28 @@ export function ProfileForm({ user }) {
       return;
     }
 
+    if (trimmedEmail && !/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(trimmedEmail)) {
+      setProfileMessage({
+        type: "error",
+        text: "অনুগ্রহ করে একটি কার্যকর ইমেইল ঠিকানা লিখুন (যেমন: name@example.com)।",
+      });
+      return;
+    }
+
+    if (trimmedPhone && !isValidPhoneNumber(trimmedPhone)) {
+      setProfileMessage({
+        type: "error",
+        text: "অনুগ্রহ করে একটি কার্যকর ফোন নম্বর লিখুন (যেমন: 01XXXXXXXXX বা +8801XXXXXXXXX)।",
+      });
+      return;
+    }
+
     startProfileTransition(async () => {
       const formData = new FormData();
-      formData.append("fullName", fullName);
-      formData.append("email", email);
-      formData.append("phone", phone);
-      formData.append("bio", bio);
+      formData.append("fullName", trimmedFullName);
+      formData.append("email", trimmedEmail);
+      formData.append("phone", trimmedPhone);
+      formData.append("bio", (bio || "").trim());
 
       const res = await updateProfileAction(null, formData);
       if (res.success) {
@@ -231,13 +252,13 @@ export function ProfileForm({ user }) {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                ফোন নম্বর
+                ফোন নম্বর (ঐচ্ছিক)
               </label>
               <div className="relative">
                 <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   type="tel"
-                  placeholder="আপনার যোগাযোগ নম্বর লিখুন"
+                  placeholder="আপনার যোগাযোগ নম্বর লিখুন (যেমন: 01XXXXXXXXX)"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   disabled={isProfilePending}

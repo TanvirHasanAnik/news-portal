@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { hasScriptInjection } from "./baseSchema";
+import { hasScriptInjection, safeEmail, safePhone } from "./baseSchema.js";
 
 export const loginSchema = z.object({
   username: z
@@ -26,18 +26,8 @@ export const updateProfileSchema = z.object({
     })
     .optional()
     .default(""),
-  email: z
-    .string()
-    .trim()
-    .email({ message: "সঠিক ইমেইল ঠিকানা প্রদান করুন।" })
-    .optional()
-    .or(z.literal("")),
-  phone: z
-    .string()
-    .trim()
-    .max(25, { message: "ফোন নম্বর সর্বোচ্চ ২৫ অক্ষরের হতে হবে।" })
-    .optional()
-    .or(z.literal("")),
+  email: safeEmail({ required: false }).optional().or(z.literal("")),
+  phone: safePhone({ required: false }),
   bio: z
     .string()
     .max(500, { message: "বিবরণ সর্বোচ্চ ৫০০ অক্ষরের হতে হবে।" })

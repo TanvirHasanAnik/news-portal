@@ -172,7 +172,7 @@ export function UserManager({
         const newUserObj = res.user || {
           id: `usr_${Date.now()}`,
           username: data.username.trim().toLowerCase(),
-          full_name: (data.fullName || "").trim(),
+          full_name: (data.fullName || "").trim() || null,
           name: (data.fullName || data.username).trim(),
           email: (data.email || "").trim(),
           phone: (data.phone || "").trim(),
@@ -568,7 +568,9 @@ export function UserManager({
 
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">পুরো নাম (ইংরেজি) <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  পুরো নাম (ইংরেজি) (ঐচ্ছিক)
+                </label>
                 <Input
                   type="text"
                   placeholder="ব্যবহারকারীর পূর্ণ ইংরেজি নাম লিখুন"
@@ -696,7 +698,7 @@ export function UserManager({
                 <span className="font-bold text-slate-900 font-mono">
                   @{resetTargetUser.username}
                 </span>
-                {resetTargetUser.full_name && (
+                {resetTargetUser.full_name && resetTargetUser.full_name !== resetTargetUser.username && (
                   <span className="text-slate-600 font-medium ml-1">
                     ({resetTargetUser.full_name})
                   </span>

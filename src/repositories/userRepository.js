@@ -152,7 +152,8 @@ export async function createUser({
     throw new Error("ইউজারনেম আবশ্যক।");
   }
 
-  const cleanName = (fullName || name || cleanUsername).trim();
+  const cleanFullName = (fullName || name || "").trim();
+  const displayName = cleanFullName || cleanUsername;
   const cleanEmail = (email || "").trim().toLowerCase();
   const cleanPhone = (phone || "").trim();
 
@@ -161,14 +162,14 @@ export async function createUser({
   await query(
     `INSERT INTO users (id, username, full_name, name, email, phone, password, role, status, must_change_password, bio, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-    [id, cleanUsername, cleanName, cleanName, cleanEmail || null, cleanPhone || null, password, role, status, mustChangePassword ? 1 : 0, bio]
+    [id, cleanUsername, cleanFullName || null, displayName, cleanEmail || null, cleanPhone || null, password, role, status, mustChangePassword ? 1 : 0, bio]
   );
 
   return {
     id,
     username: cleanUsername,
-    full_name: cleanName,
-    name: cleanName,
+    full_name: cleanFullName || null,
+    name: displayName,
     email: cleanEmail,
     phone: cleanPhone,
     role,

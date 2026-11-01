@@ -163,6 +163,33 @@ export function safeEmail({ label = "ইমেইল ঠিকানা", requir
 
 
 
+export function isValidPhoneNumber(phone) {
+  if (!phone || typeof phone !== "string") return false;
+  const normalized = phone.replace(/[০-৯]/g, (d) => "০১২৩৪৫৬৭৮৯".indexOf(d)).trim();
+  if (!normalized) return false;
+  const cleaned = normalized.replace(/[\s-]/g, "");
+  const bdRegex = /^(?:\+?88)?01[3-9]\d{8}$/;
+  const intlRegex = /^\+[1-9]\d{6,14}$/;
+  return bdRegex.test(cleaned) || intlRegex.test(cleaned);
+}
+
+export function safePhone({ label = "ফোন নম্বর", required = false } = {}) {
+  let schema = z.string().trim();
+  if (required) {
+    schema = schema.min(1, { message: `${label} আবশ্যক।` });
+  }
+  return schema
+    .max(25, { message: `${label} সর্বোচ্চ ২৫ অক্ষরের হতে হবে।` })
+    .refine((val) => !hasScriptInjection(val), {
+      message: `${label}-এ কোনো কোড বা স্ক্রিপ্ট গ্রহণযোগ্য নয়।`,
+    })
+    .refine((val) => !val || isValidPhoneNumber(val), {
+      message: "অনুগ্রহ করে একটি কার্যকর ফোন নম্বর লিখুন (যেমন: 01XXXXXXXXX বা +8801XXXXXXXXX)।",
+    })
+    .optional()
+    .or(z.literal(""));
+}
+
 export function safeUrl({ label = "লিংক", required = false } = {}) {
   return z
     .string()
