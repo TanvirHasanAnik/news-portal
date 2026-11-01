@@ -15,6 +15,7 @@ import {
   Loader2,
   ChevronUp,
   ChevronDown,
+  Pencil,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,11 +32,21 @@ const subcategoryFormSchema = z.object({
   slug: safeSlug({ label: "উপ-বিভাগের স্লাগ", min: 2, max: 60, required: true }),
 });
 
+const editCategorySchema = z.object({
+  name: safeBanglaCategoryName({ label: "ক্যাটাগরির নাম", min: 2, max: 60 }),
+});
+
+const editSubcategorySchema = z.object({
+  name: safeBanglaCategoryName({ label: "উপ-বিভাগের নাম", min: 2, max: 60 }),
+});
+
 export function CategoryManager({ initialCategories = [] }) {
   const [categories, setCategories] = useState(initialCategories);
   const [isDirty, setIsDirty] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [subcategoryModalCat, setSubcategoryModalCat] = useState(null);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editingSubcategory, setEditingSubcategory] = useState(null);
   const [isSaving, startSavingTransition] = useTransition();
   const [feedback, setFeedback] = useState(null);
   const [confirmConfig, setConfirmConfig] = useState(null);
@@ -71,6 +82,107 @@ export function CategoryManager({ initialCategories = [] }) {
     },
   });
 
+
+  const {
+    register: registerEditCat,
+    handleSubmit: handleSubmitEditCat,
+    reset: resetEditCat,
+    formState: { errors: editCatErrors },
+  } = useForm({
+    resolver: zodResolver(editCategorySchema),
+    mode: "onChange",
+    defaultValues: {
+      name: "",
+    },
+  });
+
+  const {
+    register: registerEditSub,
+    handleSubmit: handleSubmitEditSub,
+    reset: resetEditSub,
+    formState: { errors: editSubErrors },
+  } = useForm({
+    resolver: zodResolver(editSubcategorySchema),
+    mode: "onChange",
+    defaultValues: {
+      name: "",
+    },
+  });
+
+  const handleOpenEditCategory = (cat) => {
+    if (cat.is_permanent || cat.slug === "latest" || cat.slug === "handpicked" || cat.slug === "others") {
+      setAlertConfig({ message: "স্থায়ী ক্যাটাগরি সম্পাদনা করা যাবে না।" });
+      return;
+    }
+    setEditingCategory(cat);
+    resetEditCat({ name: cat.name });
+  };
+
+  const onUpdateCategory = (data) => {
+    if (!editingCategory) return;
+    const trimmedName = data.name.trim();
+
+    if (
+      categories.some(
+        (c) => c.id !== editingCategory.id && c.name.trim() === trimmedName
+      )
+    ) {
+      setAlertConfig({ message: "এই নামের একটি ক্যাটাগরি ইতিমধ্যে রয়েছে।" });
+      return;
+    }
+
+    if (trimmedName !== editingCategory.name) {
+      setCategories((prev) =>
+        prev.map((c) =>
+          c.id === editingCategory.id ? { ...c, name: trimmedName } : c
+        )
+      );
+      setIsDirty(true);
+    }
+
+    setEditingCategory(null);
+    resetEditCat({ name: "" });
+  };
+
+  const handleOpenEditSubcategory = (categoryId, sub) => {
+    setEditingSubcategory({ categoryId, subcategory: sub });
+    resetEditSub({ name: sub.name });
+  };
+
+  const onUpdateSubcategory = (data) => {
+    if (!editingSubcategory) return;
+    const { categoryId, subcategory } = editingSubcategory;
+    const trimmedName = data.name.trim();
+
+    const parentCat = categories.find((c) => c.id === categoryId);
+    if (
+      parentCat?.subcategories?.some(
+        (s) => s.id !== subcategory.id && s.name.trim() === trimmedName
+      )
+    ) {
+      setAlertConfig({ message: "এই ক্যাটাগরিতে এই নামের একটি উপ-বিভাগ ইতিমধ্যে রয়েছে।" });
+      return;
+    }
+
+    if (trimmedName !== subcategory.name) {
+      setCategories((prev) =>
+        prev.map((c) =>
+          c.id === categoryId
+            ? {
+                ...c,
+                subcategories: (c.subcategories || []).map((s) =>
+                  s.id === subcategory.id ? { ...s, name: trimmedName } : s
+                ),
+              }
+            : c
+        )
+      );
+      setIsDirty(true);
+    }
+
+    setEditingSubcategory(null);
+    resetEditSub({ name: "" });
+  };
 
   const onAddCategory = (data) => {
     const cleanSlug = data.slug.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "");
@@ -483,14 +595,24 @@ export function CategoryManager({ initialCategories = [] }) {
                       </Badge>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteCategory(cat)}
-                      className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-colors"
-                      title="ক্যাটাগরি বাদ দিন"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenEditCategory(cat)}
+                        className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer transition-colors"
+                        title="ক্যাটাগরির নাম পরিবর্তন করুন"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCategory(cat)}
+                        className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 cursor-pointer transition-colors"
+                        title="ক্যাটাগরি বাদ দিন"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
 
@@ -520,14 +642,24 @@ export function CategoryManager({ initialCategories = [] }) {
                             className="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-2 py-0.5 rounded text-xs"
                           >
                             <span>{sub.name}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteSubcategory(cat.id, sub)}
-                              className="text-slate-400 hover:text-red-600 cursor-pointer"
-                              title="মুছুন"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
+                            <div className="flex items-center gap-0.5 border-l border-slate-200 pl-1 ml-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEditSubcategory(cat.id, sub)}
+                                className="text-slate-400 hover:text-slate-700 cursor-pointer p-0.5 transition-colors"
+                                title="উপ-বিভাগের নাম পরিবর্তন করুন"
+                              >
+                                <Pencil className="w-2.5 h-2.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteSubcategory(cat.id, sub)}
+                                className="text-slate-400 hover:text-red-600 cursor-pointer p-0.5 transition-colors"
+                                title="মুছুন"
+                              >
+                                <X className="w-2.5 h-2.5" />
+                              </button>
+                            </div>
                           </span>
                         ))
                       ) : (
@@ -645,6 +777,134 @@ export function CategoryManager({ initialCategories = [] }) {
                   className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 px-4"
                 >
                   উপ-বিভাগ যোগ করুন
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingCategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <h3 className="text-sm font-bold text-slate-900">
+                ক্যাটাগরির নাম পরিবর্তন
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  resetEditCat();
+                  setEditingCategory(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitEditCat(onUpdateCategory)} className="p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  ক্যাটাগরির নাম (বাংলা) <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="text"
+                  placeholder="ক্যাটাগরির বাংলা নাম লিখুন"
+                  autoFocus
+                  {...registerEditCat("name")}
+                  className={`text-xs h-9 ${
+                    editCatErrors.name ? "border-red-400 focus-visible:ring-red-400" : ""
+                  }`}
+                />
+                {editCatErrors.name && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{editCatErrors.name.message}</p>
+                )}
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    resetEditCat();
+                    setEditingCategory(null);
+                  }}
+                  className="text-xs h-8.5 text-slate-600 border-slate-200"
+                >
+                  বাতিল
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 px-4"
+                >
+                  হালনাগাদ করুন
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingSubcategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full border border-slate-200 overflow-hidden">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <h3 className="text-sm font-bold text-slate-900">
+                উপ-বিভাগের নাম পরিবর্তন
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  resetEditSub();
+                  setEditingSubcategory(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitEditSub(onUpdateSubcategory)} className="p-4 space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  উপ-বিভাগের নাম (বাংলা) <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="text"
+                  placeholder="উপ-বিভাগের বাংলা নাম লিখুন"
+                  autoFocus
+                  {...registerEditSub("name")}
+                  className={`text-xs h-9 ${
+                    editSubErrors.name ? "border-red-400 focus-visible:ring-red-400" : ""
+                  }`}
+                />
+                {editSubErrors.name && (
+                  <p className="text-[11px] text-red-500 font-medium mt-1">{editSubErrors.name.message}</p>
+                )}
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    resetEditSub();
+                    setEditingSubcategory(null);
+                  }}
+                  className="text-xs h-8.5 text-slate-600 border-slate-200"
+                >
+                  বাতিল
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  className="bg-slate-900 hover:bg-slate-800 text-white text-xs h-8.5 px-4"
+                >
+                  হালনাগাদ করুন
                 </Button>
               </div>
             </form>
