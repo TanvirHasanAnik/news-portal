@@ -143,6 +143,23 @@ export default function RichTextEditor({
     };
   }, [checkActiveFormats]);
 
+  const getCurrentBlock = () => {
+    if (typeof window === "undefined") return null;
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return null;
+    let node = selection.anchorNode;
+    if (!node) return null;
+    if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+    while (node && node !== editorRef.current) {
+      const tag = node.tagName?.toLowerCase();
+      if (tag === "h2" || tag === "h3" || tag === "p" || tag === "li" || tag === "div") {
+        return { tag, element: node };
+      }
+      node = node.parentElement;
+    }
+    return null;
+  };
+
   const executeCommand = (command, val = null) => {
     if (!editorRef.current) return;
     editorRef.current.focus();
@@ -150,24 +167,91 @@ export default function RichTextEditor({
     handleContentChange();
   };
 
-  const toggleH2 = () => {
-    if (activeFormats.h2) {
-      executeCommand("formatBlock", "<p>");
-    } else {
-      executeCommand("formatBlock", "<h2>");
+  const convertBlockToParagraph = (element) => {
+    document.execCommand("formatBlock", false, "<p>");
+    const current = getCurrentBlock();
+    if (current && (current.tag === "h2" || current.tag === "h3") && element) {
+      document.execCommand("formatBlock", false, "p");
+      const updated = getCurrentBlock();
+      if (updated && (updated.tag === "h2" || updated.tag === "h3") && element.parentNode) {
+        const p = document.createElement("p");
+        p.innerHTML = element.innerHTML || "<br>";
+        element.parentNode.replaceChild(p, element);
+        const sel = window.getSelection();
+        if (sel) {
+          const range = document.createRange();
+          range.selectNodeContents(p);
+          range.collapse(false);
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      }
     }
   };
 
-  const toggleH3 = () => {
-    if (activeFormats.h3) {
-      executeCommand("formatBlock", "<p>");
+  const toggleH2 = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    const block = getCurrentBlock();
+
+    if (block?.tag === "h2" || activeFormats.h2) {
+      convertBlockToParagraph(block?.element);
     } else {
-      executeCommand("formatBlock", "<h3>");
+      document.execCommand("formatBlock", false, "<h2>");
     }
+    handleContentChange();
+  };
+
+  const toggleH3 = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    const block = getCurrentBlock();
+
+    if (block?.tag === "h3" || activeFormats.h3) {
+      convertBlockToParagraph(block?.element);
+    } else {
+      document.execCommand("formatBlock", false, "<h3>");
+    }
+    handleContentChange();
   };
 
   const toggleBulletList = () => {
     executeCommand("insertUnorderedList");
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      const block = getCurrentBlock();
+      if (block && (block.tag === "h2" || block.tag === "h3")) {
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          if (range.collapsed) {
+            const checkRange = range.cloneRange();
+            checkRange.selectNodeContents(block.element);
+            checkRange.setStart(range.endContainer, range.endOffset);
+            const isAtEnd = checkRange.toString().length === 0;
+
+            if (isAtEnd) {
+              e.preventDefault();
+              const p = document.createElement("p");
+              p.innerHTML = "<br>";
+              if (block.element.nextSibling) {
+                block.element.parentNode.insertBefore(p, block.element.nextSibling);
+              } else {
+                block.element.parentNode.appendChild(p);
+              }
+              const newRange = document.createRange();
+              newRange.setStart(p, 0);
+              newRange.collapse(true);
+              selection.removeAllRanges();
+              selection.addRange(newRange);
+              handleContentChange();
+            }
+          }
+        }
+      }
+    }
   };
 
   const saveSelection = () => {
@@ -281,6 +365,7 @@ export default function RichTextEditor({
       <div className="flex flex-wrap items-center gap-1 p-2 bg-slate-50/90 border-b border-slate-200 rounded-t-lg">
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => executeCommand("bold")}
           title="বোল্ড (Ctrl+B)"
           className={`p-1.5 rounded text-sm transition-colors cursor-pointer ${
@@ -294,6 +379,7 @@ export default function RichTextEditor({
 
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => executeCommand("italic")}
           title="ইটালিক (Ctrl+I)"
           className={`p-1.5 rounded text-sm transition-colors cursor-pointer ${
@@ -307,6 +393,7 @@ export default function RichTextEditor({
 
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={() => executeCommand("underline")}
           title="আন্ডারলাইন (Ctrl+U)"
           className={`p-1.5 rounded text-sm transition-colors cursor-pointer ${
@@ -322,6 +409,7 @@ export default function RichTextEditor({
 
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={toggleH2}
           title="শিরোনাম ২ (H2)"
           className={`px-2 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${
@@ -338,6 +426,7 @@ export default function RichTextEditor({
 
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={toggleH3}
           title="শিরোনাম ৩ (H3)"
           className={`px-2 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${
@@ -356,6 +445,7 @@ export default function RichTextEditor({
 
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={toggleBulletList}
           title="বুলেটযুক্ত তালিকা"
           className={`p-1.5 rounded text-sm transition-colors cursor-pointer ${
@@ -369,6 +459,7 @@ export default function RichTextEditor({
 
         <button
           type="button"
+          onMouseDown={(e) => e.preventDefault()}
           onClick={handleOpenLinkDialog}
           title={activeFormats.link ? "লিংক বাতিল করুন" : "লিংক যুক্ত করুন"}
           className={`p-1.5 rounded text-sm transition-colors cursor-pointer ${
@@ -418,6 +509,7 @@ export default function RichTextEditor({
         contentEditable
         suppressContentEditableWarning
         onInput={handleContentChange}
+        onKeyDown={handleKeyDown}
         onCompositionStart={() => {
           isComposingRef.current = true;
         }}
@@ -427,14 +519,16 @@ export default function RichTextEditor({
         }}
         onKeyUp={checkActiveFormats}
         onMouseUp={checkActiveFormats}
-        onBlur={() => {
+        onBlur={(e) => {
           if (editorRef.current) {
             const text = editorRef.current.innerText?.trim() || "";
             if (!text && !editorRef.current.querySelector("img, video")) {
               editorRef.current.innerHTML = "";
             }
           }
-          setActiveFormats(DEFAULT_FORMATS);
+          if (!editorRef.current?.contains(e.relatedTarget)) {
+            setActiveFormats(DEFAULT_FORMATS);
+          }
         }}
         onPaste={handlePaste}
         data-placeholder={placeholder}
