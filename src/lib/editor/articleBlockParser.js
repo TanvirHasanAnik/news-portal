@@ -75,11 +75,11 @@ export function htmlToArticleBlocks(htmlString) {
     const text = tempDiv.textContent.trim();
     const html = sanitizeInline(tempDiv.innerHTML);
 
-    if (text || tempDiv.querySelector("a, b, strong, i, em, u")) {
+    if (text || tempDiv.querySelector("a, b, strong, i, em, u, br")) {
       blocks.push({
         type: "paragraph",
         text,
-        html,
+        html: html || (tempDiv.querySelector("br") ? "<br>" : ""),
       });
     }
     inlineGroup = [];
@@ -154,11 +154,11 @@ export function htmlToArticleBlocks(htmlString) {
         } else {
           const text = node.textContent.trim();
           const html = sanitizeInline(node.innerHTML);
-          if (text || node.querySelector("a, b, strong, i, em, u")) {
+          if (text || node.querySelector("a, b, strong, i, em, u, br")) {
             blocks.push({
               type: "paragraph",
               text,
-              html,
+              html: html || (node.querySelector("br") ? "<br>" : ""),
             });
           }
         }
@@ -185,7 +185,11 @@ export function articleBlocksToHtml(blocksDoc) {
     try {
       doc = JSON.parse(blocksDoc);
     } catch {
-      return blocksDoc
+      const trimmed = blocksDoc.trim();
+      if (trimmed.startsWith("<")) {
+        return sanitizeHtml(trimmed);
+      }
+      return trimmed
         .split("\n\n")
         .map((p) => `<p>${sanitizeHtml(p.trim())}</p>`)
         .join("");
@@ -211,7 +215,7 @@ export function articleBlocksToHtml(blocksDoc) {
         }
         case "paragraph":
         default:
-          return `<p>${block.html || sanitizeHtml(block.text || "")}</p>`;
+          return `<p>${block.html || sanitizeHtml(block.text || "") || "<br>"}</p>`;
       }
     })
     .join("");

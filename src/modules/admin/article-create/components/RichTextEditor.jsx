@@ -19,6 +19,16 @@ import {
   sanitizeHtml,
 } from "@/lib/editor/articleBlockParser";
 
+const DEFAULT_FORMATS = {
+  bold: false,
+  italic: false,
+  underline: false,
+  h2: false,
+  h3: false,
+  list: false,
+  link: false,
+};
+
 export default function RichTextEditor({
   value,
   onChange,
@@ -27,33 +37,27 @@ export default function RichTextEditor({
   error = false,
 }) {
   const editorRef = useRef(null);
-  const isUpdatingFromProps = useRef(false);
+  const isComposingRef = useRef(false);
+  const lastEmittedValueRef = useRef("");
   const savedSelectionRange = useRef(null);
 
-
-  const [activeFormats, setActiveFormats] = useState({
-    bold: false,
-    italic: false,
-    underline: false,
-    h2: false,
-    h3: false,
-    list: false,
-    link: false,
-  });
-
-
+  const [activeFormats, setActiveFormats] = useState(DEFAULT_FORMATS);
   const [showLinkDialog, setShowLinkDialog] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
-
-
 
   const checkActiveFormats = useCallback(() => {
     if (typeof window === "undefined") return;
     const selection = window.getSelection();
-    if (!selection || selection.rangeCount === 0) return;
+    if (!selection || selection.rangeCount === 0) {
+      setActiveFormats(DEFAULT_FORMATS);
+      return;
+    }
 
     const anchorNode = selection.anchorNode;
-    if (!anchorNode || !editorRef.current?.contains(anchorNode)) return;
+    if (!anchorNode || !editorRef.current?.contains(anchorNode)) {
+      setActiveFormats(DEFAULT_FORMATS);
+      return;
+    }
 
     let h2 = false;
     let h3 = false;
@@ -73,28 +77,28 @@ export default function RichTextEditor({
 
     try {
       setActiveFormats({
-        bold: document.queryCommandState("bold"),
-        italic: document.queryCommandState("italic"),
-        underline: document.queryCommandState("underline"),
+        bold: Boolean(document.queryCommandState("bold")),
+        italic: Boolean(document.queryCommandState("italic")),
+        underline: Boolean(document.queryCommandState("underline")),
         h2,
         h3,
         list,
         link,
       });
     } catch {
-
+      setActiveFormats(DEFAULT_FORMATS);
     }
   }, []);
 
-
-
   const handleContentChange = useCallback(() => {
-    if (!editorRef.current) return;
+    if (!editorRef.current || isComposingRef.current) return;
     const rawHtml = editorRef.current.innerHTML;
 
-
     const blocksDoc = htmlToArticleBlocks(rawHtml);
-    const jsonString = JSON.stringify(blocksDoc);
+    const isEmpty = !blocksDoc.blocks || blocksDoc.blocks.length === 0;
+    const jsonString = isEmpty ? "" : JSON.stringify(blocksDoc);
+
+    lastEmittedValueRef.current = jsonString;
 
     if (onChange) {
       onChange(jsonString, blocksDoc);
@@ -103,32 +107,30 @@ export default function RichTextEditor({
     checkActiveFormats();
   }, [onChange, checkActiveFormats]);
 
-
-
   useEffect(() => {
     if (!editorRef.current) return;
-
 
     if (!value) {
       if (editorRef.current.innerHTML !== "") {
         editorRef.current.innerHTML = "";
       }
+      lastEmittedValueRef.current = "";
+      setActiveFormats(DEFAULT_FORMATS);
       return;
     }
 
+    if (value === lastEmittedValueRef.current) {
+      return;
+    }
 
     const targetHtml = articleBlocksToHtml(value);
     const currentHtml = editorRef.current.innerHTML;
 
-
-    if (targetHtml !== currentHtml && !editorRef.current.contains(document.activeElement)) {
-      isUpdatingFromProps.current = true;
+    if (targetHtml !== currentHtml) {
       editorRef.current.innerHTML = targetHtml;
-      isUpdatingFromProps.current = false;
+      lastEmittedValueRef.current = value;
     }
   }, [value]);
-
-
 
   useEffect(() => {
     const handleSelectionChange = () => {
@@ -141,16 +143,12 @@ export default function RichTextEditor({
     };
   }, [checkActiveFormats]);
 
-
-
   const executeCommand = (command, val = null) => {
     if (!editorRef.current) return;
     editorRef.current.focus();
     document.execCommand(command, false, val);
     handleContentChange();
   };
-
-
 
   const toggleH2 = () => {
     if (activeFormats.h2) {
@@ -160,8 +158,6 @@ export default function RichTextEditor({
     }
   };
 
-
-
   const toggleH3 = () => {
     if (activeFormats.h3) {
       executeCommand("formatBlock", "<p>");
@@ -170,38 +166,36 @@ export default function RichTextEditor({
     }
   };
 
-
-
   const toggleBulletList = () => {
     executeCommand("insertUnorderedList");
   };
 
-
-
   const saveSelection = () => {
+    if (typeof window === "undefined") return;
     const sel = window.getSelection();
     if (sel && sel.rangeCount > 0) {
-      savedSelectionRange.current = sel.getRangeAt(0).cloneRange();
+      const range = sel.getRangeAt(0);
+      if (editorRef.current && editorRef.current.contains(range.commonAncestorContainer)) {
+        savedSelectionRange.current = range.cloneRange();
+        return;
+      }
     }
+    savedSelectionRange.current = null;
   };
-
-
 
   const restoreSelection = () => {
-    if (savedSelectionRange.current) {
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      sel.addRange(savedSelectionRange.current);
-    }
+    if (typeof window === "undefined" || !savedSelectionRange.current) return;
+    const sel = window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    sel.addRange(savedSelectionRange.current);
   };
-
-
 
   const handleOpenLinkDialog = () => {
     if (activeFormats.link) {
-
       executeCommand("unlink");
       setShowLinkDialog(false);
+      savedSelectionRange.current = null;
       return;
     }
 
@@ -210,46 +204,61 @@ export default function RichTextEditor({
     setShowLinkDialog(true);
   };
 
-
+  const closeLinkDialog = () => {
+    setShowLinkDialog(false);
+    setLinkUrl("");
+    savedSelectionRange.current = null;
+  };
 
   const handleApplyLink = (e) => {
     e?.preventDefault();
-    if (!linkUrl.trim()) {
-      setShowLinkDialog(false);
+    const trimmed = linkUrl.trim();
+    if (!trimmed) {
+      closeLinkDialog();
       return;
     }
 
-    let url = linkUrl.trim();
-    if (!/^https?:\/\//i.test(url) && !url.startsWith("/")) {
+    let url = trimmed;
+    if (!/^https?:\/\//i.test(url) && !url.startsWith("/") && !url.startsWith("mailto:")) {
       url = `https://${url}`;
     }
 
-    restoreSelection();
-    executeCommand("createLink", url);
-
-
     if (editorRef.current) {
-      const links = editorRef.current.querySelectorAll("a");
-      links.forEach((a) => {
-        if (a.getAttribute("href") === url) {
-          a.setAttribute("target", "_blank");
-          a.setAttribute("rel", "noopener noreferrer");
-        }
-      });
+      editorRef.current.focus();
     }
 
-    setShowLinkDialog(false);
-    setLinkUrl("");
+    const isCollapsed = savedSelectionRange.current ? savedSelectionRange.current.collapsed : true;
+    restoreSelection();
+
+    if (isCollapsed) {
+      const safeUrl = sanitizeHtml(url);
+      document.execCommand(
+        "insertHTML",
+        false,
+        `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>`
+      );
+    } else {
+      executeCommand("createLink", url);
+      if (editorRef.current) {
+        const links = editorRef.current.querySelectorAll("a");
+        links.forEach((a) => {
+          if (a.getAttribute("href") === url) {
+            a.setAttribute("target", "_blank");
+            a.setAttribute("rel", "noopener noreferrer");
+          }
+        });
+      }
+    }
+
+    closeLinkDialog();
     handleContentChange();
   };
-
-
 
   const handlePaste = (e) => {
     e.preventDefault();
     const clipboardData = e.clipboardData || window.clipboardData;
-    const pastedHtml = clipboardData.getData("text/html");
-    const pastedText = clipboardData.getData("text/plain");
+    const pastedHtml = clipboardData?.getData("text/html");
+    const pastedText = clipboardData?.getData("text/plain");
 
     if (pastedHtml) {
       const cleanHtml = sanitizeHtml(pastedHtml);
@@ -269,14 +278,12 @@ export default function RichTextEditor({
           : "border-slate-300 focus-within:border-slate-800"
       } ${className}`}
     >
-
       <div className="flex flex-wrap items-center gap-1 p-2 bg-slate-50/90 border-b border-slate-200 rounded-t-lg">
-
         <button
           type="button"
           onClick={() => executeCommand("bold")}
           title="বোল্ড (Ctrl+B)"
-          className={`p-1.5 rounded text-sm transition-colors ${
+          className={`p-1.5 rounded text-sm transition-colors cursor-pointer ${
             activeFormats.bold
               ? "bg-slate-200 text-slate-950 font-bold shadow-xs"
               : "text-slate-600 hover:bg-slate-200/60 hover:text-slate-900"
@@ -285,12 +292,11 @@ export default function RichTextEditor({
           <Bold className="w-4 h-4" />
         </button>
 
-
         <button
           type="button"
           onClick={() => executeCommand("italic")}
           title="ইটালিক (Ctrl+I)"
-          className={`p-1.5 rounded text-sm transition-colors ${
+          className={`p-1.5 rounded text-sm transition-colors cursor-pointer ${
             activeFormats.italic
               ? "bg-slate-200 text-slate-950 shadow-xs"
               : "text-slate-600 hover:bg-slate-200/60 hover:text-slate-900"
@@ -299,12 +305,11 @@ export default function RichTextEditor({
           <Italic className="w-4 h-4" />
         </button>
 
-
         <button
           type="button"
           onClick={() => executeCommand("underline")}
           title="আন্ডারলাইন (Ctrl+U)"
-          className={`p-1.5 rounded text-sm transition-colors ${
+          className={`p-1.5 rounded text-sm transition-colors cursor-pointer ${
             activeFormats.underline
               ? "bg-slate-200 text-slate-950 shadow-xs"
               : "text-slate-600 hover:bg-slate-200/60 hover:text-slate-900"
@@ -315,12 +320,11 @@ export default function RichTextEditor({
 
         <span className="w-px h-5 bg-slate-200 mx-1" />
 
-
         <button
           type="button"
           onClick={toggleH2}
           title="শিরোনাম ২ (H2)"
-          className={`px-2 py-1 rounded text-xs font-bold transition-colors ${
+          className={`px-2 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${
             activeFormats.h2
               ? "bg-slate-200 text-slate-950 shadow-xs"
               : "text-slate-600 hover:bg-slate-200/60 hover:text-slate-900"
@@ -332,12 +336,11 @@ export default function RichTextEditor({
           </div>
         </button>
 
-
         <button
           type="button"
           onClick={toggleH3}
           title="শিরোনাম ৩ (H3)"
-          className={`px-2 py-1 rounded text-xs font-bold transition-colors ${
+          className={`px-2 py-1 rounded text-xs font-bold transition-colors cursor-pointer ${
             activeFormats.h3
               ? "bg-slate-200 text-slate-950 shadow-xs"
               : "text-slate-600 hover:bg-slate-200/60 hover:text-slate-900"
@@ -351,12 +354,11 @@ export default function RichTextEditor({
 
         <span className="w-px h-5 bg-slate-200 mx-1" />
 
-
         <button
           type="button"
           onClick={toggleBulletList}
           title="বুলেটযুক্ত তালিকা"
-          className={`p-1.5 rounded text-sm transition-colors ${
+          className={`p-1.5 rounded text-sm transition-colors cursor-pointer ${
             activeFormats.list
               ? "bg-slate-200 text-slate-950 shadow-xs"
               : "text-slate-600 hover:bg-slate-200/60 hover:text-slate-900"
@@ -365,12 +367,11 @@ export default function RichTextEditor({
           <List className="w-4 h-4" />
         </button>
 
-
         <button
           type="button"
           onClick={handleOpenLinkDialog}
           title={activeFormats.link ? "লিংক বাতিল করুন" : "লিংক যুক্ত করুন"}
-          className={`p-1.5 rounded text-sm transition-colors ${
+          className={`p-1.5 rounded text-sm transition-colors cursor-pointer ${
             activeFormats.link
               ? "bg-red-100 text-red-700 shadow-xs"
               : "text-slate-600 hover:bg-slate-200/60 hover:text-slate-900"
@@ -379,7 +380,6 @@ export default function RichTextEditor({
           {activeFormats.link ? <Unlink className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
         </button>
       </div>
-
 
       {showLinkDialog && (
         <div className="flex items-center gap-2 p-2 bg-slate-100 border-b border-slate-200 animate-slide-in">
@@ -391,7 +391,7 @@ export default function RichTextEditor({
             onChange={(e) => setLinkUrl(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") handleApplyLink(e);
-              if (e.key === "Escape") setShowLinkDialog(false);
+              if (e.key === "Escape") closeLinkDialog();
             }}
             autoFocus
             className="flex-1 bg-white border border-slate-300 rounded px-2.5 py-1 text-xs outline-none focus:border-slate-800"
@@ -399,28 +399,43 @@ export default function RichTextEditor({
           <button
             type="button"
             onClick={handleApplyLink}
-            className="px-2.5 py-1 bg-slate-900 text-white rounded text-xs font-semibold hover:bg-slate-800 flex items-center gap-1"
+            className="px-2.5 py-1 bg-slate-900 text-white rounded text-xs font-semibold hover:bg-slate-800 flex items-center gap-1 cursor-pointer"
           >
             <Check className="w-3 h-3" /> যোগ করুন
           </button>
           <button
             type="button"
-            onClick={() => setShowLinkDialog(false)}
-            className="p-1 text-slate-500 hover:text-slate-800"
+            onClick={closeLinkDialog}
+            className="p-1 text-slate-500 hover:text-slate-800 cursor-pointer"
           >
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
       )}
 
-
       <div
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
         onInput={handleContentChange}
+        onCompositionStart={() => {
+          isComposingRef.current = true;
+        }}
+        onCompositionEnd={() => {
+          isComposingRef.current = false;
+          handleContentChange();
+        }}
         onKeyUp={checkActiveFormats}
         onMouseUp={checkActiveFormats}
+        onBlur={() => {
+          if (editorRef.current) {
+            const text = editorRef.current.innerText?.trim() || "";
+            if (!text && !editorRef.current.querySelector("img, video")) {
+              editorRef.current.innerHTML = "";
+            }
+          }
+          setActiveFormats(DEFAULT_FORMATS);
+        }}
         onPaste={handlePaste}
         data-placeholder={placeholder}
         className="min-h-[260px] max-h-[560px] overflow-y-auto p-4 font-serif-bangla text-base text-slate-900 leading-relaxed outline-none focus:outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-slate-400 empty:before:pointer-events-none [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:text-slate-950 [&_h2]:mt-5 [&_h2]:mb-2 [&_h2]:border-b [&_h2]:border-slate-100 [&_h2]:pb-1 [&_h3]:text-xl [&_h3]:font-bold [&_h3]:text-slate-900 [&_h3]:mt-4 [&_h3]:mb-1.5 [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-3 [&_ul]:space-y-1.5 [&_li]:leading-relaxed [&_a]:text-red-600 [&_a]:underline [&_a]:underline-offset-2 [&_a]:hover:text-red-800"
@@ -428,4 +443,3 @@ export default function RichTextEditor({
     </div>
   );
 }
-
