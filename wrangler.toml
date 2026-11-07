@@ -7,7 +7,6 @@ compatibility_flags = ["nodejs_compat"]
 directory = ".open-next/assets"
 binding = "ASSETS"
 
-# MySQL / TiDB Environment Variables
 [vars]
 DB_HOST = "127.0.0.1"
 DB_PORT = "3307"
@@ -15,15 +14,24 @@ DB_USER = "root"
 DB_PASSWORD = "123456"
 DB_NAME = "newsportal_db"
 
-# Cloudflare D1 Database binding
-# For local dev / preview via wrangler, any database_id works.
-# For remote production, create with: npx wrangler d1 create news-portal-db
 [[d1_databases]]
 binding = "DB"
 database_name = "news-portal-db"
 database_id = "news-portal-db-local"
 
-# Cloudflare R2 Bucket binding (for news images)
+[[d1_databases]]
+binding = "NEXT_TAG_CACHE_D1"
+database_name = "news-portal-tag-cache"
+database_id = "news-portal-tag-cache-local"
+
 [[r2_buckets]]
 binding = "NEWS_IMAGES_BUCKET"
 bucket_name = "news-portal-images"
+
+[[r2_buckets]]
+binding = "NEXT_INC_CACHE_R2_BUCKET"
+bucket_name = "news-portal-isr-cache"
+
+[[kv_namespaces]]
+binding = "REVALIDATE_RATE_LIMIT_KV"
+id = "revalidate-rate-limit-kv-local"

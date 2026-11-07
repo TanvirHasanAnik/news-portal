@@ -6,6 +6,24 @@ import { verifyJwtToken, AUTH_COOKIE_NAME } from "@/lib/auth/jwt";
 export async function proxy(request) {
   const { pathname, search } = request.nextUrl;
 
+  if (pathname.startsWith("/category")) {
+    const url = request.nextUrl.clone();
+    const searchParams = url.searchParams;
+    const keysToDelete = [];
+    searchParams.forEach((_, key) => {
+      if (key !== "sub" && key !== "page") {
+        keysToDelete.push(key);
+      }
+    });
+    if (keysToDelete.length > 0) {
+      for (const key of keysToDelete) {
+        searchParams.delete(key);
+      }
+      return NextResponse.rewrite(url);
+    }
+    return NextResponse.next();
+  }
+
   const isAdminPath = pathname.startsWith("/admin");
   const isLoginPage = pathname === "/admin/login";
 
@@ -60,7 +78,7 @@ export async function proxy(request) {
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*"],
+  matcher: ["/admin", "/admin/:path*", "/category/:path*"],
 };
 
 export default proxy;

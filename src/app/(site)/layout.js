@@ -1,9 +1,35 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { unstable_cache } from "next/cache";
+import { TAGS } from "@/lib/cache/tags";
 import { getActiveBreakingNews } from "@/repositories/curationRepository";
 import { getAllCategoriesWithSubcategories } from "@/repositories/categoryRepository";
 import { getPublishedArticles, mapDbArticleToFrontend } from "@/repositories/articleRepository";
 import { getSocialLinks } from "@/repositories/socialLinksRepository";
+
+const getCachedBreakingNews = unstable_cache(
+  async () => getActiveBreakingNews(10),
+  ["layout-breaking-news"],
+  { tags: [TAGS.CURATION_BREAKING] }
+);
+
+const getCachedCategories = unstable_cache(
+  async () => getAllCategoriesWithSubcategories(),
+  ["layout-categories"],
+  { tags: [TAGS.CATEGORIES] }
+);
+
+const getCachedHeadlines = unstable_cache(
+  async () => getPublishedArticles({ limit: 3 }),
+  ["layout-headlines"],
+  { tags: [TAGS.ARTICLES_PUBLISHED] }
+);
+
+const getCachedSocialLinks = unstable_cache(
+  async () => getSocialLinks(),
+  ["layout-social-links"],
+  { tags: [TAGS.SOCIAL_LINKS] }
+);
 
 export default async function SiteLayout({ children }) {
   let breakingNewsList = [];
@@ -15,12 +41,13 @@ export default async function SiteLayout({ children }) {
     twitter: "",
     instagram: "",
   };
+
   try {
     const [breaking, cats, rawHeadlines, sLinks] = await Promise.all([
-      getActiveBreakingNews(10),
-      getAllCategoriesWithSubcategories(),
-      getPublishedArticles({ limit: 3 }),
-      getSocialLinks(),
+      getCachedBreakingNews(),
+      getCachedCategories(),
+      getCachedHeadlines(),
+      getCachedSocialLinks(),
     ]);
     breakingNewsList = breaking || [];
     dbCategories = cats || [];

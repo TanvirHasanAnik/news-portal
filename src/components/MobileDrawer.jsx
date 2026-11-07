@@ -27,10 +27,11 @@ export default function MobileDrawer({
     if (propDates && propDates.english) {
       setDates(propDates);
     } else {
+      const now = new Date();
       setDates({
-        english: getEnglishDateBangla(),
-        bangla: getBanglaDate(),
-        hijri: getHijriDate(),
+        english: getEnglishDateBangla(now),
+        bangla: getBanglaDate(now),
+        hijri: getHijriDate(now),
       });
     }
   }, [propDates]);

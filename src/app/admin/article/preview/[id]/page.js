@@ -1,0 +1,220 @@
+import React from "react";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import NewsImage from "@/components/NewsImage";
+import NewsCard from "@/components/NewsCard";
+import AdHolder from "@/components/AdHolder";
+import MostReadSection from "@/components/MostReadSection";
+import SocialShareBar from "@/components/SocialShareBar";
+import YouTubeEmbed from "@/components/YouTubeEmbed";
+import ArticleContentRenderer from "@/components/ArticleContentRenderer";
+import { DEFAULT_NEWS_IMAGE } from "@/utils/imageUtils";
+import { categoryAccentMap } from "@/utils/categoryNews";
+import {
+  findArticleBySlugOrId,
+  getPublishedArticles,
+  mapDbArticleToFrontend,
+} from "@/repositories/articleRepository";
+import { getTopArticles } from "@/repositories/analyticsRepository";
+import { getCurrentUser } from "@/lib/auth/server";
+
+export const dynamic = "force-dynamic";
+
+export default async function AdminArticlePreviewPage({ params }) {
+  const user = await getCurrentUser();
+  if (!user) {
+    redirect("/admin/login");
+  }
+
+  const { id } = await params;
+  let article = null;
+  let dbRow = null;
+
+  try {
+    dbRow = await findArticleBySlugOrId(id);
+    if (dbRow) {
+      article = mapDbArticleToFrontend(dbRow);
+    }
+  } catch (err) {
+    console.error("Error fetching article for preview:", err);
+  }
+
+  if (!article) {
+    notFound();
+  }
+
+  let mostReadArticles = [];
+  try {
+    mostReadArticles = await getTopArticles(10);
+  } catch (err) {
+    console.error("Error fetching most read articles for sidebar:", err);
+  }
+
+  const accentClass =
+    categoryAccentMap[article.categorySlug] ||
+    "from-slate-700 to-slate-900 bg-red-600 border-red-600 text-red-600";
+  const badgeBg = accentClass.split(" ")[1] || "bg-red-600";
+
+  let allImages = [];
+  if (Array.isArray(article.images)) {
+    allImages = article.images.filter(Boolean).slice(0, 3);
+  } else if (typeof article.images === "string" && article.images.trim()) {
+    try {
+      const parsed = JSON.parse(article.images);
+      if (Array.isArray(parsed)) {
+        allImages = parsed.filter(Boolean).slice(0, 3);
+      } else if (parsed) {
+        allImages = [String(parsed)];
+      }
+    } catch {
+      allImages = [article.images.trim()];
+    }
+  } else if (article.image) {
+    allImages = [article.image];
+  }
+  const heroImage = allImages[0] || article.image || (article.youtubeUrl ? null : DEFAULT_NEWS_IMAGE);
+
+  let relatedArticles = [];
+  try {
+    const dbRelated = await getPublishedArticles({ categorySlug: article.categorySlug, limit: 6 });
+    relatedArticles = (dbRelated || [])
+      .map(mapDbArticleToFrontend)
+      .filter((a) => a.id !== article.id && a.dbId !== article.dbId && a.slug !== article.slug)
+      .slice(0, 4);
+  } catch (err) {
+    console.error("Error fetching related articles:", err);
+  }
+
+  return (
+    <div className="min-h-screen bg-white py-4 sm:py-6 lg:py-8 font-sans">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded text-sm font-medium flex items-center justify-between">
+          <span>প্রিভিউ মোড: এই সংবাদটি বর্তমানে &ldquo;{dbRow?.status}&rdquo; অবস্থায় রয়েছে।</span>
+          <Link href="/admin?tab=article-list" className="underline hover:text-amber-950 font-semibold">
+            অ্যাডমিন প্যানেলে ফিরুন
+          </Link>
+        </div>
+
+        <header className="border-b-2 border-slate-200 pb-5 sm:pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-2 sm:gap-2.5 flex-wrap">
+              <span className={`w-2 sm:w-2.5 h-5 sm:h-6 rounded-2xs ${badgeBg}`} />
+              <Link
+                href={`/category/${article.categorySlug}`}
+                className="font-serif-bangla text-lg sm:text-xl lg:text-2xl font-bold text-slate-950 tracking-tight shrink-0 hover:text-red-700 transition-colors"
+              >
+                {article.category}
+              </Link>
+
+              {article.subcategory && (
+                <span className="font-serif-bangla text-sm sm:text-base lg:text-lg font-semibold text-red-600 shrink-0">
+                  / {article.subcategory}
+                </span>
+              )}
+            </div>
+
+            <div className="shrink-0 flex items-center">
+              <SocialShareBar title={article.headline} />
+            </div>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10 items-start">
+          <main className="lg:col-span-2 space-y-6">
+            <h1 className="font-serif-bangla text-2xl sm:text-3xl lg:text-2xl xl:text-3xl font-semibold text-slate-950 leading-tight">
+              {article.headline}
+            </h1>
+
+            {(article.hasCustomImage || heroImage || !article.youtubeUrl) && heroImage && (
+              <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-100 rounded-lg">
+                <NewsImage
+                  src={heroImage}
+                  alt={article.headline}
+                  imagePriority={true}
+                  loading="eager"
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            )}
+
+            {allImages.length > 1 && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {allImages.slice(1, 3).map((imgUrl, idx) => (
+                  <div
+                    key={idx}
+                    className="relative aspect-video w-full overflow-hidden rounded-lg bg-slate-100 border border-slate-200 shadow-xs"
+                  >
+                    <NewsImage
+                      src={imgUrl}
+                      alt={`${article.headline} - ছবি ${idx + 2}`}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {article.youtubeUrl && (
+              <YouTubeEmbed
+                url={article.youtubeUrl}
+                title={article.headline}
+              />
+            )}
+
+            {article.content ? (
+              <ArticleContentRenderer
+                content={article.content}
+                className="text-lg sm:text-xl text-slate-800 leading-relaxed sm:leading-loose space-y-5 sm:space-y-6"
+              />
+            ) : article.summary ? (
+              <p className="font-serif-bangla text-lg sm:text-xl text-slate-800 leading-relaxed sm:leading-loose">
+                {article.summary}
+              </p>
+            ) : null}
+          </main>
+
+          <aside
+            aria-label="বিজ্ঞাপন ও সর্বাধিক পঠিত"
+            className="lg:col-span-1 space-y-6"
+          >
+            <AdHolder size="300x250" />
+            <AdHolder size="300x250" />
+
+            <MostReadSection newsList={mostReadArticles} />
+          </aside>
+        </div>
+
+        {relatedArticles.length > 0 && (
+          <section
+            aria-label="এই বিভাগের আরও খবর"
+            className="pt-8 sm:pt-10 border-t-2 border-slate-900 mt-8 sm:mt-12"
+          >
+            <div className="flex items-center gap-2.5 border-b-2 border-slate-900 pb-3 mb-6">
+              <span className="w-2.5 h-6 bg-red-600 inline-block"></span>
+              <h2 className="font-serif-bangla text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+                এই বিভাগের আরও খবর
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6 items-start">
+              {relatedArticles.map((item) => (
+                <NewsCard
+                  key={item.id}
+                  news={item}
+                  variant="vertical"
+                  imageAspect="aspect-[16/10]"
+                  showCategory={false}
+                  showSubcategory={false}
+                  showSummary={true}
+                  summaryClamp="line-clamp-2"
+                  headlineTag="h3"
+                  headlineSize="text-base sm:text-lg font-bold"
+                />
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+    </div>
+  );
+}

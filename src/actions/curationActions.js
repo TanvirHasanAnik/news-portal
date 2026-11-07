@@ -1,12 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { invalidateCuration } from "@/lib/cache/invalidate";
 import {
   addCuratedNews,
   removeCuratedNews,
   toggleCuratedNews,
   updateCuratedNewsPriorities,
   saveCuratedNewsBatch,
+  getCuratedNewsType,
 } from "@/repositories/curationRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
 import { notifyAdmins } from "@/repositories/notificationRepository";
@@ -47,9 +49,8 @@ export async function addCuratedNewsAction(prevState, formData) {
       details: { type: validated.type, articleId: validated.articleId, customTitle: validated.customTitle },
     });
 
+    invalidateCuration(validated.type);
     revalidatePath("/admin");
-    revalidatePath("/");
-    revalidatePath("/category/handpicked");
 
     return {
       success: true,
@@ -68,7 +69,7 @@ export async function removeCuratedNewsAction(id) {
     }
 
     if (!id) return { success: false, message: "আইডি আবশ্যক।" };
-    await removeCuratedNews(id);
+    const res = await removeCuratedNews(id);
 
     await recordAuditLog({
       userId: currentUser.id,
@@ -77,9 +78,13 @@ export async function removeCuratedNewsAction(id) {
       targetId: id,
     });
 
+    if (res?.type) {
+      invalidateCuration(res.type);
+    } else {
+      invalidateCuration("handpicked");
+      invalidateCuration("breaking");
+    }
     revalidatePath("/admin");
-    revalidatePath("/");
-    revalidatePath("/category/handpicked");
     return { success: true, message: "আইটেমটি তালিকা থেকে সরানো হয়েছে।" };
   } catch (error) {
     return { success: false, message: error.message };
@@ -94,7 +99,7 @@ export async function toggleCuratedNewsAction(id, currentActive) {
     }
 
     if (!id) return { success: false, message: "আইডি আবশ্যক।" };
-    await toggleCuratedNews(id, currentActive);
+    const res = await toggleCuratedNews(id, currentActive);
 
     await recordAuditLog({
       userId: currentUser.id,
@@ -104,9 +109,13 @@ export async function toggleCuratedNewsAction(id, currentActive) {
       details: { active: currentActive ? 0 : 1 },
     });
 
+    if (res?.type) {
+      invalidateCuration(res.type);
+    } else {
+      invalidateCuration("handpicked");
+      invalidateCuration("breaking");
+    }
     revalidatePath("/admin");
-    revalidatePath("/");
-    revalidatePath("/category/handpicked");
     return { success: true };
   } catch (error) {
     return { success: false, message: error.message };
@@ -132,9 +141,15 @@ export async function reorderCuratedNewsAction(orderedIds) {
       details: { count: orderedIds.length },
     });
 
+    const curType = await getCuratedNewsType(orderedIds[0]);
+
+    if (curType) {
+      invalidateCuration(curType);
+    } else {
+      invalidateCuration("handpicked");
+      invalidateCuration("breaking");
+    }
     revalidatePath("/admin");
-    revalidatePath("/");
-    revalidatePath("/category/handpicked");
     return { success: true };
   } catch (error) {
     return { success: false, message: error.message };
@@ -188,9 +203,8 @@ export async function saveCuratedBatchAction(type, items) {
       });
     }
 
-    revalidatePath("/");
+    invalidateCuration(type);
     revalidatePath("/admin");
-    revalidatePath("/category/handpicked");
 
     return {
       success: true,

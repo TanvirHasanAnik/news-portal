@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS revalidations (
+  tag TEXT PRIMARY KEY ON CONFLICT REPLACE,
+  revalidatedAt INTEGER,
+  stale INTEGER,
+  expire INTEGER
+);

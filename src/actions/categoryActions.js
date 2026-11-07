@@ -1,6 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { invalidateCategory } from "@/lib/cache/invalidate";
+import { TAGS } from "@/lib/cache/tags";
 import {
   createCategory,
   deleteCategory,
@@ -50,12 +52,8 @@ export async function createCategoryAction(prevState, formData) {
       actionBy: currentUser.username,
     });
 
-    revalidatePath("/", "layout");
-    revalidatePath("/");
+    invalidateCategory(validated.slug);
     revalidatePath("/admin");
-    if (validated.slug) {
-      revalidatePath(`/category/${validated.slug}`);
-    }
 
     return { success: true, message: `"${validated.name}" ক্যাটাগরি সফলভাবে তৈরি করা হয়েছে!` };
   } catch (error) {
@@ -74,7 +72,7 @@ export async function deleteCategoryAction(categoryId) {
       return { success: false, message: "ক্যাটাগরি আইডি আবশ্যক।" };
     }
 
-    await deleteCategory(categoryId);
+    const res = await deleteCategory(categoryId);
 
     await recordAuditLog({
       userId: currentUser.id,
@@ -91,8 +89,7 @@ export async function deleteCategoryAction(categoryId) {
       actionBy: currentUser.username,
     });
 
-    revalidatePath("/", "layout");
-    revalidatePath("/");
+    invalidateCategory(res?.slug || null);
     revalidatePath("/admin");
 
     return { success: true, message: "ক্যাটাগরি সফলভাবে মুছে ফেলা হয়েছে।" };
@@ -117,7 +114,7 @@ export async function createSubcategoryAction(prevState, formData) {
 
     const validated = subcategorySchema.parse(rawData);
 
-    await createSubcategory(validated);
+    const res = await createSubcategory(validated);
 
     await recordAuditLog({
       userId: currentUser.id,
@@ -134,8 +131,7 @@ export async function createSubcategoryAction(prevState, formData) {
       actionBy: currentUser.username,
     });
 
-    revalidatePath("/", "layout");
-    revalidatePath("/");
+    invalidateCategory(res?.categorySlug || null);
     revalidatePath("/admin");
 
     return { success: true, message: `"${validated.name}" উপ-বিভাগ সফলভাবে যোগ করা হয়েছে!` };
@@ -155,7 +151,7 @@ export async function deleteSubcategoryAction(subcategoryId) {
       return { success: false, message: "উপ-বিভাগ আইডি আবশ্যক।" };
     }
 
-    await deleteSubcategory(subcategoryId);
+    const res = await deleteSubcategory(subcategoryId);
 
     await recordAuditLog({
       userId: currentUser.id,
@@ -172,8 +168,7 @@ export async function deleteSubcategoryAction(subcategoryId) {
       actionBy: currentUser.username,
     });
 
-    revalidatePath("/", "layout");
-    revalidatePath("/");
+    invalidateCategory(res?.categorySlug || null);
     revalidatePath("/admin");
 
     return { success: true, message: "উপ-বিভাগ সফলভাবে মুছে ফেলা হয়েছে।" };
@@ -208,17 +203,16 @@ export async function saveCategoriesBatchAction(categories) {
       actionBy: currentUser.username,
     });
 
-    revalidatePath("/", "layout"); 
-    revalidatePath("/"); 
-    revalidatePath("/admin"); 
-    revalidatePath("/category/[category]", "page");
+    invalidateCategory(null);
 
     const slugsToRevalidate = res?.affectedSlugs || validatedCategories.map((c) => c.slug);
     for (const slug of slugsToRevalidate) {
       if (slug) {
-        revalidatePath(`/category/${slug}`);
+        revalidateTag(TAGS.CATEGORY(slug));
       }
     }
+
+    revalidatePath("/admin");
 
     return {
       success: true,

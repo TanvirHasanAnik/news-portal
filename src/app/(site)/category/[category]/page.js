@@ -1,38 +1,103 @@
-import React from "react";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { Newspaper } from "lucide-react";
+import AdHolder from "@/components/AdHolder";
 import NewsArticleCard from "@/components/NewsArticleCard";
 import SubcategoryDropdown from "@/components/SubcategoryDropdown";
-import AdHolder from "@/components/AdHolder";
-import { categoryAccentMap } from "@/utils/categoryNews";
+import { TAGS } from "@/lib/cache/tags";
 import {
-  getPublishedArticles,
-  getPublishedArticlesCount,
-  getPublishedSubcategories,
-  mapDbArticleToFrontend,
+    getPublishedArticles,
+    getPublishedArticlesCount,
+    getPublishedSubcategories,
+    mapDbArticleToFrontend,
 } from "@/repositories/articleRepository";
 import {
-  getCategoryBySlug,
-  getSubcategoriesByCategoryId,
-  getAllCategories,
+    getCategoryBySlug,
+    getSubcategoriesByCategoryId
 } from "@/repositories/categoryRepository";
+import { categoryAccentMap } from "@/utils/categoryNews";
+import { Newspaper } from "lucide-react";
+import { unstable_cache } from "next/cache";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
-export const dynamic = "force-dynamic";
+const PAGE_SIZE = 5;
 
-export async function generateStaticParams() {
-  const slugs = new Set(["latest", "handpicked", "others"]);
-  try {
-    const dbCats = await getAllCategories();
-    (dbCats || []).forEach((c) => {
-      if (c.slug) slugs.add(c.slug);
-    });
-  } catch (_e) {}
+const getCachedCategoryMeta = (category) =>
+  unstable_cache(
+    async () => {
+      if (category === "latest") {
+        return { name: "সর্বশেষ", subcategories: [], exists: true };
+      }
+      if (category === "handpicked") {
+        return { name: "বাছাইকৃত", subcategories: [], exists: true };
+      }
+      try {
+        const dbCat = await getCategoryBySlug(category);
+        if (dbCat) {
+          const [subs, liveSubs] = await Promise.all([
+            getSubcategoriesByCategoryId(dbCat.id),
+            getPublishedSubcategories(category),
+          ]);
+          const set = new Set();
+          (subs || []).forEach((s) => s.name && set.add(s.name));
+          (liveSubs || []).forEach((s) => s && set.add(s));
+          return {
+            name: dbCat.name,
+            subcategories: Array.from(set),
+            exists: true,
+          };
+        }
+        const checkCount = await getPublishedArticlesCount({ categorySlug: category });
+        if (checkCount === 0 && category !== "others") {
+          return { name: "সংবাদ", subcategories: [], exists: false };
+        }
+        return { name: "সংবাদ", subcategories: [], exists: true };
+      } catch (err) {
+        console.error("Error loading category metadata:", err);
+        return { name: "সংবাদ", subcategories: [], exists: true };
+      }
+    },
+    [`category-meta-${category}`],
+    {
+      tags: [TAGS.CATEGORY(category), TAGS.CATEGORIES],
+    }
+  )();
 
-  return Array.from(slugs).map((slug) => ({
-    category: slug,
-  }));
-}
+const getCachedCategoryArticles = (category, selectedSub, page) =>
+  unstable_cache(
+    async () => {
+      const totalCount = await getPublishedArticlesCount({
+        categorySlug: category,
+        subcategoryName: selectedSub,
+      });
+
+      const totalPagesCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+      const currentPageNum = Math.min(totalPagesCount, page);
+      const offset = (currentPageNum - 1) * PAGE_SIZE;
+
+      const raw = await getPublishedArticles({
+        categorySlug: category,
+        subcategoryName: selectedSub,
+        limit: PAGE_SIZE,
+        offset,
+      });
+
+      const displayedArticles = (raw || []).map(mapDbArticleToFrontend);
+
+      return {
+        totalCount,
+        displayedArticles,
+      };
+    },
+    [`category-articles-${category}`, selectedSub || "all", String(page)],
+    {
+      tags: [
+        TAGS.CATEGORY(category),
+        TAGS.ARTICLES_CATEGORY(category),
+        TAGS.ARTICLES_PUBLISHED,
+      ],
+    }
+  )();
+
+
 
 export async function generateMetadata({ params }) {
   const { category } = await params;
@@ -44,8 +109,8 @@ export async function generateMetadata({ params }) {
     categoryName = "বাছাইকৃত";
   } else {
     try {
-      const dbCat = await getCategoryBySlug(category);
-      if (dbCat?.name) categoryName = dbCat.name;
+      const meta = await getCachedCategoryMeta(category);
+      if (meta?.name) categoryName = meta.name;
     } catch (_e) {}
   }
 
@@ -76,41 +141,14 @@ export default async function CategoryPage({ params, searchParams }) {
     }
   }
 
-  let name = "";
-  let subcategories = [];
-  let dbCat = null;
-
-  if (category === "latest") {
-    name = "সর্বশেষ";
-  } else if (category === "handpicked") {
-    name = "বাছাইকৃত";
-  } else {
-    try {
-      dbCat = await getCategoryBySlug(category);
-      if (dbCat) {
-        name = dbCat.name;
-        const [subs, liveSubs] = await Promise.all([
-          getSubcategoriesByCategoryId(dbCat.id),
-          getPublishedSubcategories(category),
-        ]);
-        const set = new Set();
-        (subs || []).forEach((s) => s.name && set.add(s.name));
-        (liveSubs || []).forEach((s) => s && set.add(s));
-        subcategories = Array.from(set);
-      } else {
-        const checkCount = await getPublishedArticlesCount({ categorySlug: category });
-        if (checkCount === 0 && category !== "others") {
-          notFound();
-        }
-        name = "সংবাদ";
-      }
-    } catch (err) {
-      console.error("Error loading category metadata:", err);
-      name = "সংবাদ";
-    }
+  const meta = await getCachedCategoryMeta(category);
+  if (!meta.exists) {
+    notFound();
   }
 
-  const PAGE_SIZE = 5;
+  const name = meta.name;
+  const subcategories = meta.subcategories;
+
   const rawPageNum = parseInt(resolvedSearchParams.page, 10);
   const requestedPage = Number.isInteger(rawPageNum) && rawPageNum > 0 ? rawPageNum : 1;
 
@@ -118,23 +156,9 @@ export default async function CategoryPage({ params, searchParams }) {
   let displayedArticles = [];
 
   try {
-    totalCount = await getPublishedArticlesCount({
-      categorySlug: category,
-      subcategoryName: selectedSub,
-    });
-
-    const totalPagesCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-    const currentPageNum = Math.min(totalPagesCount, requestedPage);
-    const offset = (currentPageNum - 1) * PAGE_SIZE;
-
-    const raw = await getPublishedArticles({
-      categorySlug: category,
-      subcategoryName: selectedSub,
-      limit: PAGE_SIZE,
-      offset,
-    });
-
-    displayedArticles = (raw || []).map(mapDbArticleToFrontend);
+    const result = await getCachedCategoryArticles(category, selectedSub, requestedPage);
+    totalCount = result.totalCount;
+    displayedArticles = result.displayedArticles;
   } catch (err) {
     console.error("Error fetching paginated articles for category:", err);
   }

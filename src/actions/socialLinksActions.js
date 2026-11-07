@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { invalidateSocialLinks } from "@/lib/cache/invalidate";
 import { getCurrentUser } from "@/lib/auth/server";
 import { updateSocialLinks } from "@/repositories/socialLinksRepository";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
@@ -64,8 +65,7 @@ export async function saveSocialLinksAction(prevState, formData) {
       actionBy: currentUser.username,
     });
 
-    revalidatePath("/", "layout");
-    revalidatePath("/");
+    invalidateSocialLinks();
     revalidatePath("/admin");
 
     return {

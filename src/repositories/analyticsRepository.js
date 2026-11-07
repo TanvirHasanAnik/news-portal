@@ -45,6 +45,13 @@ export async function recordArticleView(articleId, { categorySlug = "", subcateg
   try {
     const today = new Date().toISOString().slice(0, 10);
     const id = `pv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    let safePath = path ? path : `/article/${articleId}`;
+    try {
+      safePath = decodeURIComponent(safePath);
+    } catch {}
+    if (safePath.length > 255) {
+      safePath = safePath.slice(0, 255);
+    }
 
     await withTransaction(async (tx) => {
 
@@ -56,7 +63,7 @@ export async function recordArticleView(articleId, { categorySlug = "", subcateg
       await tx.query(
         `INSERT INTO analytics_page_views (id, path, article_id, category_slug, subcategory_name, viewed_date, created_at)
          VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [id, path || `/article/${articleId}`, articleId, categorySlug || null, subcategoryName || null, today]
+        [id, safePath, articleId, categorySlug || null, subcategoryName || null, today]
       );
     });
   } catch (err) {

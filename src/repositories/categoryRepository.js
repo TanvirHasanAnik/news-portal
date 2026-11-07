@@ -154,7 +154,8 @@ export async function deleteCategory(id) {
       [fallback.slug, category.slug]
     );
     await tx.query("DELETE FROM subcategories WHERE category_id = ?", [id]);
-    return await tx.query("DELETE FROM categories WHERE id = ?", [id]);
+    await tx.query("DELETE FROM categories WHERE id = ?", [id]);
+    return { id, slug: category?.slug };
   });
 }
 
@@ -178,19 +179,26 @@ export async function createSubcategory({ categoryId, name, slug, sortOrder = 0 
     [id, categoryId, name, slug, Number(sortOrder) || 0]
   );
 
-  return { id, categoryId, name, slug };
+  return { id, categoryId, name, slug, categorySlug: category?.slug || null };
 }
 
 
 
 export async function deleteSubcategory(id) {
-  const sub = await queryOne("SELECT name FROM subcategories WHERE id = ?", [id]);
+  const sub = await queryOne(
+    `SELECT s.name, c.slug as category_slug 
+     FROM subcategories s 
+     LEFT JOIN categories c ON s.category_id = c.id 
+     WHERE s.id = ?`,
+    [id]
+  );
   return await withTransaction(async (tx) => {
     await tx.query("UPDATE articles SET subcategory_id = NULL, subcategory_name = NULL WHERE subcategory_id = ?", [id]);
     if (sub?.name) {
       await tx.query("UPDATE analytics_page_views SET subcategory_name = NULL WHERE subcategory_name = ?", [sub.name]);
     }
-    return await tx.query("DELETE FROM subcategories WHERE id = ?", [id]);
+    await tx.query("DELETE FROM subcategories WHERE id = ?", [id]);
+    return { id, categorySlug: sub?.category_slug || null };
   });
 }
 

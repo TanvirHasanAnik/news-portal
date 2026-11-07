@@ -25,6 +25,12 @@ export async function getCuratedNews(type) {
   return rows || [];
 }
 
+export async function getCuratedNewsType(id) {
+  if (!id) return null;
+  const row = await queryOne("SELECT type FROM curated_news WHERE id = ?", [id]);
+  return row?.type || null;
+}
+
 export async function addCuratedNews({ type, articleId, customTitle = "", customUrl = "", priority }) {
   return await withTransaction(async (tx) => {
 
@@ -95,7 +101,7 @@ export async function removeCuratedNews(id) {
       }
     }
 
-    return { id };
+    return { id, type: existing?.type || null };
   });
 }
 
@@ -117,7 +123,7 @@ export async function toggleCuratedNews(id, currentActive) {
       }
     }
 
-    return { id, is_active: newActive };
+    return { id, is_active: newActive, type: item?.type || null };
   });
 }
 

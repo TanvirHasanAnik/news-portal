@@ -2,6 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  invalidateHomepage,
+  invalidateArticle,
+  invalidateCategory,
+  invalidateCuration,
+} from "@/lib/cache/invalidate";
+import {
   createArticle,
   updateArticle,
   getArticleById,
@@ -183,9 +189,13 @@ export async function createArticleAction(prevState, formData) {
       isHandpicked: validated.isHandpicked,
     });
 
+    if (validated.status === "published") {
+      invalidateHomepage();
+      invalidateArticle(result.id, validated.categorySlug, validated.slug);
+      if (validated.isBreaking) invalidateCuration("breaking");
+      if (validated.isHandpicked) invalidateCuration("handpicked");
+    }
     revalidatePath("/admin");
-    revalidatePath("/");
-    revalidatePath(`/category/${validated.categorySlug}`);
 
     if (currentUser.role === "reporter" && (validated.status === "pending" || validated.status === "pending_approval")) {
       try {
@@ -402,10 +412,18 @@ export async function updateArticleAction(prevState, formData) {
       passToUpper: isSubEditorReview ? passToUpper : false,
     });
 
+    invalidateHomepage();
+    invalidateArticle(articleId, validated.categorySlug, existingArticle.slug);
+    if (existingArticle.category_slug && existingArticle.category_slug !== validated.categorySlug) {
+      invalidateCategory(existingArticle.category_slug);
+    }
+    if (Boolean(existingArticle.is_breaking) !== Boolean(validated.isBreaking)) {
+      invalidateCuration("breaking");
+    }
+    if (Boolean(existingArticle.is_handpicked) !== Boolean(validated.isHandpicked)) {
+      invalidateCuration("handpicked");
+    }
     revalidatePath("/admin");
-    revalidatePath("/");
-    revalidatePath(`/category/${validated.categorySlug}`);
-    revalidatePath(`/article/${existingArticle.slug}`);
 
     if (
       currentUser.role === "reporter" &&
@@ -564,14 +582,13 @@ export async function updateArticleStatusAction(articleId, newStatus, rejectionR
 
     const cleanReason = (rejectionReason || "").toString().trim() || null;
     await updateArticleStatus(articleId, newStatus, currentUser.id, currentUser.username, cleanReason);
+    if (newStatus === "published" || article.status === "published") {
+      invalidateHomepage();
+      invalidateArticle(articleId, article.category_slug, article.slug);
+      if (article.is_breaking) invalidateCuration("breaking");
+      if (article.is_handpicked) invalidateCuration("handpicked");
+    }
     revalidatePath("/admin");
-    revalidatePath("/");
-    if (article.category_slug) {
-      revalidatePath(`/category/${article.category_slug}`);
-    }
-    if (article.slug) {
-      revalidatePath(`/article/${article.slug}`);
-    }
 
     if (
       currentUser.role === "reporter" &&
@@ -615,9 +632,13 @@ export async function toggleArticleFlagAction(articleId, flagName) {
       return { success: false, message: "এই পরিবর্তন করার অনুমতি আপনার নেই।" };
     }
     const res = await toggleArticleFlag(articleId, flagName);
+    invalidateHomepage();
+    if (flagName === "is_breaking") {
+      invalidateCuration("breaking");
+    } else if (flagName === "is_handpicked") {
+      invalidateCuration("handpicked");
+    }
     revalidatePath("/admin");
-    revalidatePath("/");
-    revalidatePath("/category/handpicked");
     return { success: true, active: res[flagName] };
   } catch (error) {
     return { success: false, message: error.message };
@@ -637,13 +658,23 @@ export async function deleteArticleAction(articleId) {
     if (!allowedRoles.includes(currentUser.role)) {
       return { success: false, message: "আর্টিকেল মুছে ফেলার অনুমতি আপনার নেই।" };
     }
+    const article = await getArticleById(articleId);
     await deleteArticle(
       articleId,
       currentUser.id,
       currentUser.username
     );
+    invalidateHomepage();
+    if (article?.category_slug) {
+      invalidateArticle(articleId, article.category_slug, article.slug);
+    }
+    if (article?.is_breaking) {
+      invalidateCuration("breaking");
+    }
+    if (article?.is_handpicked) {
+      invalidateCuration("handpicked");
+    }
     revalidatePath("/admin");
-    revalidatePath("/");
     return { success: true, message: "আর্টিকেলটি সফলভাবে মুছে ফেলা হয়েছে।" };
   } catch (error) {
     return { success: false, message: `মুছে ফেলা সম্ভব হয়নি: ${error.message}` };

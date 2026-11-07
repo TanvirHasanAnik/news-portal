@@ -22,9 +22,9 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dates, setDates] = useState({
-    english: "বৃহস্পতিবার, ১৫ অক্টোবর ২০২৬",
-    bangla: "৩০ আশ্বিন ১৪৩৩ বঙ্গাব্দ",
-    hijri: "৪ জমাদিউল আউয়াল ১৪৪৮ হিজরি",
+    english: "",
+    bangla: "",
+    hijri: "",
   });
 
   const hasDbCats = Array.isArray(propCategories) && propCategories.length > 0;
@@ -162,10 +162,11 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
   }, []);
 
   useEffect(() => {
+    const now = new Date();
     setDates({
-      english: getEnglishDateBangla(),
-      bangla: getBanglaDate(),
-      hijri: getHijriDate(),
+      english: getEnglishDateBangla(now),
+      bangla: getBanglaDate(now),
+      hijri: getHijriDate(now),
     });
   }, []);
 
@@ -216,16 +217,26 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
 
         <div className="hidden lg:grid lg:grid-cols-3 lg:items-center gap-4">
 
-          <div className="flex flex-col items-start justify-center space-y-1 font-serif-bangla">
-            <span className="text-lg font-medium text-slate-900 tracking-tight">
-              {dates.english}
-            </span>
-            <span className="text-base font-medium text-slate-600">
-              {dates.bangla}
-            </span>
-            <span className="text-base text-slate-600 font-medium">
-              {dates.hijri}
-            </span>
+          <div className="flex flex-col items-start justify-center space-y-1 font-serif-bangla min-h-[72px]">
+            {dates.english ? (
+              <>
+                <span className="text-lg font-medium text-slate-900 tracking-tight">
+                  {dates.english}
+                </span>
+                <span className="text-base font-medium text-slate-600">
+                  {dates.bangla}
+                </span>
+                <span className="text-base text-slate-600 font-medium">
+                  {dates.hijri}
+                </span>
+              </>
+            ) : (
+              <div className="space-y-1 py-1" aria-hidden="true">
+                <span className="inline-block h-5 w-44 bg-slate-100 rounded" />
+                <span className="inline-block h-4 w-36 bg-slate-100 rounded" />
+                <span className="inline-block h-4 w-40 bg-slate-100 rounded" />
+              </div>
+            )}
           </div>
 
 

@@ -1,41 +1,71 @@
-import React from "react";
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import NewsImage from "@/components/NewsImage";
-import NewsCard from "@/components/NewsCard";
 import AdHolder from "@/components/AdHolder";
+import ArticleContentRenderer from "@/components/ArticleContentRenderer";
 import MostReadSection from "@/components/MostReadSection";
+import NewsCard from "@/components/NewsCard";
+import NewsImage from "@/components/NewsImage";
 import SocialShareBar from "@/components/SocialShareBar";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
-import ArticleContentRenderer from "@/components/ArticleContentRenderer";
-import { DEFAULT_NEWS_IMAGE } from "@/utils/imageUtils";
-import { categoryAccentMap } from "@/utils/categoryNews";
+import { TAGS } from "@/lib/cache/tags";
+import { getTopArticles, recordArticleView } from "@/repositories/analyticsRepository";
 import {
-  findArticleBySlugOrId,
-  getPublishedArticles,
-  mapDbArticleToFrontend,
+    findArticleBySlugOrId,
+    getPublishedArticles,
+    mapDbArticleToFrontend,
 } from "@/repositories/articleRepository";
-import { recordArticleView, getTopArticles } from "@/repositories/analyticsRepository";
-import { getCurrentUser } from "@/lib/auth/server";
+import { categoryAccentMap } from "@/utils/categoryNews";
+import { DEFAULT_NEWS_IMAGE } from "@/utils/imageUtils";
+import { unstable_cache } from "next/cache";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
-export const dynamic = "force-dynamic";
+export const revalidate = false;
+export const dynamicParams = true;
 
 export async function generateStaticParams() {
-  try {
-    const rawArticles = await getPublishedArticles({ limit: 50 });
-    return (rawArticles || []).map((article) => ({
-      id: String(article.slug || article.id),
-    }));
-  } catch {
-    return [];
-  }
+  return [];
 }
+
+const getCachedPublishedArticle = (id) =>
+  unstable_cache(
+    async () => {
+      const dbRow = await findArticleBySlugOrId(id);
+      if (!dbRow || dbRow.status !== "published") {
+        return null;
+      }
+      return dbRow;
+    },
+    [`article-page-${id}`],
+    {
+      tags: [TAGS.ARTICLE(id), TAGS.ARTICLES_PUBLISHED],
+    }
+  )();
+
+const getCachedRelatedArticles = (categorySlug, currentArticleId, currentArticleSlug) =>
+  unstable_cache(
+    async () => {
+      const dbRelated = await getPublishedArticles({ categorySlug, limit: 6 });
+      return (dbRelated || [])
+        .map(mapDbArticleToFrontend)
+        .filter((a) => a.id !== currentArticleId && a.dbId !== currentArticleId && a.slug !== currentArticleSlug)
+        .slice(0, 4);
+    },
+    [`related-articles-${categorySlug}-${currentArticleId}`],
+    {
+      tags: [TAGS.ARTICLES_CATEGORY(categorySlug), TAGS.ARTICLES_PUBLISHED],
+    }
+  )();
+
+
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
+  let decodedId = id;
+  try {
+    decodedId = decodeURIComponent(id);
+  } catch {}
   let article = null;
   try {
-    const dbRow = await findArticleBySlugOrId(id);
+    const dbRow = await getCachedPublishedArticle(decodedId);
     if (dbRow) {
       article = mapDbArticleToFrontend(dbRow);
     }
@@ -57,25 +87,23 @@ export async function generateMetadata({ params }) {
 
 export default async function ArticlePage({ params }) {
   const { id } = await params;
+  let decodedId = id;
+  try {
+    decodedId = decodeURIComponent(id);
+  } catch {}
   let article = null;
   let dbRow = null;
 
   try {
-    dbRow = await findArticleBySlugOrId(id);
+    dbRow = await getCachedPublishedArticle(decodedId);
     if (dbRow) {
-      if (dbRow.status !== "published") {
-        const user = await getCurrentUser();
-        if (!user) {
-          notFound();
-        }
-      }
       article = mapDbArticleToFrontend(dbRow);
     }
   } catch (err) {
     console.error("Error fetching db article for page:", err);
   }
 
-  if (!article) {
+  if (!article || !dbRow) {
     notFound();
   }
 
@@ -83,7 +111,7 @@ export default async function ArticlePage({ params }) {
     recordArticleView(dbRow.id, {
       categorySlug: article.categorySlug,
       subcategoryName: article.subcategory,
-      path: `/article/${id}`,
+      path: `/article/${decodedId}`,
     }).catch(() => {});
   }
 
@@ -120,11 +148,11 @@ export default async function ArticlePage({ params }) {
 
   let relatedArticles = [];
   try {
-    const dbRelated = await getPublishedArticles({ categorySlug: article.categorySlug, limit: 6 });
-    relatedArticles = (dbRelated || [])
-      .map(mapDbArticleToFrontend)
-      .filter((a) => a.id !== article.id && a.dbId !== article.dbId && a.slug !== article.slug)
-      .slice(0, 4);
+    relatedArticles = await getCachedRelatedArticles(
+      article.categorySlug,
+      article.id,
+      article.slug
+    );
   } catch (err) {
     console.error("Error fetching related articles:", err);
   }
