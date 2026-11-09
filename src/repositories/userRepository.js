@@ -88,7 +88,7 @@ export async function getAllUsers() {
 export async function getUserById(id) {
   if (!id) return null;
   return await queryOne(
-    `SELECT id, username, full_name, COALESCE(full_name, name, username) as name, email, phone, role, status, must_change_password, avatar, bio, created_at 
+    `SELECT id, username, full_name, COALESCE(full_name, name, username) as name, email, phone, password, role, status, must_change_password, avatar, bio, created_at 
      FROM users 
      WHERE id = ?`,
     [id]

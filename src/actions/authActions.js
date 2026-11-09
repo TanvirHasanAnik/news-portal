@@ -16,7 +16,7 @@ import {
   updateUserPassword,
   updateUserProfile,
 } from "@/repositories/userRepository";
-import { createJwtToken } from "@/lib/auth/jwt";
+import { createJwtToken, computePasswordSignature } from "@/lib/auth/jwt";
 import { setAuthCookie, removeAuthCookie } from "@/lib/auth/cookies";
 import { getCurrentUser } from "@/lib/auth/server";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
@@ -68,6 +68,7 @@ export async function loginAction(prevState, formData) {
         isMatch = true;
         const newHash = await bcrypt.hash(validated.password, BCRYPT_SALT_ROUNDS);
         await updateUserPassword(user.id, newHash);
+        user.password = newHash;
       }
     }
 
@@ -78,6 +79,7 @@ export async function loginAction(prevState, formData) {
       };
     }
 
+    const pwdSig = await computePasswordSignature(user.password);
 
     const token = await createJwtToken({
       sub: user.id,
@@ -87,6 +89,7 @@ export async function loginAction(prevState, formData) {
       role: user.role,
       status: user.status,
       mustChangePassword: Boolean(user.must_change_password),
+      pwdSig,
     });
 
 
@@ -226,6 +229,20 @@ export async function changeAdminPasswordAction(prevState, formData) {
     } catch (_err) {
 
     }
+
+    const newPwdSig = await computePasswordSignature(hashed);
+    const newToken = await createJwtToken({
+      sub: currentUser.id,
+      username: currentUser.username,
+      email: currentUser.email || "",
+      name: currentUser.name || currentUser.fullName || currentUser.username,
+      role: currentUser.role,
+      status: currentUser.status,
+      mustChangePassword: false,
+      pwdSig: newPwdSig,
+    });
+
+    await setAuthCookie(newToken);
 
     revalidatePath("/admin");
     return {

@@ -1,9 +1,6 @@
 import { getAuthCookie } from "./cookies";
-import { verifyJwtToken } from "./jwt";
+import { verifyJwtToken, computePasswordSignature } from "./jwt";
 import { getUserById } from "@/repositories/userRepository";
-
-
-
 
 export const DEFAULT_DEV_USER = {
   id: "usr_superadmin",
@@ -13,8 +10,6 @@ export const DEFAULT_DEV_USER = {
   status: "active",
 };
 
-
-
 export async function getCurrentUser() {
   try {
     const token = await getAuthCookie();
@@ -23,9 +18,17 @@ export async function getCurrentUser() {
     const payload = await verifyJwtToken(token);
     if (!payload || !payload.sub) return null;
 
-
     const dbUser = await getUserById(payload.sub);
     if (!dbUser || dbUser.status !== "active") {
+      return null;
+    }
+
+    if (!payload.pwdSig || !dbUser.password) {
+      return null;
+    }
+
+    const currentSig = await computePasswordSignature(dbUser.password);
+    if (payload.pwdSig !== currentSig) {
       return null;
     }
 
