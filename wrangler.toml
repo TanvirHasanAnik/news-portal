@@ -17,15 +17,17 @@ DB_NAME = "newsportal_db"
 [[d1_databases]]
 binding = "DB"
 database_name = "news-portal-db"
-database_id = "news-portal-db-local"
+database_id = "4b0601b0-2897-48cd-b385-a165d32b10a3"
+remote = true
 
 [[d1_databases]]
 binding = "NEXT_TAG_CACHE_D1"
 database_name = "news-portal-tag-cache"
-database_id = "news-portal-tag-cache-local"
+database_id = "551bed68-2d55-4760-8e05-f9d084d1f522"
+remote = true
 
 [[r2_buckets]]
-binding = "NEWS_IMAGES_BUCKET"
+binding = "news_portal_images"
 bucket_name = "news-portal-images"
 
 [[r2_buckets]]
@@ -34,4 +36,4 @@ bucket_name = "news-portal-isr-cache"
 
 [[kv_namespaces]]
 binding = "REVALIDATE_RATE_LIMIT_KV"
-id = "revalidate-rate-limit-kv-local"
+id = "d48561caa1e04a4b960c9253c6683daa"
