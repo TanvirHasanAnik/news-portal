@@ -71,7 +71,7 @@ export async function recordArticleView(
     let updated = false;
 
     await withTransaction(async (tx) => {
-      const [updateResult] = await tx.query(
+      const updateResult = await tx.query(
         "UPDATE articles SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ? AND status = 'published'",
         [articleId]
       );

@@ -38,7 +38,7 @@ export async function getJwtSecretKey() {
 
 export async function createJwtToken(payload, options = {}) {
   const secretKey = await getJwtSecretKey();
-  const expiresIn = options.expiresIn || "7d";
+  const expiresIn = options.expiresIn || "30d";
 
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })

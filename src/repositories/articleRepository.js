@@ -1178,30 +1178,31 @@ export async function getMostReadArticles(limit = 10) {
                WHEN COALESCE(a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 
                ELSE 0 
              END as is_within_validity_week,
-             (
-               SELECT COUNT(*)
-               FROM analytics_page_views v
-               WHERE v.article_id = a.id
-                 AND v.created_at <= DATE_ADD(COALESCE(a.published_at, a.created_at), INTERVAL 7 DAY)
-             ) as individual_logged_views
+             CASE 
+               WHEN COALESCE(a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 
+                 GREATEST(
+                   COALESCE(a.view_count, 0),
+                   (
+                     SELECT COUNT(*) 
+                     FROM analytics_page_views v 
+                     WHERE v.article_id = a.id 
+                       AND v.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                   )
+                 )
+               ELSE 
+                 (
+                   SELECT COUNT(*) 
+                   FROM analytics_page_views v 
+                   WHERE v.article_id = a.id 
+                     AND v.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+                     AND v.created_at > DATE_ADD(COALESCE(a.published_at, a.created_at), INTERVAL 7 DAY)
+                 )
+             END as display_views
       FROM articles a
       WHERE a.status = 'published'
       ORDER BY 
-        is_within_validity_week DESC,
-        CASE 
-          WHEN COALESCE(a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 
-            GREATEST(
-              COALESCE(a.view_count, 0),
-              (
-                SELECT COUNT(*) 
-                FROM analytics_page_views v 
-                WHERE v.article_id = a.id 
-                  AND v.created_at <= DATE_ADD(COALESCE(a.published_at, a.created_at), INTERVAL 7 DAY)
-              )
-            )
-          ELSE 0 
-        END DESC,
-        a.created_at DESC
+        display_views DESC,
+        COALESCE(a.published_at, a.created_at) DESC
       LIMIT ?
     `;
 
@@ -1213,16 +1214,13 @@ export async function getMostReadArticles(limit = 10) {
   return (dbRows || []).map((row) => {
     const mapped = mapDbArticleToFrontend(row);
     const isWithinWeek = row.is_within_validity_week === 1;
-    const loggedWeekViews = Number(row.individual_logged_views) || 0;
-    const directViews = Number(row.view_count) || 0;
-
-    const weekViews = isWithinWeek ? Math.max(directViews, loggedWeekViews) : loggedWeekViews;
+    const displayViews = Number(row.display_views) || 0;
 
     return {
       ...mapped,
-      view_count: weekViews,
-      week_views: weekViews,
-      views: weekViews > 0 ? `${weekViews.toLocaleString("bn-BD")} পঠিত` : "সর্বশেষ সংবাদ",
+      view_count: displayViews,
+      week_views: displayViews,
+      views: displayViews > 0 ? `${displayViews.toLocaleString("bn-BD")} পঠিত` : "সর্বশেষ সংবাদ",
       isWithinValidityWeek: isWithinWeek,
     };
   });

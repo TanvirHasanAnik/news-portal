@@ -1,47 +1,83 @@
-import { revalidateTag } from "next/cache";
+import { revalidateTag, revalidatePath } from "next/cache";
 import { TAGS } from "./tags";
 
 export function invalidateHomepage() {
-  revalidateTag(TAGS.HOMEPAGE);
-  revalidateTag(TAGS.ARTICLES_PUBLISHED);
+  try {
+    revalidateTag(TAGS.HOMEPAGE);
+    revalidateTag(TAGS.ARTICLES_PUBLISHED);
+    revalidatePath("/", "page");
+    revalidatePath("/category/latest", "page");
+  } catch (err) {
+    console.error("invalidateHomepage error:", err);
+  }
 }
 
 export function invalidateArticle(id, categorySlug, slug = null) {
-  if (id) {
-    revalidateTag(TAGS.ARTICLE(id));
-  }
-  if (slug && slug !== id) {
-    revalidateTag(TAGS.ARTICLE(slug));
-  }
-  if (categorySlug) {
-    revalidateTag(TAGS.CATEGORY(categorySlug));
-    revalidateTag(TAGS.ARTICLES_CATEGORY(categorySlug));
+  try {
+    if (id) {
+      revalidateTag(TAGS.ARTICLE(id));
+      revalidatePath(`/article/${id}`, "page");
+    }
+    if (slug && slug !== id) {
+      revalidateTag(TAGS.ARTICLE(slug));
+      revalidatePath(`/article/${slug}`, "page");
+    }
+    if (categorySlug) {
+      revalidateTag(TAGS.CATEGORY(categorySlug));
+      revalidateTag(TAGS.ARTICLES_CATEGORY(categorySlug));
+      revalidatePath(`/category/${categorySlug}`, "page");
+    }
+    revalidatePath("/category/latest", "page");
+    revalidatePath("/", "page");
+  } catch (err) {
+    console.error("invalidateArticle error:", err);
   }
 }
 
 export function invalidateCuration(type) {
-  revalidateTag(TAGS.HOMEPAGE);
-  if (type === "breaking") {
-    revalidateTag(TAGS.CURATION_BREAKING);
-  } else if (type === "handpicked") {
-    revalidateTag(TAGS.CURATION_HANDPICKED);
-    revalidateTag(TAGS.CATEGORY("handpicked"));
-    revalidateTag(TAGS.ARTICLES_CATEGORY("handpicked"));
+  try {
+    revalidateTag(TAGS.HOMEPAGE);
+    revalidatePath("/", "page");
+    if (type === "breaking") {
+      revalidateTag(TAGS.CURATION_BREAKING);
+    } else if (type === "handpicked") {
+      revalidateTag(TAGS.CURATION_HANDPICKED);
+      revalidateTag(TAGS.CATEGORY("handpicked"));
+      revalidateTag(TAGS.ARTICLES_CATEGORY("handpicked"));
+      revalidatePath("/category/handpicked", "page");
+    }
+  } catch (err) {
+    console.error("invalidateCuration error:", err);
   }
 }
 
 export function invalidateCategory(slug) {
-  revalidateTag(TAGS.HOMEPAGE);
-  revalidateTag(TAGS.CATEGORIES);
-  if (slug) {
-    revalidateTag(TAGS.CATEGORY(slug));
+  try {
+    revalidateTag(TAGS.HOMEPAGE);
+    revalidateTag(TAGS.CATEGORIES);
+    revalidatePath("/", "page");
+    if (slug) {
+      revalidateTag(TAGS.CATEGORY(slug));
+      revalidateTag(TAGS.ARTICLES_CATEGORY(slug));
+      revalidatePath(`/category/${slug}`, "page");
+    }
+  } catch (err) {
+    console.error("invalidateCategory error:", err);
   }
 }
 
 export function invalidateSocialLinks() {
-  revalidateTag(TAGS.SOCIAL_LINKS);
+  try {
+    revalidateTag(TAGS.SOCIAL_LINKS);
+  } catch (err) {
+    console.error("invalidateSocialLinks error:", err);
+  }
 }
 
 export function invalidateSiteSettings() {
-  revalidateTag(TAGS.SITE_SETTINGS);
+  try {
+    revalidateTag(TAGS.SITE_SETTINGS);
+  } catch (err) {
+    console.error("invalidateSiteSettings error:", err);
+  }
 }

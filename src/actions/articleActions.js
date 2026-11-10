@@ -726,15 +726,6 @@ export async function recordArticleViewAction({ articleId, path } = {}) {
       return { success: false };
     }
 
-    if (referer) {
-      try {
-        const refererUrl = new URL(referer);
-        if (!refererUrl.pathname.startsWith("/article/")) {
-          return { success: false };
-        }
-      } catch {}
-    }
-
     const article = await findArticleBySlugOrId(articleId);
     if (!article || article.status !== "published") {
       return { success: false };

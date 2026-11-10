@@ -34,7 +34,8 @@ export async function POST(request) {
 
     let body = {};
     try {
-      body = await request.json();
+      const text = await request.text();
+      body = text ? JSON.parse(text) : {};
     } catch {
       return NextResponse.json({ success: false }, { status: 400 });
     }
@@ -51,15 +52,6 @@ export async function POST(request) {
 
     if (!cleanPath.startsWith("/article/")) {
       return NextResponse.json({ success: false }, { status: 403 });
-    }
-
-    if (referer) {
-      try {
-        const refererUrl = new URL(referer);
-        if (!refererUrl.pathname.startsWith("/article/")) {
-          return NextResponse.json({ success: false }, { status: 403 });
-        }
-      } catch {}
     }
 
     let ipHash = null;
