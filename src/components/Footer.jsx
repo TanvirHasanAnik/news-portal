@@ -47,7 +47,7 @@ export default function Footer({ socialLinks = {} }) {
             <p className="flex items-start sm:items-center gap-1.5">
               <MapPin className="w-4 h-4 text-red-600 shrink-0 mt-0.5 sm:mt-0" />
               <span>
-                <strong className="text-slate-800">সম্পাদকীয় ও বাণিজ্য বিভাগ:</strong> 165/1/A (1st floor), East kafrul, Dhaka cant, Dhaka-1206
+                <strong className="text-slate-800">সম্পাদকীয় ও বাণিজ্য বিভাগ:</strong> ইস্ট কাফরুল,ঢাকা ক্যান্টনমেন্ট, ঢাকা -১২০৬।
               </span>
             </p>
           </div>
