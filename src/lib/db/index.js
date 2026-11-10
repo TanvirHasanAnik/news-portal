@@ -1,6 +1,17 @@
+import { connect as connectTiDB } from "@tidbcloud/serverless";
 import mysql from "mysql2/promise";
 
 let globalNodePool = null;
+
+// Extract Cloudflare runtime environment variables
+async function getCloudflareEnv() {
+  try {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const ctx = await getCloudflareContext({ async: true });
+    if (ctx?.env) return ctx.env;
+  } catch (_e) {}
+  return {};
+}
 
 export function isWorkerRuntime() {
   return (
@@ -11,15 +22,7 @@ export function isWorkerRuntime() {
 }
 
 export async function getDbConfig() {
-  let cfEnv = {};
-  try {
-    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-    const ctx = await getCloudflareContext({ async: true });
-    if (ctx?.env) {
-      cfEnv = ctx.env;
-    }
-  } catch (_e) {}
-
+  const cfEnv = await getCloudflareEnv();
   const env = {
     ...(typeof process !== "undefined" && process.env ? process.env : {}),
     ...cfEnv,
@@ -27,35 +30,13 @@ export async function getDbConfig() {
 
   const databaseUrl = env.DATABASE_URL || env.TIDB_DATABASE_URL || env.MYSQL_URL;
   if (databaseUrl) {
-    return {
-      uri: databaseUrl,
-      charset: "utf8mb4",
-      timezone: "Z",
-      dateStrings: true,
-      decimalNumbers: true,
-      connectTimeout: 10000,
-    };
+    const isTiDB = databaseUrl.includes("tidbcloud.com") || env.DB_SSL === "true";
+    return { uri: databaseUrl, isTiDB };
   }
 
-  const host =
-    env.DB_HOST ||
-    env.TIDB_HOST ||
-    env.MYSQL_HOST ||
-    "127.0.0.1";
-
-  const port = Number(
-    env.DB_PORT ||
-    env.TIDB_PORT ||
-    env.MYSQL_PORT ||
-    3307
-  );
-
-  const user =
-    env.DB_USER ||
-    env.TIDB_USER ||
-    env.MYSQL_USER ||
-    "root";
-
+  const host = env.DB_HOST || env.TIDB_HOST || env.MYSQL_HOST || "127.0.0.1";
+  const port = Number(env.DB_PORT || env.TIDB_PORT || env.MYSQL_PORT || 3307);
+  const user = env.DB_USER || env.TIDB_USER || env.MYSQL_USER || "root";
   const password =
     env.DB_PASSWORD !== undefined
       ? env.DB_PASSWORD
@@ -64,42 +45,55 @@ export async function getDbConfig() {
       : env.MYSQL_PASSWORD !== undefined
       ? env.MYSQL_PASSWORD
       : "123456";
+  const database = env.DB_NAME || env.TIDB_DATABASE || env.MYSQL_DATABASE || "newsportal_db";
 
-  const database =
-    env.DB_NAME ||
-    env.TIDB_DATABASE ||
-    env.MYSQL_DATABASE ||
-    "newsportal_db";
+  const isTiDB = host.includes("tidbcloud.com") || env.DB_SSL === "true" || env.TIDB_ENABLE_SSL === "true";
 
-  const isTiDbCloud =
-    host.includes("tidbcloud.com") ||
-    env.DB_SSL === "true" ||
-    env.TIDB_ENABLE_SSL === "true";
-
-  const config = {
-    host,
-    port,
-    user,
-    password,
-    database,
-    charset: "utf8mb4",
-    timezone: "Z",
-    disableEval: true,
-    dateStrings: true,
-    decimalNumbers: true,
-    connectTimeout: 10000,
-  };
-
-  if (isTiDbCloud) {
-    config.ssl = {
-      minVersion: "TLSv1.2",
-      rejectUnauthorized: true,
-    };
-  }
-
-  return config;
+  return { host, port, user, password, database, isTiDB };
 }
 
+// Global Unified Query Handler
+export async function query(sql, params = []) {
+  const config = await getDbConfig();
+
+  // 1. TiDB Cloud Connection via Serverless HTTP (Fetch)
+  if (config.isTiDB) {
+    const conn = connectTiDB(
+      config.uri
+        ? { url: config.uri }
+        : {
+            host: config.host,
+            port: config.port,
+            username: config.user,
+            password: config.password,
+            database: config.database,
+          }
+    );
+    const rows = await conn.execute(sql, params);
+    return rows;
+  }
+
+  // 2. Local MySQL Connection via mysql2 TCP Driver
+  const handle = await getConnectionHandle();
+  try {
+    const [rows] = await handle.query(sql, params);
+    return rows;
+  } finally {
+    if (typeof handle.release === "function") {
+      await handle.release();
+    }
+  }
+}
+
+export async function queryOne(sql, params = []) {
+  const rows = await query(sql, params);
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return null;
+  }
+  return rows[0];
+}
+
+// Local MySQL pool & connection management
 export async function getConnectionHandle() {
   const config = await getDbConfig();
 
@@ -143,30 +137,46 @@ export async function getConnectionHandle() {
   };
 }
 
-export async function query(sql, params = []) {
-  const handle = await getConnectionHandle();
-  try {
-    const [rows] = await handle.query(sql, params);
-    return rows;
-  } catch (error) {
-    console.error("[Database Query Error]:", error?.message || error);
-    throw error;
-  } finally {
-    if (typeof handle.release === "function") {
-      await handle.release();
+// Dual-Engine Transaction Handler
+export async function withTransaction(callback) {
+  const config = await getDbConfig();
+
+  // TiDB Cloud HTTP Transaction
+  if (config.isTiDB) {
+    const conn = connectTiDB(
+      config.uri
+        ? { url: config.uri }
+        : {
+            host: config.host,
+            port: config.port,
+            username: config.user,
+            password: config.password,
+            database: config.database,
+          }
+    );
+    const tx = await conn.begin();
+    try {
+      const txWrapper = {
+        query: async (sql, params = []) => await tx.execute(sql, params),
+        queryOne: async (sql, params = []) => {
+          const rows = await tx.execute(sql, params);
+          if (!rows || !Array.isArray(rows) || rows.length === 0) return null;
+          return rows[0];
+        },
+        execute: async (sql, params = []) => await tx.execute(sql, params),
+      };
+      const result = await callback(txWrapper);
+      await tx.commit();
+      return result;
+    } catch (error) {
+      try {
+        await tx.rollback();
+      } catch (_rollbackErr) {}
+      throw error;
     }
   }
-}
 
-export async function queryOne(sql, params = []) {
-  const rows = await query(sql, params);
-  if (!rows || !Array.isArray(rows) || rows.length === 0) {
-    return null;
-  }
-  return rows[0];
-}
-
-export async function withTransaction(callback) {
+  // Local MySQL TCP Transaction
   const handle = await getConnectionHandle();
   const conn = handle.connection;
 
@@ -196,7 +206,6 @@ export async function withTransaction(callback) {
     await conn.commit();
     return result;
   } catch (error) {
-    console.error("[Database Transaction Error]:", error?.message || error);
     try {
       await conn.rollback();
     } catch (_rollbackErr) {}
@@ -208,6 +217,7 @@ export async function withTransaction(callback) {
   }
 }
 
+// D1-style Wrapper Layer
 export async function getDb() {
   return {
     query,
@@ -255,7 +265,7 @@ export async function getDb() {
         const results = [];
         for (const stmt of statements) {
           const params = typeof stmt.getBoundParams === "function" ? stmt.getBoundParams() : [];
-          const [result] = await tx.connection.query(stmt.sql, params);
+          const result = await tx.query(stmt.sql, params);
           results.push({
             success: true,
             meta: {
