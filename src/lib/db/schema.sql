@@ -21,26 +21,6 @@ CREATE TABLE IF NOT EXISTS users (
   INDEX idx_users_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS admin_requests (
-  id VARCHAR(64) NOT NULL PRIMARY KEY,
-  requester_id VARCHAR(64) NOT NULL,
-  request_type VARCHAR(64) NOT NULL,
-  target_user_id VARCHAR(64) NULL,
-  payload TEXT NULL,
-  status VARCHAR(32) NOT NULL DEFAULT 'pending',
-  reviewed_by VARCHAR(64) NULL,
-  reviewer_note TEXT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_admin_requests_status (status),
-  INDEX idx_admin_requests_requester (requester_id),
-  INDEX idx_admin_requests_target (target_user_id),
-  INDEX idx_admin_requests_created (created_at),
-  CONSTRAINT fk_admin_requests_requester FOREIGN KEY (requester_id) REFERENCES users(id) ON DELETE CASCADE,
-  CONSTRAINT fk_admin_requests_target FOREIGN KEY (target_user_id) REFERENCES users(id) ON DELETE SET NULL,
-  CONSTRAINT fk_admin_requests_reviewer FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS categories (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -65,7 +45,7 @@ CREATE TABLE IF NOT EXISTS subcategories (
   UNIQUE KEY uq_subcategories_cat_slug (category_id, slug),
   INDEX idx_subcategories_category_id (category_id),
   INDEX idx_subcategories_sort_order (sort_order),
-  CONSTRAINT fk_subcategories_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+  CONSTRAINT fk_subcategories_category FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS articles (
@@ -115,9 +95,9 @@ CREATE TABLE IF NOT EXISTS articles (
   INDEX idx_articles_created_by (created_by),
   INDEX idx_articles_last_edited_by (last_edited_by),
   INDEX idx_articles_view_count (view_count),
-  CONSTRAINT fk_articles_category FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
-  CONSTRAINT fk_articles_subcategory FOREIGN KEY (subcategory_id) REFERENCES subcategories(id) ON DELETE SET NULL,
-  CONSTRAINT fk_articles_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+  CONSTRAINT fk_articles_category FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE SET NULL,
+  CONSTRAINT fk_articles_subcategory FOREIGN KEY (subcategory_id) REFERENCES subcategories (id) ON DELETE SET NULL,
+  CONSTRAINT fk_articles_author FOREIGN KEY (author_id) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS article_revisions (
@@ -132,8 +112,28 @@ CREATE TABLE IF NOT EXISTS article_revisions (
   INDEX idx_revisions_article (article_id),
   INDEX idx_revisions_editor (editor_id),
   INDEX idx_revisions_created_at (created_at),
-  CONSTRAINT fk_revisions_article FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE,
-  CONSTRAINT fk_revisions_editor FOREIGN KEY (editor_id) REFERENCES users(id) ON DELETE SET NULL
+  CONSTRAINT fk_revisions_article FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE CASCADE,
+  CONSTRAINT fk_revisions_editor FOREIGN KEY (editor_id) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS admin_requests (
+  id VARCHAR(64) NOT NULL PRIMARY KEY,
+  requester_id VARCHAR(64) NOT NULL,
+  request_type VARCHAR(64) NOT NULL,
+  target_user_id VARCHAR(64) NULL,
+  payload TEXT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  reviewed_by VARCHAR(64) NULL,
+  reviewer_note TEXT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_admin_requests_status (status),
+  INDEX idx_admin_requests_requester (requester_id),
+  INDEX idx_admin_requests_target (target_user_id),
+  INDEX idx_admin_requests_created (created_at),
+  CONSTRAINT fk_admin_requests_requester FOREIGN KEY (requester_id) REFERENCES users (id) ON DELETE CASCADE,
+  CONSTRAINT fk_admin_requests_target FOREIGN KEY (target_user_id) REFERENCES users (id) ON DELETE SET NULL,
+  CONSTRAINT fk_admin_requests_reviewer FOREIGN KEY (reviewed_by) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS curated_news (
@@ -148,7 +148,7 @@ CREATE TABLE IF NOT EXISTS curated_news (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_curated_type_active_priority (type, is_active, priority),
   INDEX idx_curated_article_id (article_id),
-  CONSTRAINT fk_curated_article FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE SET NULL
+  CONSTRAINT fk_curated_article FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS analytics_page_views (
@@ -165,7 +165,7 @@ CREATE TABLE IF NOT EXISTS analytics_page_views (
   INDEX idx_analytics_date (viewed_date),
   INDEX idx_analytics_article_created (article_id, created_at),
   INDEX idx_analytics_category (category_slug),
-  CONSTRAINT fk_analytics_article FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE SET NULL
+  CONSTRAINT fk_analytics_article FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS audit_logs (
@@ -180,24 +180,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   INDEX idx_audit_logs_action (action),
   INDEX idx_audit_logs_user (user_id),
   INDEX idx_audit_logs_created_at (created_at),
-  CONSTRAINT fk_audit_logs_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS comments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  article_id VARCHAR(64) NOT NULL,
-  user_id VARCHAR(64) NULL,
-  user_name VARCHAR(255) NOT NULL,
-  user_email VARCHAR(191) NULL,
-  content TEXT NOT NULL,
-  status VARCHAR(32) NOT NULL DEFAULT 'pending',
-  parent_id INT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_comments_article_status (article_id, status),
-  INDEX idx_comments_created_at (created_at),
-  INDEX idx_comments_parent_id (parent_id),
-  CONSTRAINT fk_comments_article FOREIGN KEY (article_id) REFERENCES articles(id) ON DELETE CASCADE
+  CONSTRAINT fk_audit_logs_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS notifications (
@@ -214,7 +197,26 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_notifications_user_created (user_id, created_at),
   INDEX idx_notifications_user_read (user_id, is_read),
-  INDEX idx_notifications_type (type)
+  INDEX idx_notifications_type (type),
+  CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS comments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  article_id VARCHAR(64) NOT NULL,
+  user_id VARCHAR(64) NULL,
+  user_name VARCHAR(255) NOT NULL,
+  user_email VARCHAR(191) NULL,
+  content TEXT NOT NULL,
+  status VARCHAR(32) NOT NULL DEFAULT 'pending',
+  parent_id INT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_comments_article_status (article_id, status),
+  INDEX idx_comments_created_at (created_at),
+  INDEX idx_comments_parent_id (parent_id),
+  CONSTRAINT fk_comments_article FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE CASCADE,
+  CONSTRAINT fk_comments_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS social_links (

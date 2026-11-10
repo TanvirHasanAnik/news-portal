@@ -1,11 +1,12 @@
--- Default Staff Users
--- Super Admin and Admin accounts are securely bootstrapped by the system runtime from environment variables (.dev.vars / wrangler secret)
-INSERT IGNORE INTO users (id, username, full_name, name, email, phone, role, status, bio)
-VALUES 
-  ('usr_reporter', 'reporter', 'নিজস্ব প্রতিবেদক', 'নিজস্ব প্রতিবেদক', 'reporter@aloshbe.com', '', 'reporter', 'active', 'আলো আসবে সংবাদ পরিবার');
+INSERT INTO users (id, username, password, role)
+VALUES
+  ('usr_superadmin', 'superadmin', '$2b$12$1kLUR/4rKxknuVsp87lWh.K4MOqjMztMTmNf2cyOe9zKTViQ.xpYS', 'super_admin'),
+  ('usr_admin', 'admin', '$2b$12$ggT7r3YklXUYRafSbt6bYOsOb8MPr2EzX1OUDJDja45L6PnKFkmpO', 'admin')
+ON DUPLICATE KEY UPDATE
+  password = VALUES(password),
+  role = VALUES(role);
 
--- Default Categories
-INSERT IGNORE INTO categories (id, name, slug, is_permanent, sort_order)
+INSERT INTO categories (id, name, slug, is_permanent, sort_order)
 VALUES
   ('cat_latest', 'সর্বশেষ', 'latest', 1, 1),
   ('cat_handpicked', 'বাছাইকৃত', 'handpicked', 1, 2),
@@ -18,10 +19,14 @@ VALUES
   ('cat_technology', 'প্রযুক্তি', 'technology', 0, 9),
   ('cat_lifestyle', 'জীবনযাপন', 'lifestyle', 0, 10),
   ('cat_career', 'চাকরি ও ক্যারিয়ার', 'career', 0, 11),
-  ('cat_opinion', 'মতামত', 'opinion', 0, 12);
+  ('cat_opinion', 'মতামত', 'opinion', 0, 12),
+  ('cat_others', 'অন্যান্য', 'others', 1, 9999)
+ON DUPLICATE KEY UPDATE
+  name = VALUES(name),
+  is_permanent = VALUES(is_permanent),
+  sort_order = VALUES(sort_order);
 
--- Default Subcategories
-INSERT IGNORE INTO subcategories (id, category_id, name, slug, sort_order)
+INSERT INTO subcategories (id, category_id, name, slug, sort_order)
 VALUES
   ('cat_national_s_1', 'cat_national', 'রাজধানী', 'sub_national_1', 1),
   ('cat_national_s_2', 'cat_national', 'সারাদেশ', 'sub_national_2', 2),
@@ -81,4 +86,16 @@ VALUES
   ('cat_opinion_s_1', 'cat_opinion', 'সম্পাদকীয়', 'sub_opinion_1', 1),
   ('cat_opinion_s_2', 'cat_opinion', 'কলাম', 'sub_opinion_2', 2),
   ('cat_opinion_s_3', 'cat_opinion', 'মুক্তমত', 'sub_opinion_3', 3),
-  ('cat_opinion_s_4', 'cat_opinion', 'বিশ্লেষণ', 'sub_opinion_4', 4);
+  ('cat_opinion_s_4', 'cat_opinion', 'বিশ্লেষণ', 'sub_opinion_4', 4)
+ON DUPLICATE KEY UPDATE
+  name = VALUES(name),
+  sort_order = VALUES(sort_order);
+
+INSERT INTO social_links (id, facebook, youtube, twitter, instagram)
+VALUES
+  ('default', '', '', '', '')
+ON DUPLICATE KEY UPDATE
+  facebook = VALUES(facebook),
+  youtube = VALUES(youtube),
+  twitter = VALUES(twitter),
+  instagram = VALUES(instagram);

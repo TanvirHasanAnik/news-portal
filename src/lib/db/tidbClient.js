@@ -1,57 +1,64 @@
 import { connect } from "@tidbcloud/serverless";
 
-
-
-
 let cachedConnection = null;
 let cachedConfigKey = null;
 
+async function getCloudflareEnv() {
+  try {
+    const { getCloudflareContext } = await import("@opennextjs/cloudflare");
+    const ctx = await getCloudflareContext({ async: true });
+    if (ctx?.env) {
+      return ctx.env;
+    }
+  } catch (_e) {}
+  return {};
+}
 
+export async function getTiDbConfig(env = {}) {
+  const cfEnv = await getCloudflareEnv();
+  const merged = {
+    ...(typeof process !== "undefined" && process.env ? process.env : {}),
+    ...cfEnv,
+    ...env,
+  };
 
-export function getTiDbConfig(env = {}) {
-  const databaseUrl =
-    env.DATABASE_URL ||
-    env.TIDB_DATABASE_URL ||
-    (typeof process !== "undefined" && (process.env.DATABASE_URL || process.env.TIDB_DATABASE_URL));
-
+  const databaseUrl = merged.DATABASE_URL || merged.TIDB_DATABASE_URL || merged.MYSQL_URL;
   if (databaseUrl) {
     return { url: databaseUrl };
   }
 
   const host =
-    env.TIDB_HOST ||
-    env.DB_HOST ||
-    (typeof process !== "undefined" && (process.env.TIDB_HOST || process.env.DB_HOST)) ||
+    merged.TIDB_HOST ||
+    merged.DB_HOST ||
+    merged.MYSQL_HOST ||
     "gateway01.us-east-1.prod.aws.tidbcloud.com";
 
   const port = Number(
-    env.TIDB_PORT ||
-    env.DB_PORT ||
-    (typeof process !== "undefined" && (process.env.TIDB_PORT || process.env.DB_PORT)) ||
+    merged.TIDB_PORT ||
+    merged.DB_PORT ||
+    merged.MYSQL_PORT ||
     4000
   );
 
   const username =
-    env.TIDB_USER ||
-    env.DB_USER ||
-    (typeof process !== "undefined" && (process.env.TIDB_USER || process.env.DB_USER)) ||
+    merged.TIDB_USER ||
+    merged.DB_USER ||
+    merged.MYSQL_USER ||
     "root";
 
   const password =
-    env.TIDB_PASSWORD !== undefined
-      ? env.TIDB_PASSWORD
-      : env.DB_PASSWORD !== undefined
-      ? env.DB_PASSWORD
-      : typeof process !== "undefined" && process.env.TIDB_PASSWORD !== undefined
-      ? process.env.TIDB_PASSWORD
-      : typeof process !== "undefined" && process.env.DB_PASSWORD !== undefined
-      ? process.env.DB_PASSWORD
+    merged.TIDB_PASSWORD !== undefined
+      ? merged.TIDB_PASSWORD
+      : merged.DB_PASSWORD !== undefined
+      ? merged.DB_PASSWORD
+      : merged.MYSQL_PASSWORD !== undefined
+      ? merged.MYSQL_PASSWORD
       : "";
 
   const database =
-    env.TIDB_DATABASE ||
-    env.DB_NAME ||
-    (typeof process !== "undefined" && (process.env.TIDB_DATABASE || process.env.DB_NAME)) ||
+    merged.TIDB_DATABASE ||
+    merged.DB_NAME ||
+    merged.MYSQL_DATABASE ||
     "newsportal_db";
 
   return {
@@ -63,10 +70,8 @@ export function getTiDbConfig(env = {}) {
   };
 }
 
-
-
-export function getTiDbConnection(env = {}) {
-  const config = getTiDbConfig(env);
+export async function getTiDbConnection(env = {}) {
+  const config = await getTiDbConfig(env);
   const configKey = config.url || `${config.host}:${config.port}:${config.username}:${config.database}`;
 
   if (!cachedConnection || cachedConfigKey !== configKey) {
@@ -77,14 +82,10 @@ export function getTiDbConnection(env = {}) {
   return cachedConnection;
 }
 
-
-
 export async function executeQuery(sql, params = [], env = {}) {
-  const conn = getTiDbConnection(env);
+  const conn = await getTiDbConnection(env);
   return await conn.execute(sql, params);
 }
-
-
 
 export async function executeQueryOne(sql, params = [], env = {}) {
   const rows = await executeQuery(sql, params, env);
@@ -94,3 +95,9 @@ export async function executeQueryOne(sql, params = [], env = {}) {
   return rows[0];
 }
 
+export default {
+  getTiDbConfig,
+  getTiDbConnection,
+  executeQuery,
+  executeQueryOne,
+};

@@ -21,7 +21,6 @@ import { setAuthCookie, removeAuthCookie } from "@/lib/auth/cookies";
 import { getCurrentUser } from "@/lib/auth/server";
 import { recordAuditLog } from "@/repositories/analyticsRepository";
 import { notifyAdmins } from "@/repositories/notificationRepository";
-import { getFallbackPasswordForRole } from "@/lib/db/bootstrap";
 
 const BCRYPT_SALT_ROUNDS = 12;
 

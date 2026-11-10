@@ -1,13 +1,12 @@
 import mysql from "mysql2/promise";
 
 let globalNodePool = null;
-let isDbBootstrapped = false;
-let bootstrapPromise = null;
 
 export function isWorkerRuntime() {
   return (
     typeof WebSocketPair !== "undefined" ||
-    (typeof navigator !== "undefined" && navigator.userAgent?.includes("Cloudflare"))
+    (typeof navigator !== "undefined" && navigator.userAgent?.includes("Cloudflare")) ||
+    Boolean(process.env.NEXT_RUNTIME === "edge")
   );
 }
 
@@ -21,47 +20,63 @@ export async function getDbConfig() {
     }
   } catch (_e) {}
 
+  const env = {
+    ...(typeof process !== "undefined" && process.env ? process.env : {}),
+    ...cfEnv,
+  };
+
+  const databaseUrl = env.DATABASE_URL || env.TIDB_DATABASE_URL || env.MYSQL_URL;
+  if (databaseUrl) {
+    return {
+      uri: databaseUrl,
+      charset: "utf8mb4",
+      timezone: "Z",
+      dateStrings: true,
+      decimalNumbers: true,
+      connectTimeout: 10000,
+    };
+  }
+
   const host =
-    cfEnv.DB_HOST ||
-    cfEnv.MYSQL_HOST ||
-    process.env.DB_HOST ||
-    process.env.MYSQL_HOST ||
+    env.DB_HOST ||
+    env.TIDB_HOST ||
+    env.MYSQL_HOST ||
     "127.0.0.1";
 
   const port = Number(
-    cfEnv.DB_PORT ||
-    cfEnv.MYSQL_PORT ||
-    process.env.DB_PORT ||
-    process.env.MYSQL_PORT ||
+    env.DB_PORT ||
+    env.TIDB_PORT ||
+    env.MYSQL_PORT ||
     3307
   );
 
   const user =
-    cfEnv.DB_USER ||
-    cfEnv.MYSQL_USER ||
-    process.env.DB_USER ||
-    process.env.MYSQL_USER ||
+    env.DB_USER ||
+    env.TIDB_USER ||
+    env.MYSQL_USER ||
     "root";
 
   const password =
-    cfEnv.DB_PASSWORD !== undefined
-      ? cfEnv.DB_PASSWORD
-      : cfEnv.MYSQL_PASSWORD !== undefined
-      ? cfEnv.MYSQL_PASSWORD
-      : process.env.DB_PASSWORD !== undefined
-      ? process.env.DB_PASSWORD
-      : process.env.MYSQL_PASSWORD !== undefined
-      ? process.env.MYSQL_PASSWORD
+    env.DB_PASSWORD !== undefined
+      ? env.DB_PASSWORD
+      : env.TIDB_PASSWORD !== undefined
+      ? env.TIDB_PASSWORD
+      : env.MYSQL_PASSWORD !== undefined
+      ? env.MYSQL_PASSWORD
       : "123456";
 
   const database =
-    cfEnv.DB_NAME ||
-    cfEnv.MYSQL_DATABASE ||
-    process.env.DB_NAME ||
-    process.env.MYSQL_DATABASE ||
+    env.DB_NAME ||
+    env.TIDB_DATABASE ||
+    env.MYSQL_DATABASE ||
     "newsportal_db";
 
-  return {
+  const isTiDbCloud =
+    host.includes("tidbcloud.com") ||
+    env.DB_SSL === "true" ||
+    env.TIDB_ENABLE_SSL === "true";
+
+  const config = {
     host,
     port,
     user,
@@ -72,8 +87,17 @@ export async function getDbConfig() {
     disableEval: true,
     dateStrings: true,
     decimalNumbers: true,
-    connectTimeout: 5000,
+    connectTimeout: 10000,
   };
+
+  if (isTiDbCloud) {
+    config.ssl = {
+      minVersion: "TLSv1.2",
+      rejectUnauthorized: true,
+    };
+  }
+
+  return config;
 }
 
 export async function getConnectionHandle() {
@@ -119,44 +143,7 @@ export async function getConnectionHandle() {
   };
 }
 
-export async function ensureDbInitialized() {
-  if (isDbBootstrapped) return;
-  if (bootstrapPromise) return await bootstrapPromise;
-
-  bootstrapPromise = (async () => {
-    try {
-      let cfEnv = {};
-      try {
-        const { getCloudflareContext } = await import("@opennextjs/cloudflare");
-        const ctx = await getCloudflareContext({ async: true });
-        if (ctx?.env) {
-          cfEnv = ctx.env;
-        }
-      } catch (_e) {}
-
-      const { bootstrapDatabase } = await import("./bootstrap.js");
-      await bootstrapDatabase(cfEnv);
-      isDbBootstrapped = true;
-    } catch (err) {
-      console.warn("[Auto-Init DB Warning]:", err?.message || err);
-    } finally {
-      bootstrapPromise = null;
-    }
-  })();
-
-  return await bootstrapPromise;
-}
-
 export async function query(sql, params = []) {
-  if (
-    !isDbBootstrapped &&
-    !sql.startsWith("CREATE TABLE") &&
-    !sql.startsWith("INSERT IGNORE INTO") &&
-    !sql.startsWith("SHOW TABLES")
-  ) {
-    await ensureDbInitialized();
-  }
-
   const handle = await getConnectionHandle();
   try {
     const [rows] = await handle.query(sql, params);
@@ -292,5 +279,4 @@ export default {
   query,
   queryOne,
   withTransaction,
-  ensureDbInitialized,
 };
