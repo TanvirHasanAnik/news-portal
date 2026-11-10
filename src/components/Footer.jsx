@@ -1,8 +1,7 @@
 "use client";
 
-import React from "react";
+import { ArrowUp, MapPin } from "lucide-react";
 import Link from "next/link";
-import { Phone, Mail, ArrowUp } from "lucide-react";
 import SocialMediaLinks from "./SocialMediaLinks";
 
 export default function Footer({ socialLinks = {} }) {
@@ -35,23 +34,21 @@ export default function Footer({ socialLinks = {} }) {
           </div>
         </div>
 
-        <div className="pt-6 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs sm:text-sm text-slate-600">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <p>
-              <strong className="text-slate-800">পরিচালক:</strong> পরিচালক নাম
-            </p>
-            <p>
-              <strong className="text-slate-800">প্রকাশক:</strong> প্রকাশক নাম
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-            <p className="flex items-center gap-1.5">
-              <Mail className="w-4 h-4 text-red-600 shrink-0" />
-              <span>mail@example.com</span>
-            </p>
-            <p className="flex items-center gap-1.5">
-              <Phone className="w-4 h-4 text-red-600 shrink-0" />
-              <span>+৮৮০ ১৭xxxxxxxx</span>
+        <div className="pt-6 flex flex-col lg:flex-row lg:items-center justify-between gap-4 text-xs sm:text-sm text-slate-600">
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+              <p>
+                <strong className="text-slate-800">পরিচালক:</strong> মো: ফুয়াদ হাসান
+              </p>
+              <p>
+                <strong className="text-slate-800">প্রকাশক:</strong> মোঃ তৌহিদুল ইসলাম
+              </p>
+            </div>
+            <p className="flex items-start sm:items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-red-600 shrink-0 mt-0.5 sm:mt-0" />
+              <span>
+                <strong className="text-slate-800">সম্পাদকীয় ও বাণিজ্য বিভাগ:</strong> 165/1/A (1st floor), East kafrul, Dhaka cant, Dhaka-1206
+              </span>
             </p>
           </div>
         </div>
