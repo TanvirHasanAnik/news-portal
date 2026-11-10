@@ -7,24 +7,15 @@ compatibility_flags = ["nodejs_compat"]
 directory = ".open-next/assets"
 binding = "ASSETS"
 
-[vars]
-DB_HOST = "127.0.0.1"
-DB_PORT = "3307"
-DB_USER = "root"
-DB_PASSWORD = "123456"
-DB_NAME = "newsportal_db"
-
 [[d1_databases]]
 binding = "DB"
 database_name = "news-portal-db"
 database_id = "4b0601b0-2897-48cd-b385-a165d32b10a3"
-remote = true
 
 [[d1_databases]]
 binding = "NEXT_TAG_CACHE_D1"
 database_name = "news-portal-tag-cache"
 database_id = "551bed68-2d55-4760-8e05-f9d084d1f522"
-remote = true
 
 [[r2_buckets]]
 binding = "news_portal_images"
