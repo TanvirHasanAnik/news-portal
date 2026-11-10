@@ -3,6 +3,13 @@ main = ".open-next/worker.js"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]
 
+workers_dev = true
+
+routes = [
+  { pattern = "aloashbe.com", custom_domain = true },
+  { pattern = "www.aloashbe.com", custom_domain = true }
+]
+
 [assets]
 directory = ".open-next/assets"
 binding = "ASSETS"
