@@ -5,8 +5,9 @@ import NewsCard from "@/components/NewsCard";
 import NewsImage from "@/components/NewsImage";
 import SocialShareBar from "@/components/SocialShareBar";
 import YouTubeEmbed from "@/components/YouTubeEmbed";
+import ArticleViewTracker from "@/components/ArticleViewTracker";
 import { TAGS } from "@/lib/cache/tags";
-import { getTopArticles, recordArticleView } from "@/repositories/analyticsRepository";
+import { getTopArticles } from "@/repositories/analyticsRepository";
 import {
     findArticleBySlugOrId,
     getPublishedArticles,
@@ -107,14 +108,6 @@ export default async function ArticlePage({ params }) {
     notFound();
   }
 
-  if (dbRow?.id) {
-    recordArticleView(dbRow.id, {
-      categorySlug: article.categorySlug,
-      subcategoryName: article.subcategory,
-      path: `/article/${decodedId}`,
-    }).catch(() => {});
-  }
-
   let mostReadArticles = [];
   try {
     mostReadArticles = await getTopArticles(10);
@@ -159,6 +152,7 @@ export default async function ArticlePage({ params }) {
 
   return (
     <div className="min-h-screen bg-white py-4 sm:py-6 lg:py-8 font-sans">
+      <ArticleViewTracker articleId={dbRow.id} />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
         <header className="border-b-2 border-slate-200 pb-5 sm:pb-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

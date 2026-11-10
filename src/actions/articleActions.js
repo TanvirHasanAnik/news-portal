@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import {
   invalidateHomepage,
   invalidateArticle,
@@ -11,11 +12,13 @@ import {
   createArticle,
   updateArticle,
   getArticleById,
+  findArticleBySlugOrId,
   updateArticleStatus,
   passArticleToUpper,
   toggleArticleFlag,
   deleteArticle,
 } from "@/repositories/articleRepository";
+import { recordArticleView } from "@/repositories/analyticsRepository";
 import { notifySubEditorsOfReporterArticle } from "@/repositories/notificationRepository";
 import { getCategoryBySlug, getAllCategoriesWithSubcategories, ensureValidCategory } from "@/repositories/categoryRepository";
 import { articleCreateSchema } from "@/schemas/articleSchema";
@@ -678,6 +681,77 @@ export async function deleteArticleAction(articleId) {
     return { success: true, message: "আর্টিকেলটি সফলভাবে মুছে ফেলা হয়েছে।" };
   } catch (error) {
     return { success: false, message: `মুছে ফেলা সম্ভব হয়নি: ${error.message}` };
+  }
+}
+
+export async function recordArticleViewAction({ articleId, path } = {}) {
+  if (!articleId || typeof articleId !== "string") {
+    return { success: false };
+  }
+
+  try {
+    const reqHeaders = await headers();
+    const userAgent = (reqHeaders.get("user-agent") || "").toLowerCase();
+    const referer = reqHeaders.get("referer") || "";
+
+    const botPatterns = [
+      "bot",
+      "crawler",
+      "spider",
+      "googlebot",
+      "bingbot",
+      "slurp",
+      "baiduspider",
+      "yandex",
+      "duckduckbot",
+      "headlesschrome",
+      "phantomjs",
+      "curl",
+      "wget",
+      "python",
+      "postman",
+      "lighthouse",
+    ];
+
+    if (botPatterns.some((pattern) => userAgent.includes(pattern))) {
+      return { success: false };
+    }
+
+    let cleanPath = String(path || "").trim();
+    try {
+      cleanPath = decodeURIComponent(cleanPath);
+    } catch {}
+
+    if (!cleanPath.startsWith("/article/")) {
+      return { success: false };
+    }
+
+    if (referer) {
+      try {
+        const refererUrl = new URL(referer);
+        if (!refererUrl.pathname.startsWith("/article/")) {
+          return { success: false };
+        }
+      } catch {}
+    }
+
+    const article = await findArticleBySlugOrId(articleId);
+    if (!article || article.status !== "published") {
+      return { success: false };
+    }
+
+    const updated = await recordArticleView(article.id, {
+      categorySlug: article.category_slug || article.categorySlug,
+      subcategoryName: article.subcategory_name || article.subcategory,
+      path: cleanPath,
+      referrer: referer ? referer.slice(0, 1000) : null,
+      userAgent: userAgent ? userAgent.slice(0, 500) : null,
+    });
+
+    return { success: Boolean(updated) };
+  } catch (error) {
+    console.error("recordArticleViewAction error:", error);
+    return { success: false };
   }
 }
 

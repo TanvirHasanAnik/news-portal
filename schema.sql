@@ -201,24 +201,6 @@ CREATE TABLE IF NOT EXISTS notifications (
   CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS comments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  article_id VARCHAR(64) NOT NULL,
-  user_id VARCHAR(64) NULL,
-  user_name VARCHAR(255) NOT NULL,
-  user_email VARCHAR(191) NULL,
-  content TEXT NOT NULL,
-  status VARCHAR(32) NOT NULL DEFAULT 'pending',
-  parent_id INT NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_comments_article_status (article_id, status),
-  INDEX idx_comments_created_at (created_at),
-  INDEX idx_comments_parent_id (parent_id),
-  CONSTRAINT fk_comments_article FOREIGN KEY (article_id) REFERENCES articles (id) ON DELETE CASCADE,
-  CONSTRAINT fk_comments_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS social_links (
   id VARCHAR(64) NOT NULL PRIMARY KEY,
   facebook VARCHAR(500) NULL,

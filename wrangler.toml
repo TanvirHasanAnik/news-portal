@@ -1,4 +1,4 @@
-name = "news-portal"
+name = "alo-ashbe"
 main = ".open-next/worker.js"
 compatibility_date = "2026-10-01"
 compatibility_flags = ["nodejs_compat"]

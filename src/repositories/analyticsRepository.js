@@ -40,34 +40,66 @@ export async function getTopArticles(limit = 10) {
   return await getMostReadArticles(limit);
 }
 
-export async function recordArticleView(articleId, { categorySlug = "", subcategoryName = "", path = "" } = {}) {
-  if (!articleId) return;
+export async function recordArticleView(
+  articleId,
+  {
+    categorySlug = "",
+    subcategoryName = "",
+    path = "",
+    referrer = null,
+    userAgent = null,
+    ipHash = null,
+  } = {}
+) {
+  if (!articleId || typeof articleId !== "string") return false;
+
+  let safePath = path ? String(path).trim() : `/article/${articleId}`;
+  try {
+    safePath = decodeURIComponent(safePath);
+  } catch {}
+
+  if (!safePath.startsWith("/article/")) {
+    return false;
+  }
+  if (safePath.length > 255) {
+    safePath = safePath.slice(0, 255);
+  }
+
   try {
     const today = new Date().toISOString().slice(0, 10);
     const id = `pv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    let safePath = path ? path : `/article/${articleId}`;
-    try {
-      safePath = decodeURIComponent(safePath);
-    } catch {}
-    if (safePath.length > 255) {
-      safePath = safePath.slice(0, 255);
-    }
+    let updated = false;
 
     await withTransaction(async (tx) => {
-
-      await tx.query(
-        "UPDATE articles SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?",
+      const [updateResult] = await tx.query(
+        "UPDATE articles SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ? AND status = 'published'",
         [articleId]
       );
 
-      await tx.query(
-        `INSERT INTO analytics_page_views (id, path, article_id, category_slug, subcategory_name, viewed_date, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [id, safePath, articleId, categorySlug || null, subcategoryName || null, today]
-      );
+      if (updateResult && updateResult.affectedRows > 0) {
+        updated = true;
+        await tx.query(
+          `INSERT INTO analytics_page_views (id, path, article_id, category_slug, subcategory_name, referrer, user_agent, ip_hash, viewed_date, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+          [
+            id,
+            safePath,
+            articleId,
+            categorySlug || null,
+            subcategoryName || null,
+            referrer ? String(referrer).slice(0, 1000) : null,
+            userAgent ? String(userAgent).slice(0, 500) : null,
+            ipHash ? String(ipHash).slice(0, 128) : null,
+            today,
+          ]
+        );
+      }
     });
+
+    return updated;
   } catch (err) {
     console.error("recordArticleView error:", err);
+    return false;
   }
 }
 

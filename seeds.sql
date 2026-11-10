@@ -1,11 +1,3 @@
-INSERT INTO users (id, username, password, role)
-VALUES
-  ('usr_superadmin', 'superadmin', '$2b$12$1kLUR/4rKxknuVsp87lWh.K4MOqjMztMTmNf2cyOe9zKTViQ.xpYS', 'super_admin'),
-  ('usr_admin', 'admin', '$2b$12$ggT7r3YklXUYRafSbt6bYOsOb8MPr2EzX1OUDJDja45L6PnKFkmpO', 'admin')
-ON DUPLICATE KEY UPDATE
-  password = VALUES(password),
-  role = VALUES(role);
-
 INSERT INTO categories (id, name, slug, is_permanent, sort_order)
 VALUES
   ('cat_latest', 'সর্বশেষ', 'latest', 1, 1),
