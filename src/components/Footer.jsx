@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, MapPin } from "lucide-react";
+import { ArrowUp, MapPin, Mail } from "lucide-react";
 import Link from "next/link";
 import SocialMediaLinks from "./SocialMediaLinks";
 
@@ -50,6 +50,18 @@ export default function Footer({ socialLinks = {} }) {
                 <strong className="text-slate-800">সম্পাদকীয় ও বাণিজ্য বিভাগ:</strong> ইস্ট কাফরুল,ঢাকা ক্যান্টনমেন্ট, ঢাকা -১২০৬।
               </span>
             </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 lg:justify-end">
+            <a
+              href="mailto:aloashbenews@gmail.com"
+              className="flex items-center gap-1.5 hover:text-red-600 transition-colors"
+            >
+              <Mail className="w-4 h-4 text-red-600 shrink-0" />
+              <span>
+                <strong className="text-slate-800">ইমেইলঃ</strong> aloashbenews@gmail.com
+              </span>
+            </a>
           </div>
         </div>
 

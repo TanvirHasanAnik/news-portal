@@ -1,4 +1,4 @@
-import AdHolder from "@/components/AdHolder";
+import AdSlot from "@/components/AdSlot";
 import NewsArticleCard from "@/components/NewsArticleCard";
 import SubcategoryDropdown from "@/components/SubcategoryDropdown";
 import { TAGS } from "@/lib/cache/tags";
@@ -317,7 +317,11 @@ export default async function CategoryPage({ params, searchParams }) {
 
                 {leadStory && (
                   <div className="lg:hidden pb-6 border-b border-slate-200">
-                    <AdHolder size="300x250" />
+                    <AdSlot
+                      variant="mediumRectangle"
+                      slotId="category-mobile-inline"
+                      mediaQuery="(max-width: 1023px)"
+                    />
                   </div>
                 )}
 
@@ -405,8 +409,17 @@ export default async function CategoryPage({ params, searchParams }) {
             aria-label="বিজ্ঞাপন এলাকা"
             className="hidden lg:block lg:col-span-4 space-y-6"
           >
-            <AdHolder size="300x250" />
-            <AdHolder size="300x600" className="hidden sm:flex" />
+            <AdSlot
+              variant="mediumRectangle"
+              slotId="category-sidebar-top"
+              mediaQuery="(min-width: 1024px)"
+            />
+            <AdSlot
+              variant="skyscraper"
+              slotId="category-sidebar-skyscraper"
+              mediaQuery="(min-width: 1024px)"
+              className="hidden sm:flex"
+            />
           </aside>
         </div>
       </div>

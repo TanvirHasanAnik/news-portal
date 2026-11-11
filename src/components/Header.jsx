@@ -11,6 +11,7 @@ import {
 import MobileDrawer from "./MobileDrawer";
 import NewsTickerSection from "./NewsTickerSection";
 import SocialMediaLinks from "./SocialMediaLinks";
+import AdSlot from "./AdSlot";
 import {
   getEnglishDateBangla,
   getBanglaDate,
@@ -21,6 +22,7 @@ import {
 export default function Header({ breakingNewsList = [], latestHeadlines = [], categories: propCategories = [], socialLinks = {} }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isDesktopAd, setIsDesktopAd] = useState(null);
   const [dates, setDates] = useState({
     english: "",
     bangla: "",
@@ -170,18 +172,48 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
     });
   }, []);
 
+  useEffect(() => {
+    try {
+      const mq = window.matchMedia("(min-width: 640px)");
+      const updateViewport = () => setIsDesktopAd(mq.matches);
+      updateViewport();
+      if (typeof mq.addEventListener === "function") {
+        mq.addEventListener("change", updateViewport);
+        return () => mq.removeEventListener("change", updateViewport);
+      }
+      mq.addListener(updateViewport);
+      return () => mq.removeListener(updateViewport);
+    } catch {
+      setIsDesktopAd(true);
+    }
+  }, []);
+
   return (
     <>
 
       <aside aria-label="বিজ্ঞাপন" className="w-full bg-slate-100 border-b border-slate-200 overflow-hidden">
         <div className="flex items-center justify-center">
-          <div className="relative w-full max-w-[320px] sm:max-w-[728px] lg:max-w-[970px] h-[50px] sm:h-[90px] bg-slate-200/60 border-dashed border-2 border-slate-300 flex items-center justify-center text-slate-400 text-xs sm:text-sm font-medium">
-            <span className="absolute top-1 left-2 text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-wider select-none">
-              বিজ্ঞাপন
-            </span>
-            <span className="hidden lg:inline">শীর্ষ ব্যানার বিজ্ঞাপন (৯৭০ × ৯০)</span>
-            <span className="hidden sm:inline lg:hidden">শীর্ষ ব্যানার বিজ্ঞাপন (৭২৮ × ৯০)</span>
-            <span className="inline sm:hidden">শীর্ষ ব্যানার বিজ্ঞাপন (৩২০ × ৫০)</span>
+          <div className="relative w-full max-w-[320px] sm:max-w-[728px] lg:max-w-[970px] h-[50px] sm:h-[90px] bg-slate-100 flex items-center justify-center overflow-hidden">
+            {isDesktopAd === true ? (
+              <AdSlot
+                variant="leaderboard"
+                slotId="header-leaderboard"
+                eager={true}
+              />
+            ) : isDesktopAd === false ? (
+              <AdSlot
+                variant="mobileBanner"
+                slotId="header-mobile"
+                eager={true}
+              />
+            ) : (
+              <span
+                aria-hidden="true"
+                className="text-[11px] font-medium text-slate-400 select-none pointer-events-none"
+              >
+                বিজ্ঞাপন
+              </span>
+            )}
           </div>
         </div>
       </aside>

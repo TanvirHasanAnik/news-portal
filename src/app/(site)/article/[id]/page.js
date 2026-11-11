@@ -1,4 +1,4 @@
-import AdHolder from "@/components/AdHolder";
+import AdSlot from "@/components/AdSlot";
 import ArticleContentRenderer from "@/components/ArticleContentRenderer";
 import MostReadSection from "@/components/MostReadSection";
 import NewsCard from "@/components/NewsCard";
@@ -239,8 +239,8 @@ export default async function ArticlePage({ params }) {
             aria-label="বিজ্ঞাপন ও সর্বাধিক পঠিত"
             className="lg:col-span-1 space-y-6"
           >
-            <AdHolder size="300x250" />
-            <AdHolder size="300x250" />
+            <AdSlot variant="mediumRectangle" slotId="article-sidebar-top" />
+            <AdSlot variant="mediumRectangle" slotId="article-sidebar-bottom" />
 
             <MostReadSection newsList={mostReadArticles} />
           </aside>

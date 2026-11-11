@@ -1,6 +1,6 @@
 import React from "react";
 import NewsCard from "./NewsCard";
-import AdHolder from "./AdHolder";
+import AdSlot from "./AdSlot";
 import { Newspaper } from "lucide-react";
 
 export default function LatestMixedSection({ dbArticles = [] }) {
@@ -208,8 +208,8 @@ export default function LatestMixedSection({ dbArticles = [] }) {
           </div>
 
           <div className="lg:col-span-1 flex flex-col gap-6 items-center">
-            <AdHolder size="300x250" />
-            <AdHolder size="300x250" />
+            <AdSlot variant="mediumRectangle" slotId="home-sidebar-top" />
+            <AdSlot variant="mediumRectangle" slotId="home-sidebar-bottom" />
           </div>
         </div>
       </div>
