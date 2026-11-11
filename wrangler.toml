@@ -25,7 +25,7 @@ database_name = "news-portal-tag-cache"
 database_id = "551bed68-2d55-4760-8e05-f9d084d1f522"
 
 [[r2_buckets]]
-binding = "news_portal_images"
+binding = "NEWS_IMAGES_BUCKET"
 bucket_name = "news-portal-images"
 
 [[r2_buckets]]

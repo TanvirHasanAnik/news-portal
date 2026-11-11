@@ -1,4 +1,5 @@
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { TAGS } from "@/lib/cache/tags";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 const KV_KEY = "revalidate-all:last-call";
@@ -47,6 +48,9 @@ export async function POST(request) {
 
   try {
     revalidatePath("/", "layout");
+    revalidateTag(TAGS.HOMEPAGE);
+    revalidateTag(TAGS.ARTICLES_PUBLISHED);
+    revalidateTag(TAGS.CATEGORIES);
   } catch (revalidateErr) {
     console.error("[REVALIDATE-ALL] revalidatePath failed:", revalidateErr);
     return Response.json(

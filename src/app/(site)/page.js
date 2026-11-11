@@ -37,7 +37,7 @@ const getCachedHomepageData = unstable_cache(
           }
         })
       );
-      categorySections = catResults.filter((c) => c.articles && c.articles.length > 0).slice(0, 4);
+      categorySections = catResults.filter((c) => c.articles && c.articles.length > 0);
     }
 
     return {

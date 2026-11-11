@@ -22,7 +22,7 @@ export default function CategoryScrollSection({ categorySections = [] }) {
     <section className="py-8 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="space-y-12">
-          {categorySections.slice(0, 4).map((cat, catIdx) => {
+          {categorySections.map((cat, catIdx) => {
             const articles = cat.articles || [];
             if (articles.length === 0) return null;
 
