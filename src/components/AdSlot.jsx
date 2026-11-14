@@ -34,6 +34,7 @@ const AD_PRESETS = {
   },
 };
 
+/*
 function buildAdSrcDoc({ adKey, src, width, height }) {
   const safeKey = JSON.stringify(String(adKey));
   const safeSrc = JSON.stringify(String(src));
@@ -72,6 +73,7 @@ atOptions = {
 </body>
 </html>`;
 }
+*/
 
 export default function AdSlot({
   variant,
@@ -138,6 +140,7 @@ export default function AdSlot({
 
   const shouldRenderIframe = mounted && matchesMedia && isValidConfig && status !== "error";
 
+  /*
   const srcDoc = shouldRenderIframe
     ? buildAdSrcDoc({
         adKey: resolvedKey,
@@ -146,6 +149,7 @@ export default function AdSlot({
         height: resolvedHeight,
       })
     : "";
+  */
 
   return (
     <div
@@ -164,6 +168,7 @@ export default function AdSlot({
         </span>
       )}
 
+      {/*
       {shouldRenderIframe && (
         <iframe
           key={`${pathname}-${resolvedKey}-${slotId}-${resolvedWidth}x${resolvedHeight}`}
@@ -185,6 +190,7 @@ export default function AdSlot({
           } transition-opacity duration-150`}
         />
       )}
+      */}
     </div>
   );
 }
