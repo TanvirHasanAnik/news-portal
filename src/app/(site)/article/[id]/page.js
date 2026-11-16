@@ -16,6 +16,7 @@ import {
 } from "@/repositories/articleRepository";
 import { categoryAccentMap } from "@/utils/categoryNews";
 import { DEFAULT_NEWS_IMAGE } from "@/utils/imageUtils";
+import { formatArticlePublishDate } from "@/utils/dateUtils";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -187,6 +188,43 @@ export default async function ArticlePage({ params }) {
             <h1 className="font-serif-bangla text-2xl sm:text-3xl lg:text-2xl xl:text-3xl font-semibold text-slate-950 leading-tight">
               {article.headline}
             </h1>
+
+            {(() => {
+              const displayAuthor =
+                article.representativeType !== "none" && article.authorName
+                  ? article.authorName.trim()
+                  : "";
+              const displayDate =
+                article.formattedPublishDate ||
+                (article.time ? formatArticlePublishDate(article.time) : "");
+
+              if (!displayAuthor && !displayDate) return null;
+
+              return (
+                <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-sm sm:text-base text-slate-600 border-b border-slate-100 pb-3 pt-1">
+                  {displayAuthor && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="font-bold text-slate-900">
+                        {displayAuthor}
+                      </span>
+                      {article.location && (
+                        <span className="text-slate-500 font-medium">
+                          , {article.location}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  {displayAuthor && displayDate && (
+                    <span className="text-slate-300">•</span>
+                  )}
+                  {displayDate && (
+                    <time className="text-slate-500 font-normal">
+                      {displayDate}
+                    </time>
+                  )}
+                </div>
+              );
+            })()}
 
             {(article.hasCustomImage || heroImage || !article.youtubeUrl) && heroImage && (
               <div className="relative aspect-[16/10] sm:aspect-[16/9] w-full overflow-hidden bg-slate-100 rounded-lg">

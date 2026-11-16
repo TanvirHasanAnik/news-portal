@@ -156,4 +156,35 @@ export const articleCreateSchema = z.object({
   isBreaking: z.boolean().optional().default(false),
   isLead: z.boolean().optional().default(false),
   isHandpicked: z.boolean().optional().default(false),
+  representativeType: z
+    .enum(["online_desk", "reporter", "bss", "author", "custom", "none"])
+    .optional()
+    .default("online_desk"),
+  authorName: z.string().trim().max(100, "প্রতিনিধির নাম সর্বোচ্চ ১০০ অক্ষরের মধ্যে হতে হবে।").optional().default(""),
+  customAuthorName: z
+    .string()
+    .trim()
+    .max(100, "কাস্টম প্রতিনিধির নাম সর্বোচ্চ ১০০ অক্ষরের মধ্যে হতে হবে।")
+    .optional()
+    .default("")
+    .refine((val) => !val || !hasDisallowedCode(val), {
+      message: "প্রতিনিধির নামে কোনো প্রকার কোড বা স্ক্রিপ্ট গ্রহণযোগ্য নয়।",
+    })
+    .refine((val) => !val || countWords(val) <= 6, {
+      message: "প্রতিনিধির নাম সর্বোচ্চ ৬টি শব্দের মধ্যে হতে হবে।",
+    }),
+  location: z
+    .string()
+    .trim()
+    .max(50, "জেলার নাম সর্বোচ্চ ৫০ অক্ষরের মধ্যে হতে হবে।")
+    .optional()
+    .default("")
+    .refine((val) => !val || !hasDisallowedCode(val), {
+      message: "জেলার নামে কোনো প্রকার কোড বা স্ক্রিপ্ট গ্রহণযোগ্য নয়।",
+    })
+    .refine((val) => !val || countWords(val) <= 4, {
+      message: "জেলার নাম সর্বোচ্চ ৪টি শব্দের মধ্যে হতে হবে।",
+    }),
+  isCustomDate: z.boolean().optional().default(false),
+  customPublishedAt: z.string().trim().optional().nullable().default(null),
 });

@@ -100,8 +100,38 @@ export async function createArticleAction(prevState, formData) {
     const primaryImage = images[0] || null;
 
     const youtubeUrl = formData.get("youtubeUrl")?.toString() || "";
-    const authorName = formData.get("authorName")?.toString().trim() || currentUser.fullName || currentUser.name || "নিজস্ব প্রতিবেদক";
-    const location = formData.get("location")?.toString().trim() || "ঢাকা";
+
+    const representativeType = formData.get("representativeType")?.toString().trim() || "online_desk";
+    const customAuthorName = formData.get("customAuthorName")?.toString().trim() || "";
+    const rawAuthorName = formData.get("authorName")?.toString().trim() || "";
+    const location = formData.get("location")?.toString().trim() || "";
+
+    let resolvedAuthorName = "";
+    if (representativeType === "none") {
+      resolvedAuthorName = "";
+    } else if (representativeType === "online_desk") {
+      resolvedAuthorName = "অনলাইন ডেস্ক";
+    } else if (representativeType === "reporter") {
+      resolvedAuthorName = "নিজস্ব প্রতিবেদক";
+    } else if (representativeType === "bss") {
+      resolvedAuthorName = "বাসস";
+    } else if (representativeType === "author") {
+      resolvedAuthorName = (currentUser.fullName || currentUser.full_name || "").trim();
+    } else if (representativeType === "custom") {
+      resolvedAuthorName = customAuthorName || rawAuthorName || "";
+    } else {
+      resolvedAuthorName = "";
+    }
+
+    const isCustomDate = formData.get("isCustomDate") === "true";
+    const customPublishedAtRaw = formData.get("customPublishedAt")?.toString().trim() || "";
+    let customPublishedAt = null;
+    if (isCustomDate && customPublishedAtRaw) {
+      const parsed = new Date(customPublishedAtRaw);
+      if (!isNaN(parsed.getTime())) {
+        customPublishedAt = parsed.toISOString().slice(0, 19).replace("T", " ");
+      }
+    }
 
     let requestedStatus = formData.get("status")?.toString().trim() || "published";
     if (isLowerRole(currentUser.role)) {
@@ -127,6 +157,12 @@ export async function createArticleAction(prevState, formData) {
       isBreaking,
       isLead,
       isHandpicked,
+      representativeType,
+      authorName: resolvedAuthorName,
+      customAuthorName,
+      location,
+      isCustomDate,
+      customPublishedAt,
     });
 
     if (!validationResult.success) {
@@ -181,10 +217,12 @@ export async function createArticleAction(prevState, formData) {
       image: primaryImage,
       youtubeUrl: validated.youtubeUrl || null,
       authorId: currentUser.id,
-      authorName,
+      authorName: resolvedAuthorName,
+      representativeType: validated.representativeType,
+      location: representativeType === "none" ? null : (validated.location || null),
+      customPublishedAt,
       createdBy: currentUser.username,
       lastEditedBy: currentUser.username,
-      location,
       readTime,
       status: validated.status,
       isBreaking: validated.isBreaking,
@@ -323,7 +361,39 @@ export async function updateArticleAction(prevState, formData) {
     const primaryImage = images[0] || null;
 
     const youtubeUrl = formData.get("youtubeUrl")?.toString() || "";
-    const location = formData.get("location")?.toString().trim() || existingArticle.location || "ঢাকা";
+
+    const representativeType = formData.get("representativeType")?.toString().trim() || existingArticle.representative_type || "online_desk";
+    const customAuthorName = formData.get("customAuthorName")?.toString().trim() || "";
+    const rawAuthorName = formData.get("authorName")?.toString().trim() || "";
+    const rawLocation = formData.get("location")?.toString().trim();
+    const location = rawLocation !== undefined ? rawLocation : (existingArticle.location || "");
+
+    let resolvedAuthorName = "";
+    if (representativeType === "none") {
+      resolvedAuthorName = "";
+    } else if (representativeType === "online_desk") {
+      resolvedAuthorName = "অনলাইন ডেস্ক";
+    } else if (representativeType === "reporter") {
+      resolvedAuthorName = "নিজস্ব প্রতিবেদক";
+    } else if (representativeType === "bss") {
+      resolvedAuthorName = "বাসস";
+    } else if (representativeType === "author") {
+      resolvedAuthorName = (existingArticle.author_full_name || "").trim();
+    } else if (representativeType === "custom") {
+      resolvedAuthorName = customAuthorName || rawAuthorName || "";
+    } else {
+      resolvedAuthorName = "";
+    }
+
+    const isCustomDate = formData.get("isCustomDate") === "true";
+    const customPublishedAtRaw = formData.get("customPublishedAt")?.toString().trim() || "";
+    let customPublishedAt = null;
+    if (isCustomDate && customPublishedAtRaw) {
+      const parsed = new Date(customPublishedAtRaw);
+      if (!isNaN(parsed.getTime())) {
+        customPublishedAt = parsed.toISOString().slice(0, 19).replace("T", " ");
+      }
+    }
 
     let targetStatus = formData.get("status")?.toString().trim() || existingArticle.status;
     if (isLowerRole(currentUser.role)) {
@@ -349,6 +419,12 @@ export async function updateArticleAction(prevState, formData) {
       isBreaking,
       isLead,
       isHandpicked,
+      representativeType,
+      authorName: resolvedAuthorName,
+      customAuthorName,
+      location,
+      isCustomDate,
+      customPublishedAt,
     });
 
     if (!validationResult.success) {
@@ -404,7 +480,10 @@ export async function updateArticleAction(prevState, formData) {
       images: validated.images,
       image: primaryImage,
       youtubeUrl: validated.youtubeUrl || null,
-      location,
+      authorName: resolvedAuthorName,
+      representativeType: validated.representativeType,
+      location: representativeType === "none" ? null : (validated.location || null),
+      customPublishedAt,
       readTime,
       status: isSubEditorReview ? "pending" : validated.status,
       isBreaking: validated.isBreaking,

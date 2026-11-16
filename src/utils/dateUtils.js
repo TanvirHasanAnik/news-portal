@@ -159,3 +159,41 @@ export function formatStaticDateTime(timestamp) {
 }
 
 export const formatAuditDateTime = formatStaticDateTime;
+
+export function formatArticlePublishDate(timestamp, includePrefix = true) {
+  if (!timestamp) return '';
+  try {
+    const d = parseDateSafe(timestamp);
+    if (!d || isNaN(d.getTime())) return '';
+
+    const day = toBengaliDigits(d.getDate());
+    const month = BENGALI_MONTHS[d.getMonth()] || '';
+    const year = toBengaliDigits(d.getFullYear());
+
+    const hours = toBengaliDigits(String(d.getHours()).padStart(2, '0'));
+    const minutes = toBengaliDigits(String(d.getMinutes()).padStart(2, '0'));
+
+    const formatted = `${day} ${month} ${year}, ${hours}:${minutes}`;
+    return includePrefix ? `প্রকাশ: ${formatted}` : formatted;
+  } catch (_e) {
+    return '';
+  }
+}
+
+export function formatDateForInput(timestamp) {
+  if (!timestamp) return '';
+  try {
+    const d = parseDateSafe(timestamp);
+    if (!d || isNaN(d.getTime())) return '';
+
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch (_e) {
+    return '';
+  }
+}

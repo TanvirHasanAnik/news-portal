@@ -6,6 +6,7 @@ import {
   getArticleBySlug,
   mapDbArticleToFrontend,
 } from "@/repositories/articleRepository";
+import { getUserByUsername } from "@/repositories/userRepository";
 import {
   ArticleCreateHeader,
   ArticleCreateForm,
@@ -44,6 +45,12 @@ export default async function ArticleCreateModule({ currentUser, searchParams })
         }
         if (!isUnauthorizedEdit) {
           initialArticle = mapDbArticleToFrontend(rawArticle);
+          if (initialArticle && !initialArticle.authorFullName && rawArticle.created_by) {
+            const authorUser = await getUserByUsername(rawArticle.created_by);
+            if (authorUser?.full_name) {
+              initialArticle.authorFullName = authorUser.full_name;
+            }
+          }
         }
       }
     } catch (err) {

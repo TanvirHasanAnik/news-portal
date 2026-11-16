@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { articleCreateSchema } from "@/schemas/articleSchema";
 import { createArticleAction, updateArticleAction } from "@/actions/articleActions";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { formatDateForInput } from "@/utils/dateUtils";
 import ArticleFormFeedback from "./ArticleFormFeedback";
 import ArticleContentFields from "./ArticleContentFields";
 import ArticleMediaFields from "./ArticleMediaFields";
@@ -29,6 +30,48 @@ export default function ArticleCreateForm({
   const isLower = checkIsLowerRole(currentUser?.role);
 
   const defaultCategorySlug = initialArticle?.categorySlug || "";
+
+  const availableAuthorFullName = isEditing
+    ? (initialArticle?.authorFullName?.trim() || null)
+    : (currentUser?.fullName?.trim() || currentUser?.full_name?.trim() || null);
+
+  const resolveInitialRepresentativeType = () => {
+    if (initialArticle?.representativeType) {
+      return initialArticle.representativeType;
+    }
+    if (initialArticle?.authorName) {
+      if (initialArticle.authorName === "বাসস") return "bss";
+      if (initialArticle.authorName === "নিজস্ব প্রতিবেদক") return "reporter";
+      if (initialArticle.authorName === "অনলাইন ডেস্ক") return "online_desk";
+      if (availableAuthorFullName && initialArticle.authorName === availableAuthorFullName) return "author";
+      if (
+        initialArticle.authorName === initialArticle.createdBy ||
+        initialArticle.authorName === "superadmin" ||
+        initialArticle.authorName === "admin" ||
+        initialArticle.authorName === "reporter"
+      ) {
+        return "online_desk";
+      }
+      return "custom";
+    }
+    return "online_desk";
+  };
+
+  const initialRepType = resolveInitialRepresentativeType();
+  const rawAuthor = initialArticle?.authorName || "";
+  const isAuthorUsername =
+    rawAuthor === initialArticle?.createdBy ||
+    rawAuthor === "superadmin" ||
+    rawAuthor === "admin" ||
+    rawAuthor === "reporter";
+
+  const initialAuthorName = isAuthorUsername ? (isEditing ? "" : "অনলাইন ডেস্ক") : (rawAuthor || (isEditing ? "" : "অনলাইন ডেস্ক"));
+  const initialCustomAuthor = initialRepType === "custom" && !isAuthorUsername ? rawAuthor : "";
+  const initialLocation = initialArticle?.location || "";
+  const initialIsCustomDate = Boolean(initialArticle?.customPublishedAt);
+  const initialCustomPublishedAt = initialArticle?.customPublishedAt
+    ? formatDateForInput(initialArticle.customPublishedAt)
+    : "";
 
   const initialImages = Array.isArray(initialArticle?.images)
     ? initialArticle.images
@@ -55,11 +98,20 @@ export default function ArticleCreateForm({
       subcategoryName: initialArticle?.subcategory || "",
       images: initialImages,
       youtubeUrl: initialArticle?.youtubeUrl || "",
+      representativeType: initialRepType,
+      authorName: initialAuthorName,
+      customAuthorName: initialCustomAuthor,
+      location: initialLocation,
+      isCustomDate: initialIsCustomDate,
+      customPublishedAt: initialCustomPublishedAt,
       status: initialArticle?.status || (isLower ? "pending" : "published"),
     },
   });
 
   const categorySlug = watch("categorySlug") !== undefined ? watch("categorySlug") : defaultCategorySlug;
+  const representativeType = watch("representativeType") || initialRepType;
+  const isCustomDate = Boolean(watch("isCustomDate"));
+  const customPublishedAt = watch("customPublishedAt") || "";
   const images = watch("images") || [];
   const youtubeUrl = watch("youtubeUrl") || "";
 
@@ -102,6 +154,12 @@ export default function ArticleCreateForm({
       subcategoryName: initialArticle?.subcategory || "",
       images: initialImages,
       youtubeUrl: initialArticle?.youtubeUrl || "",
+      representativeType: initialRepType,
+      authorName: initialAuthorName,
+      customAuthorName: initialCustomAuthor,
+      location: initialLocation,
+      isCustomDate: initialIsCustomDate,
+      customPublishedAt: initialCustomPublishedAt,
       status: initialArticle?.status || (isLower ? "pending" : "published"),
     });
     setResult(null);
@@ -167,7 +225,12 @@ export default function ArticleCreateForm({
     formData.append("images", JSON.stringify(data.images?.slice(0, 3) || []));
     formData.append("image", data.images?.[0] || "");
     formData.append("youtubeUrl", data.youtubeUrl || "");
-    formData.append("location", "ঢাকা");
+    formData.append("representativeType", data.representativeType || "online_desk");
+    formData.append("authorName", data.authorName || "");
+    formData.append("customAuthorName", data.customAuthorName || "");
+    formData.append("location", data.location || "");
+    formData.append("isCustomDate", data.isCustomDate ? "true" : "false");
+    formData.append("customPublishedAt", data.customPublishedAt || "");
     formData.append("status", resolvedStatus);
     formData.append("passToUpper", passToUpper ? "true" : "false");
     formData.append("rejectionReason", (reason || "").trim());
@@ -189,6 +252,12 @@ export default function ArticleCreateForm({
               subcategoryName: "",
               images: [],
               youtubeUrl: "",
+              representativeType: "online_desk",
+              authorName: "অনলাইন ডেস্ক",
+              customAuthorName: "",
+              location: "",
+              isCustomDate: false,
+              customPublishedAt: "",
               status: isLower ? "pending" : "published",
             });
           }
@@ -329,12 +398,19 @@ export default function ArticleCreateForm({
             <ArticlePublishSettings
               register={register}
               errors={errors}
+              watch={watch}
+              setValue={setValue}
               categorySlug={categorySlug}
               subcategoryName={watch("subcategoryName") || ""}
               setCategorySlug={(slug) => setValue("categorySlug", slug, { shouldValidate: true })}
               setSubcategoryName={(sub) => setValue("subcategoryName", sub, { shouldValidate: true })}
               categories={categories}
               availableSubcategories={availableSubcategories}
+              availableAuthorFullName={availableAuthorFullName}
+              originalCreatedAt={initialArticle?.createdAt || initialArticle?.publishedAt || null}
+              representativeType={representativeType}
+              isCustomDate={isCustomDate}
+              customPublishedAt={customPublishedAt}
             />
 
             <ArticleFormSubmit

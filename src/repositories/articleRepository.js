@@ -1,6 +1,7 @@
 import { query, queryOne, withTransaction } from "@/lib/db";
 import { deleteMultipleFromR2 } from "@/lib/r2";
 import { extractSummaryFromContent } from "@/utils/textUtils";
+import { formatArticlePublishDate } from "@/utils/dateUtils";
 
 function normalizeTimestamp(ts) {
   if (!ts) return null;
@@ -35,7 +36,54 @@ export function mapDbArticleToFrontend(dbRow) {
   }
 
   const primaryImage = imagesArray[0] || dbRow.image || null;
-  const isoTime = normalizeTimestamp(dbRow.published_at || dbRow.created_at) || new Date().toISOString();
+  const rawRepType = dbRow.representative_type;
+  let representativeType = rawRepType;
+  if (!representativeType) {
+    if (dbRow.author_name === "বাসস") {
+      representativeType = "bss";
+    } else if (dbRow.author_name === "নিজস্ব প্রতিবেদক") {
+      representativeType = "reporter";
+    } else if (dbRow.author_name === "অনলাইন ডেস্ক") {
+      representativeType = "online_desk";
+    } else if (dbRow.author_name) {
+      representativeType = "custom";
+    } else {
+      representativeType = "none";
+    }
+  }
+
+  const rawAuthorName = (dbRow.author_name || "").trim();
+  const isUsername =
+    Boolean(rawAuthorName) &&
+    (rawAuthorName === dbRow.author_username ||
+      rawAuthorName === dbRow.created_by ||
+      rawAuthorName === "superadmin" ||
+      rawAuthorName === "admin" ||
+      rawAuthorName === "reporter" ||
+      rawAuthorName === "test_reporter" ||
+      rawAuthorName === "test_sub_editor");
+
+  let resolvedAuthorName = "";
+  if (representativeType === "none" || isUsername) {
+    resolvedAuthorName = "";
+  } else if (rawAuthorName) {
+    resolvedAuthorName = rawAuthorName;
+  } else if (rawRepType === "online_desk") {
+    resolvedAuthorName = "অনলাইন ডেস্ক";
+  } else if (rawRepType === "reporter") {
+    resolvedAuthorName = "নিজস্ব প্রতিবেদক";
+  } else if (rawRepType === "bss") {
+    resolvedAuthorName = "বাসস";
+  } else if (rawRepType === "author" && dbRow.author_full_name) {
+    resolvedAuthorName = dbRow.author_full_name.trim();
+  } else {
+    resolvedAuthorName = "";
+  }
+
+  const customPublishedAt = normalizeTimestamp(dbRow.custom_published_at);
+  const effectiveTime = customPublishedAt || normalizeTimestamp(dbRow.published_at || dbRow.created_at) || null;
+  const formattedPublishDate = effectiveTime ? formatArticlePublishDate(effectiveTime) : "";
+
   const rawSummary = (dbRow.summary || "").trim();
   const headline = (dbRow.curation_custom_title || dbRow.custom_title || dbRow.headline || "").trim();
   const isHeadlineAsSummary = rawSummary && (rawSummary === headline || rawSummary === headline.substring(0, 150));
@@ -57,9 +105,13 @@ export function mapDbArticleToFrontend(dbRow) {
     image: primaryImage,
     images: imagesArray,
     youtubeUrl: dbRow.youtube_url || null,
-    author: dbRow.author_name || "নিজস্ব প্রতিবেদক",
+    author: resolvedAuthorName,
     authorId: dbRow.author_id || null,
-    authorName: dbRow.author_name || "নিজস্ব প্রতিবেদক",
+    authorName: resolvedAuthorName,
+    representativeType,
+    representative_type: representativeType,
+    authorFullName: dbRow.author_full_name || null,
+    author_full_name: dbRow.author_full_name || null,
     createdBy:
       dbRow.created_by && dbRow.created_by !== "নিজস্ব প্রতিবেদক"
         ? dbRow.created_by
@@ -88,9 +140,12 @@ export function mapDbArticleToFrontend(dbRow) {
     passed_by: dbRow.passed_by || null,
     passedAt: normalizeTimestamp(dbRow.passed_at),
     passed_at: normalizeTimestamp(dbRow.passed_at),
-    location: dbRow.location || "ঢাকা",
-    time: isoTime,
-    publishedAt: isoTime,
+    location: dbRow.location || "",
+    time: effectiveTime,
+    publishedAt: effectiveTime,
+    customPublishedAt,
+    custom_published_at: customPublishedAt,
+    formattedPublishDate,
     createdAt: normalizeTimestamp(dbRow.created_at),
     created_at: normalizeTimestamp(dbRow.created_at),
     updatedAt: normalizeTimestamp(dbRow.updated_at || dbRow.created_at),
@@ -142,25 +197,46 @@ export async function createArticle(data) {
   const createdBy = data.createdBy || data.authorUsername || "reporter";
   const lastEditedBy = data.lastEditedBy || null;
 
+  const representativeType = data.representativeType || (data.authorName ? "custom" : "none");
+  let authorName = data.authorName !== undefined ? data.authorName : "";
+  if (representativeType === "none") {
+    authorName = "";
+  } else if (!authorName) {
+    if (representativeType === "online_desk") authorName = "অনলাইন ডেস্ক";
+    else if (representativeType === "reporter") authorName = "নিজস্ব প্রতিবেদক";
+    else if (representativeType === "bss") authorName = "বাসস";
+    else authorName = "";
+  }
+
+  const customPublishedAt = data.customPublishedAt || null;
+  const location = data.location !== undefined ? (data.location ? String(data.location).trim() : null) : null;
+
   const insertSql = `
     INSERT INTO articles (
       id, headline, slug, summary, content,
       category_id, category_name, category_slug,
       subcategory_id, subcategory_name,
       images, image, youtube_url,
-      author_id, author_name, location, read_time,
+      author_id, author_name, representative_type, location, read_time,
       status, is_breaking, is_lead, is_handpicked,
       created_by, last_edited_by,
-      view_count, published_at, created_at, updated_at
+      view_count, published_at, custom_published_at, created_at, updated_at
     ) VALUES (
       ?, ?, ?, ?, ?,
       ?, ?, ?,
       ?, ?,
       ?, ?, ?,
-      ?, ?, ?, ?,
+      ?, ?, ?, ?, ?,
       ?, ?, ?, ?,
       ?, ?,
-      0, CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE NULL END, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+      0,
+      CASE
+        WHEN ? IS NOT NULL THEN ?
+        WHEN ? = 1 THEN CURRENT_TIMESTAMP
+        ELSE NULL
+      END,
+      ?,
+      CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )
   `;
 
@@ -179,8 +255,9 @@ export async function createArticle(data) {
     primaryImage,
     data.youtubeUrl || null,
     data.authorId || "usr_reporter",
-    data.authorName || "নিজস্ব প্রতিবেদক",
-    data.location || "ঢাকা",
+    authorName,
+    representativeType,
+    location,
     data.readTime || "৩ মিনিট পাঠ",
     data.status || "published",
     data.isBreaking ? 1 : 0,
@@ -188,7 +265,10 @@ export async function createArticle(data) {
     data.isHandpicked ? 1 : 0,
     createdBy,
     lastEditedBy,
+    customPublishedAt,
+    customPublishedAt,
     isPublished ? 1 : 0,
+    customPublishedAt,
   ];
 
   await withTransaction(async (tx) => {
@@ -277,6 +357,9 @@ export async function updateArticle(id, data) {
   const imageChanged = data.image !== undefined && normalizeStr(primaryImage) !== normalizeStr(current.image);
   const youtubeChanged = data.youtubeUrl !== undefined && normalizeStr(data.youtubeUrl) !== normalizeStr(current.youtube_url);
   const locationChanged = data.location !== undefined && normalizeStr(data.location) !== normalizeStr(current.location);
+  const representativeTypeChanged = data.representativeType !== undefined && data.representativeType !== current.representative_type;
+  const authorNameChanged = data.authorName !== undefined && normalizeStr(data.authorName) !== normalizeStr(current.author_name);
+  const customPublishedAtChanged = data.customPublishedAt !== undefined && normalizeStr(data.customPublishedAt) !== normalizeStr(current.custom_published_at);
 
   const hasContentChanged =
     headlineChanged ||
@@ -287,9 +370,22 @@ export async function updateArticle(id, data) {
     imagesChanged ||
     imageChanged ||
     youtubeChanged ||
-    locationChanged;
+    locationChanged ||
+    representativeTypeChanged ||
+    authorNameChanged ||
+    customPublishedAtChanged;
 
   const lastEditedBy = hasContentChanged ? editorUsername : (current.last_edited_by || null);
+
+  const newRepresentativeType = data.representativeType !== undefined ? data.representativeType : (current.representative_type || "online_desk");
+  let newAuthorName = current.author_name;
+  if (data.authorName !== undefined) {
+    newAuthorName = newRepresentativeType === "none" ? "" : data.authorName;
+  } else if (newRepresentativeType === "none") {
+    newAuthorName = "";
+  }
+  const newCustomPublishedAt = data.customPublishedAt !== undefined ? (data.customPublishedAt || null) : current.custom_published_at;
+  const newLocation = data.location !== undefined ? (data.location ? String(data.location).trim() : null) : current.location;
 
   const updateSql = `
     UPDATE articles SET
@@ -304,6 +400,8 @@ export async function updateArticle(id, data) {
       images = ?,
       image = ?,
       youtube_url = ?,
+      author_name = ?,
+      representative_type = ?,
       location = ?,
       read_time = ?,
       status = ?,
@@ -315,7 +413,12 @@ export async function updateArticle(id, data) {
       is_passed_to_upper = ?,
       passed_by = ?,
       passed_at = CASE WHEN ? = 1 THEN CURRENT_TIMESTAMP ELSE passed_at END,
-      published_at = CASE WHEN ? = 1 THEN COALESCE(published_at, CURRENT_TIMESTAMP) ELSE published_at END,
+      published_at = CASE
+        WHEN ? IS NOT NULL THEN ?
+        WHEN ? = 1 THEN COALESCE(published_at, CURRENT_TIMESTAMP)
+        ELSE published_at
+      END,
+      custom_published_at = ?,
       rejection_reason = ?,
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ?
@@ -333,7 +436,9 @@ export async function updateArticle(id, data) {
     imagesJson,
     primaryImage,
     data.youtubeUrl !== undefined ? data.youtubeUrl : current.youtube_url,
-    data.location !== undefined ? data.location : current.location,
+    newAuthorName,
+    newRepresentativeType,
+    newLocation,
     data.readTime !== undefined ? data.readTime : current.read_time,
     newStatus,
     data.isBreaking !== undefined ? (data.isBreaking ? 1 : 0) : current.is_breaking,
@@ -344,7 +449,10 @@ export async function updateArticle(id, data) {
     isPassedToUpper,
     passedBy,
     data.passToUpper ? 1 : 0,
+    newCustomPublishedAt,
+    newCustomPublishedAt,
     isNowPublished ? 1 : 0,
+    newCustomPublishedAt,
     newStatus === "rejected" ? (data.rejectionReason || current.rejection_reason || null) : null,
     id,
   ];
@@ -458,7 +566,7 @@ export async function updateArticle(id, data) {
 
 export async function getArticleById(id) {
   return await queryOne(
-    `SELECT a.*, u.role AS author_role, u.username AS author_username
+    `SELECT a.*, u.role AS author_role, u.username AS author_username, u.full_name AS author_full_name
      FROM articles a
      LEFT JOIN users u ON a.author_id = u.id
      WHERE a.id = ?`,
@@ -468,7 +576,7 @@ export async function getArticleById(id) {
 
 export async function getArticleBySlug(slug) {
   return await queryOne(
-    `SELECT a.*, u.role AS author_role, u.username AS author_username
+    `SELECT a.*, u.role AS author_role, u.username AS author_username, u.full_name AS author_full_name
      FROM articles a
      LEFT JOIN users u ON a.author_id = u.id
      WHERE a.slug = ?`,
@@ -486,19 +594,33 @@ export async function findArticleBySlugOrId(identifier) {
     decoded = raw;
   }
 
-  let row = await queryOne("SELECT * FROM articles WHERE slug = ?", [decoded]);
+  const findBySlugSql = `
+    SELECT a.*, u.role AS author_role, u.username AS author_username, u.full_name AS author_full_name
+    FROM articles a
+    LEFT JOIN users u ON a.author_id = u.id
+    WHERE a.slug = ?
+  `;
+
+  let row = await queryOne(findBySlugSql, [decoded]);
   if (row) return row;
 
   if (decoded !== raw) {
-    row = await queryOne("SELECT * FROM articles WHERE slug = ?", [raw]);
+    row = await queryOne(findBySlugSql, [raw]);
     if (row) return row;
   }
 
-  row = await queryOne("SELECT * FROM articles WHERE id = ?", [raw]);
+  const findByIdSql = `
+    SELECT a.*, u.role AS author_role, u.username AS author_username, u.full_name AS author_full_name
+    FROM articles a
+    LEFT JOIN users u ON a.author_id = u.id
+    WHERE a.id = ?
+  `;
+
+  row = await queryOne(findByIdSql, [raw]);
   if (row) return row;
 
   if (decoded !== raw) {
-    row = await queryOne("SELECT * FROM articles WHERE id = ?", [decoded]);
+    row = await queryOne(findByIdSql, [decoded]);
     if (row) return row;
   }
 
@@ -536,7 +658,7 @@ export async function getPublishedArticles({ categorySlug, subcategoryName, limi
           (c.article_id IS NOT NULL) DESC,
           c.priority DESC,
           c.created_at DESC,
-          COALESCE(a.published_at, a.created_at) DESC
+          COALESCE(a.custom_published_at, a.published_at, a.created_at) DESC
         LIMIT ? OFFSET ?
       `;
       params.push(safeLimit, safeOffset);
@@ -561,7 +683,7 @@ export async function getPublishedArticles({ categorySlug, subcategoryName, limi
     const sql = `
       SELECT * FROM articles
       WHERE ${conditions.join(" AND ")}
-      ORDER BY COALESCE(published_at, created_at) DESC
+      ORDER BY COALESCE(custom_published_at, published_at, created_at) DESC
       LIMIT ? OFFSET ?
     `;
     params.push(safeLimit, safeOffset);
@@ -1175,11 +1297,11 @@ export async function getMostReadArticles(limit = 10) {
     const sql = `
       SELECT a.*,
              CASE 
-               WHEN COALESCE(a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 
+               WHEN COALESCE(a.custom_published_at, a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 
                ELSE 0 
              END as is_within_validity_week,
              CASE 
-               WHEN COALESCE(a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 
+               WHEN COALESCE(a.custom_published_at, a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 
                  GREATEST(
                    COALESCE(a.view_count, 0),
                    (
@@ -1195,14 +1317,14 @@ export async function getMostReadArticles(limit = 10) {
                    FROM analytics_page_views v 
                    WHERE v.article_id = a.id 
                      AND v.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-                     AND v.created_at > DATE_ADD(COALESCE(a.published_at, a.created_at), INTERVAL 7 DAY)
+                     AND v.created_at > DATE_ADD(COALESCE(a.custom_published_at, a.published_at, a.created_at), INTERVAL 7 DAY)
                  )
              END as display_views
       FROM articles a
       WHERE a.status = 'published'
       ORDER BY 
         display_views DESC,
-        COALESCE(a.published_at, a.created_at) DESC
+        COALESCE(a.custom_published_at, a.published_at, a.created_at) DESC
       LIMIT ?
     `;
 
