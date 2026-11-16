@@ -1,4 +1,5 @@
 import AdSlot from "@/components/AdSlot";
+import { SHOW_ADS } from "@/config/ads";
 import NewsArticleCard from "@/components/NewsArticleCard";
 import SubcategoryDropdown from "@/components/SubcategoryDropdown";
 import { TAGS } from "@/lib/cache/tags";
@@ -269,8 +270,8 @@ export default async function CategoryPage({ params, searchParams }) {
           )}
         </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          <div className="lg:col-span-8 space-y-8">
+        <div className={SHOW_ADS ? "grid grid-cols-1 lg:grid-cols-12 gap-8 items-start" : "w-full"}>
+          <div className={SHOW_ADS ? "lg:col-span-8 space-y-8" : "w-full space-y-8"}>
             {displayedArticles.length === 0 ? (
               <div className="bg-white rounded-none border border-slate-200 p-12 text-center space-y-4 max-w-2xl mx-auto shadow-2xs my-12">
                 <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
@@ -315,7 +316,7 @@ export default async function CategoryPage({ params, searchParams }) {
                   </section>
                 )}
 
-                {leadStory && (
+                {SHOW_ADS && leadStory && (
                   <div className="lg:hidden pb-6 border-b border-slate-200">
                     <AdSlot
                       variant="mediumRectangle"
@@ -405,22 +406,24 @@ export default async function CategoryPage({ params, searchParams }) {
             )}
           </div>
 
-          <aside
-            aria-label="বিজ্ঞাপন এলাকা"
-            className="hidden lg:block lg:col-span-4 space-y-6"
-          >
-            <AdSlot
-              variant="mediumRectangle"
-              slotId="category-sidebar-top"
-              mediaQuery="(min-width: 1024px)"
-            />
-            <AdSlot
-              variant="skyscraper"
-              slotId="category-sidebar-skyscraper"
-              mediaQuery="(min-width: 1024px)"
-              className="hidden sm:flex"
-            />
-          </aside>
+          {SHOW_ADS && (
+            <aside
+              aria-label="বিজ্ঞাপন এলাকা"
+              className="hidden lg:block lg:col-span-4 space-y-6"
+            >
+              <AdSlot
+                variant="mediumRectangle"
+                slotId="category-sidebar-top"
+                mediaQuery="(min-width: 1024px)"
+              />
+              <AdSlot
+                variant="skyscraper"
+                slotId="category-sidebar-skyscraper"
+                mediaQuery="(min-width: 1024px)"
+                className="hidden sm:flex"
+              />
+            </aside>
+          )}
         </div>
       </div>
     </div>

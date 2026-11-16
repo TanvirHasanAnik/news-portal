@@ -2,6 +2,7 @@ import React from "react";
 import NewsCard from "./NewsCard";
 import AdSlot from "./AdSlot";
 import { Newspaper } from "lucide-react";
+import { SHOW_ADS } from "@/config/ads";
 
 export default function LatestMixedSection({ dbArticles = [] }) {
   const seen = new Set();
@@ -27,8 +28,8 @@ export default function LatestMixedSection({ dbArticles = [] }) {
   return (
     <section id="latest" className="scroll-mt-14 py-6 sm:py-8 bg-white border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8 items-start">
-          <div className="lg:col-span-3 flex flex-col gap-6 lg:gap-8">
+        <div className={SHOW_ADS ? "grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8 items-start" : "w-full"}>
+          <div className={SHOW_ADS ? "lg:col-span-3 flex flex-col gap-6 lg:gap-8" : "w-full flex flex-col gap-6 lg:gap-8"}>
             {sortedNews.length === 0 ? (
               <div className="bg-white border border-slate-200 p-10 text-center space-y-3 max-w-xl mx-auto my-4">
                 <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
@@ -207,10 +208,12 @@ export default function LatestMixedSection({ dbArticles = [] }) {
             )}
           </div>
 
-          <div className="lg:col-span-1 flex flex-col gap-6 items-center">
-            <AdSlot variant="mediumRectangle" slotId="home-sidebar-top" />
-            <AdSlot variant="mediumRectangle" slotId="home-sidebar-bottom" />
-          </div>
+          {SHOW_ADS && (
+            <div className="lg:col-span-1 flex flex-col gap-6 items-center">
+              <AdSlot variant="mediumRectangle" slotId="home-sidebar-top" />
+              <AdSlot variant="mediumRectangle" slotId="home-sidebar-bottom" />
+            </div>
+          )}
         </div>
       </div>
     </section>

@@ -1,22 +1,23 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import { SHOW_ADS } from "@/config/ads";
+import {
+  ChevronDown,
+  Home,
+  Menu,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import {
-  Menu,
-  Home,
-  ChevronDown,
-} from "lucide-react";
+  getBanglaDate,
+  getEnglishDateBangla,
+  getHijriDate,
+} from "../utils/dateUtils";
+import AdSlot from "./AdSlot";
 import MobileDrawer from "./MobileDrawer";
 import NewsTickerSection from "./NewsTickerSection";
 import SocialMediaLinks from "./SocialMediaLinks";
-import AdSlot from "./AdSlot";
-import {
-  getEnglishDateBangla,
-  getBanglaDate,
-  getHijriDate,
-} from "../utils/dateUtils";
 
 
 export default function Header({ breakingNewsList = [], latestHeadlines = [], categories: propCategories = [], socialLinks = {} }) {
@@ -190,33 +191,34 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
 
   return (
     <>
-
-      <aside aria-label="বিজ্ঞাপন" className="w-full bg-slate-100 border-b border-slate-200 overflow-hidden">
-        <div className="flex items-center justify-center">
-          <div className="relative w-full max-w-[320px] sm:max-w-[728px] lg:max-w-[970px] h-[50px] sm:h-[90px] bg-slate-100 flex items-center justify-center overflow-hidden">
-            {isDesktopAd === true ? (
-              <AdSlot
-                variant="leaderboard"
-                slotId="header-leaderboard"
-                eager={true}
-              />
-            ) : isDesktopAd === false ? (
-              <AdSlot
-                variant="mobileBanner"
-                slotId="header-mobile"
-                eager={true}
-              />
-            ) : (
-              <span
-                aria-hidden="true"
-                className="text-[11px] font-medium text-slate-400 select-none pointer-events-none"
-              >
-                বিজ্ঞাপন
-              </span>
-            )}
+      {SHOW_ADS && (
+        <aside aria-label="বিজ্ঞাপন" className="w-full bg-slate-100 border-b border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-center">
+            <div className="relative w-full max-w-[320px] sm:max-w-[728px] lg:max-w-[970px] h-[50px] sm:h-[90px] bg-slate-100 flex items-center justify-center overflow-hidden">
+              {isDesktopAd === true ? (
+                <AdSlot
+                  variant="leaderboard"
+                  slotId="header-leaderboard"
+                  eager={true}
+                />
+              ) : isDesktopAd === false ? (
+                <AdSlot
+                  variant="mobileBanner"
+                  slotId="header-mobile"
+                  eager={true}
+                />
+              ) : (
+                <span
+                  aria-hidden="true"
+                  className="text-[11px] font-medium text-slate-400 select-none pointer-events-none"
+                >
+                  বিজ্ঞাপন
+                </span>
+              )}
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      )}
 
       <header className="w-full bg-white border-b border-slate-200">
 
@@ -276,7 +278,7 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
             <Link href="/" className="inline-block group focus:outline-none">
               <img
                 src="/brand-logo.svg"
-                alt="আলো আসবে - সত্য ও সাহসের অগ্রদূত"
+                alt="আলো আসবে - সত্যের পথে, মানুষের সাথে"
                 className="h-14 xl:h-16 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
               />
             </Link>

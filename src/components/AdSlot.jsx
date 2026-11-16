@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { SHOW_ADS } from "@/config/ads";
 
 const AD_PRESETS = {
   leaderboard: {
@@ -87,6 +88,8 @@ export default function AdSlot({
   className = "",
   containerClassName = "",
 }) {
+  if (!SHOW_ADS) return null;
+
   const pathname = usePathname() || "/";
   const [mounted, setMounted] = useState(false);
   const [matchesMedia, setMatchesMedia] = useState(!mediaQuery);

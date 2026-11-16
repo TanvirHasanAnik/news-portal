@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, MapPin, Mail } from "lucide-react";
+import { ArrowUp, Mail, MapPin } from "lucide-react";
 import Link from "next/link";
 import SocialMediaLinks from "./SocialMediaLinks";
 
@@ -16,7 +16,7 @@ export default function Footer({ socialLinks = {} }) {
           <Link href="/" className="inline-block group focus:outline-none">
             <img
               src="/brand-logo.svg"
-              alt="আলো আসবে - সত্য ও সাহসের অগ্রদূত"
+              alt="আলো আসবে - সত্যের পথে, মানুষের সাথে"
               className="h-12 sm:h-14 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
             />
           </Link>

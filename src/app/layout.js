@@ -19,8 +19,29 @@ const solaimanLipi = localFont({
 });
 
 export const metadata = {
-  title: "আলো আসবে",
-  description: "সত্যের পথে, মানুষের সাথে",
+  metadataBase: new URL("https://aloashbe.com"),
+  title: {
+    default: "আলো আসবে - সত্যের পথে, মানুষের সাথে",
+    template: "%s | আলো আসবে",
+  },
+  description:
+    "সত্যের পথে, মানুষের সাথে — আলো আসবে। জাতীয়, রাজনীতি, অর্থনীতি, আন্তর্জাতিক, খেলাধুলা, বিনোদন ও প্রযুক্তির সর্বশেষ সংবাদ ও বিশ্লেষণ।",
+  icons: {
+    icon: "/icon.png",
+    apple: "/icon.png",
+  },
+  openGraph: {
+    title: "আলো আসবে - সত্যের পথে, মানুষের সাথে",
+    description:
+      "সত্যের পথে, মানুষের সাথে — জাতীয়, রাজনীতি, অর্থনীতি, আন্তর্জাতিক, খেলাধুলা ও প্রযুক্তির সর্বশেষ সংবাদ।",
+    url: "https://aloashbe.com",
+    siteName: "আলো আসবে",
+    locale: "bn_BD",
+    type: "website",
+  },
+  alternates: {
+    canonical: "/",
+  },
 };
 
 export default function RootLayout({ children }) {
