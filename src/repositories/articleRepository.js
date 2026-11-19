@@ -1,7 +1,7 @@
 import { query, queryOne, withTransaction } from "@/lib/db";
 import { deleteMultipleFromR2 } from "@/lib/r2";
 import { extractSummaryFromContent } from "@/utils/textUtils";
-import { formatArticlePublishDate } from "@/utils/dateUtils";
+import { formatArticlePublishDate, isPublishDateHidden } from "@/utils/dateUtils";
 
 function normalizeTimestamp(ts) {
   if (!ts) return null;
@@ -81,7 +81,9 @@ export function mapDbArticleToFrontend(dbRow) {
   }
 
   const customPublishedAt = normalizeTimestamp(dbRow.custom_published_at);
-  const effectiveTime = customPublishedAt || normalizeTimestamp(dbRow.published_at || dbRow.created_at) || null;
+  const isDateHidden = isPublishDateHidden(dbRow.custom_published_at);
+  const fallbackTime = normalizeTimestamp(dbRow.published_at || dbRow.created_at) || null;
+  const effectiveTime = isDateHidden ? null : (customPublishedAt || fallbackTime);
   const formattedPublishDate = effectiveTime ? formatArticlePublishDate(effectiveTime) : "";
 
   const rawSummary = (dbRow.summary || "").trim();
@@ -142,9 +144,10 @@ export function mapDbArticleToFrontend(dbRow) {
     passed_at: normalizeTimestamp(dbRow.passed_at),
     location: dbRow.location || "",
     time: effectiveTime,
-    publishedAt: effectiveTime,
+    publishedAt: fallbackTime,
     customPublishedAt,
     custom_published_at: customPublishedAt,
+    isDateHidden,
     formattedPublishDate,
     createdAt: normalizeTimestamp(dbRow.created_at),
     created_at: normalizeTimestamp(dbRow.created_at),
@@ -658,7 +661,7 @@ export async function getPublishedArticles({ categorySlug, subcategoryName, limi
           (c.article_id IS NOT NULL) DESC,
           c.priority DESC,
           c.created_at DESC,
-          COALESCE(a.custom_published_at, a.published_at, a.created_at) DESC
+          COALESCE(NULLIF(a.custom_published_at, '1970-01-01 00:00:01'), a.published_at, a.created_at) DESC
         LIMIT ? OFFSET ?
       `;
       params.push(safeLimit, safeOffset);
@@ -683,7 +686,7 @@ export async function getPublishedArticles({ categorySlug, subcategoryName, limi
     const sql = `
       SELECT * FROM articles
       WHERE ${conditions.join(" AND ")}
-      ORDER BY COALESCE(custom_published_at, published_at, created_at) DESC
+      ORDER BY COALESCE(NULLIF(custom_published_at, '1970-01-01 00:00:01'), published_at, created_at) DESC
       LIMIT ? OFFSET ?
     `;
     params.push(safeLimit, safeOffset);
@@ -1431,11 +1434,11 @@ export async function getMostReadArticles(limit = 10) {
     const sql = `
       SELECT a.*,
              CASE 
-               WHEN COALESCE(a.custom_published_at, a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 
+               WHEN COALESCE(NULLIF(a.custom_published_at, '1970-01-01 00:00:01'), a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 
                ELSE 0 
              END as is_within_validity_week,
              CASE 
-               WHEN COALESCE(a.custom_published_at, a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 
+               WHEN COALESCE(NULLIF(a.custom_published_at, '1970-01-01 00:00:01'), a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 
                  GREATEST(
                    COALESCE(a.view_count, 0),
                    (
@@ -1451,14 +1454,14 @@ export async function getMostReadArticles(limit = 10) {
                    FROM analytics_page_views v 
                    WHERE v.article_id = a.id 
                      AND v.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-                     AND v.created_at > DATE_ADD(COALESCE(a.custom_published_at, a.published_at, a.created_at), INTERVAL 7 DAY)
+                     AND v.created_at > DATE_ADD(COALESCE(NULLIF(a.custom_published_at, '1970-01-01 00:00:01'), a.published_at, a.created_at), INTERVAL 7 DAY)
                  )
              END as display_views
       FROM articles a
       WHERE a.status = 'published'
       ORDER BY 
         display_views DESC,
-        COALESCE(a.custom_published_at, a.published_at, a.created_at) DESC
+        COALESCE(NULLIF(a.custom_published_at, '1970-01-01 00:00:01'), a.published_at, a.created_at) DESC
       LIMIT ?
     `;
 

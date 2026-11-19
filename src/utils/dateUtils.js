@@ -160,8 +160,20 @@ export function formatStaticDateTime(timestamp) {
 
 export const formatAuditDateTime = formatStaticDateTime;
 
+export const HIDDEN_PUBLISH_DATE_SENTINEL = "1970-01-01 00:00:01";
+
+export function isPublishDateHidden(val) {
+  if (!val) return false;
+  const str = String(val).trim();
+  return (
+    str.startsWith("1970-01-01") ||
+    str === HIDDEN_PUBLISH_DATE_SENTINEL ||
+    str === "hidden"
+  );
+}
+
 export function formatArticlePublishDate(timestamp, includePrefix = true) {
-  if (!timestamp) return '';
+  if (!timestamp || isPublishDateHidden(timestamp)) return '';
   try {
     const d = parseDateSafe(timestamp);
     if (!d || isNaN(d.getTime())) return '';

@@ -22,6 +22,7 @@ export default function ArticlePublishSettings({
   originalCreatedAt = null,
   representativeType: propRepType,
   isCustomDate: propIsCustomDate,
+  hidePublishDate: propHidePublishDate,
   customPublishedAt: propCustomPublishedAt,
 }) {
   const datalistId = useId();
@@ -36,6 +37,9 @@ export default function ArticlePublishSettings({
   const isCustomDate = propIsCustomDate !== undefined
     ? propIsCustomDate
     : (watch ? Boolean(watch("isCustomDate")) : false);
+  const hidePublishDate = propHidePublishDate !== undefined
+    ? propHidePublishDate
+    : (watch ? Boolean(watch("hidePublishDate")) : false);
   const customPublishedAt = propCustomPublishedAt !== undefined
     ? propCustomPublishedAt
     : (watch ? watch("customPublishedAt") : "");
@@ -301,83 +305,105 @@ export default function ArticlePublishSettings({
           </div>
 
           {register && (
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
                   type="checkbox"
-                  id="isCustomDate"
-                  {...register("isCustomDate", {
+                  id="hidePublishDate"
+                  {...register("hidePublishDate", {
                     onChange: (e) => {
-                      if (e.target.checked && setValue && !customPublishedAt) {
-                        const now = new Date();
-                        const year = now.getFullYear();
-                        const month = String(now.getMonth() + 1).padStart(2, "0");
-                        const day = String(now.getDate()).padStart(2, "0");
-                        const hours = String(now.getHours()).padStart(2, "0");
-                        const minutes = String(now.getMinutes()).padStart(2, "0");
-                        setValue("customPublishedAt", `${year}-${month}-${day}T${hours}:${minutes}`, { shouldValidate: true });
+                      if (e.target.checked && setValue) {
+                        setValue("isCustomDate", false, { shouldValidate: true });
                       }
                     },
                   })}
                   className="rounded border-slate-300 text-slate-900 focus:ring-0 focus:outline-none w-4 h-4 cursor-pointer"
                 />
                 <span className="text-xs font-semibold text-slate-700">
-                  তারিখ ও সময় পরিবর্তন করুন
+                  তারিখ ও সময় লুকান (পাবলিক পেইজে প্রদর্শিত হবে না)
                 </span>
               </label>
 
-              {isCustomDate && (
-                <div className="space-y-2 pl-3 border-l-2 border-slate-300 pt-1">
-                  <div className="relative">
+              {!hidePublishDate && (
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
-                      type="datetime-local"
-                      id="customPublishedAt"
-                      {...register("customPublishedAt")}
-                      onClick={(e) => {
-                        if (typeof e.target.showPicker === "function") {
-                          try {
-                            e.target.showPicker();
-                          } catch {}
-                        }
-                      }}
-                      className={`flex h-10 w-full rounded-md border bg-white px-3 py-2 text-xs text-slate-800 outline-none focus:outline-none focus:ring-0 transition-colors cursor-pointer ${
-                        errors?.customPublishedAt
-                          ? "border-red-500 focus:border-red-600 ring-1 ring-red-500/20"
-                          : "border-slate-300 focus:border-slate-400"
-                      }`}
-                    />
-                  </div>
-                  {customPublishedAt && (
-                    <div className="p-2 rounded bg-slate-50 border border-slate-200 text-slate-700 text-xs flex items-center justify-between gap-1.5">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="font-semibold text-slate-900 shrink-0">নির্বাচিত সময়:</span>
-                        <span className="truncate">{formatArticlePublishDate(customPublishedAt, false)}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const input = document.getElementById("customPublishedAt");
-                          if (input && typeof input.showPicker === "function") {
-                            try {
-                              input.showPicker();
-                            } catch {
-                              input.focus();
-                            }
-                          } else if (input) {
-                            input.focus();
+                      type="checkbox"
+                      id="isCustomDate"
+                      {...register("isCustomDate", {
+                        onChange: (e) => {
+                          if (e.target.checked && setValue && !customPublishedAt) {
+                            const now = new Date();
+                            const year = now.getFullYear();
+                            const month = String(now.getMonth() + 1).padStart(2, "0");
+                            const day = String(now.getDate()).padStart(2, "0");
+                            const hours = String(now.getHours()).padStart(2, "0");
+                            const minutes = String(now.getMinutes()).padStart(2, "0");
+                            setValue("customPublishedAt", `${year}-${month}-${day}T${hours}:${minutes}`, { shouldValidate: true });
                           }
-                        }}
-                        className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 underline shrink-0 cursor-pointer"
-                      >
-                        ক্যালেন্ডার খুলুন
-                      </button>
+                        },
+                      })}
+                      className="rounded border-slate-300 text-slate-900 focus:ring-0 focus:outline-none w-4 h-4 cursor-pointer"
+                    />
+                    <span className="text-xs font-semibold text-slate-700">
+                      তারিখ ও সময় পরিবর্তন করুন
+                    </span>
+                  </label>
+
+                  {isCustomDate && (
+                    <div className="space-y-2 pl-3 border-l-2 border-slate-300 pt-1">
+                      <div className="relative">
+                        <input
+                          type="datetime-local"
+                          id="customPublishedAt"
+                          {...register("customPublishedAt")}
+                          onClick={(e) => {
+                            if (typeof e.target.showPicker === "function") {
+                              try {
+                                e.target.showPicker();
+                              } catch {}
+                            }
+                          }}
+                          className={`flex h-10 w-full rounded-md border bg-white px-3 py-2 text-xs text-slate-800 outline-none focus:outline-none focus:ring-0 transition-colors cursor-pointer ${
+                            errors?.customPublishedAt
+                              ? "border-red-500 focus:border-red-600 ring-1 ring-red-500/20"
+                              : "border-slate-300 focus:border-slate-400"
+                          }`}
+                        />
+                      </div>
+                      {customPublishedAt && (
+                        <div className="p-2 rounded bg-slate-50 border border-slate-200 text-slate-700 text-xs flex items-center justify-between gap-1.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="font-semibold text-slate-900 shrink-0">নির্বাচিত সময়:</span>
+                            <span className="truncate">{formatArticlePublishDate(customPublishedAt, false)}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const input = document.getElementById("customPublishedAt");
+                              if (input && typeof input.showPicker === "function") {
+                                try {
+                                  input.showPicker();
+                                } catch {
+                                  input.focus();
+                                }
+                              } else if (input) {
+                                input.focus();
+                              }
+                            }}
+                            className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 underline shrink-0 cursor-pointer"
+                          >
+                            ক্যালেন্ডার খুলুন
+                          </button>
+                        </div>
+                      )}
+                      {errors?.customPublishedAt && (
+                        <p className="text-xs text-red-600 font-medium flex items-center gap-1.5 mt-1">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          {errors.customPublishedAt.message}
+                        </p>
+                      )}
                     </div>
-                  )}
-                  {errors?.customPublishedAt && (
-                    <p className="text-xs text-red-600 font-medium flex items-center gap-1.5 mt-1">
-                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                      {errors.customPublishedAt.message}
-                    </p>
                   )}
                 </div>
               )}

@@ -68,8 +68,9 @@ export default function ArticleCreateForm({
   const initialAuthorName = isAuthorUsername ? (isEditing ? "" : "অনলাইন ডেস্ক") : (rawAuthor || (isEditing ? "" : "অনলাইন ডেস্ক"));
   const initialCustomAuthor = initialRepType === "custom" && !isAuthorUsername ? rawAuthor : "";
   const initialLocation = initialArticle?.location || "";
-  const initialIsCustomDate = Boolean(initialArticle?.customPublishedAt);
-  const initialCustomPublishedAt = initialArticle?.customPublishedAt
+  const initialHidePublishDate = initialArticle?.customPublishedAt === "1970-01-01 00:00:01" || initialArticle?.isDateHidden;
+  const initialIsCustomDate = Boolean(initialArticle?.customPublishedAt) && !initialHidePublishDate;
+  const initialCustomPublishedAt = initialArticle?.customPublishedAt && !initialHidePublishDate
     ? formatDateForInput(initialArticle.customPublishedAt)
     : "";
 
@@ -103,6 +104,7 @@ export default function ArticleCreateForm({
       customAuthorName: initialCustomAuthor,
       location: initialLocation,
       isCustomDate: initialIsCustomDate,
+      hidePublishDate: Boolean(initialHidePublishDate),
       customPublishedAt: initialCustomPublishedAt,
       status: initialArticle?.status || (isLower ? "pending" : "published"),
     },
@@ -111,6 +113,7 @@ export default function ArticleCreateForm({
   const categorySlug = watch("categorySlug") !== undefined ? watch("categorySlug") : defaultCategorySlug;
   const representativeType = watch("representativeType") || initialRepType;
   const isCustomDate = Boolean(watch("isCustomDate"));
+  const hidePublishDate = Boolean(watch("hidePublishDate"));
   const customPublishedAt = watch("customPublishedAt") || "";
   const images = watch("images") || [];
   const youtubeUrl = watch("youtubeUrl") || "";
@@ -159,6 +162,7 @@ export default function ArticleCreateForm({
       customAuthorName: initialCustomAuthor,
       location: initialLocation,
       isCustomDate: initialIsCustomDate,
+      hidePublishDate: Boolean(initialHidePublishDate),
       customPublishedAt: initialCustomPublishedAt,
       status: initialArticle?.status || (isLower ? "pending" : "published"),
     });
@@ -229,6 +233,7 @@ export default function ArticleCreateForm({
     formData.append("authorName", data.authorName || "");
     formData.append("customAuthorName", data.customAuthorName || "");
     formData.append("location", data.location || "");
+    formData.append("hidePublishDate", data.hidePublishDate ? "true" : "false");
     formData.append("isCustomDate", data.isCustomDate ? "true" : "false");
     formData.append("customPublishedAt", data.customPublishedAt || "");
     formData.append("status", resolvedStatus);
@@ -257,6 +262,7 @@ export default function ArticleCreateForm({
               customAuthorName: "",
               location: "",
               isCustomDate: false,
+              hidePublishDate: false,
               customPublishedAt: "",
               status: isLower ? "pending" : "published",
             });
@@ -410,6 +416,7 @@ export default function ArticleCreateForm({
               originalCreatedAt={initialArticle?.createdAt || initialArticle?.publishedAt || null}
               representativeType={representativeType}
               isCustomDate={isCustomDate}
+              hidePublishDate={hidePublishDate}
               customPublishedAt={customPublishedAt}
             />
 

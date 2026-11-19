@@ -123,10 +123,13 @@ export async function createArticleAction(prevState, formData) {
       resolvedAuthorName = "";
     }
 
+    const hidePublishDate = formData.get("hidePublishDate") === "true";
     const isCustomDate = formData.get("isCustomDate") === "true";
     const customPublishedAtRaw = formData.get("customPublishedAt")?.toString().trim() || "";
     let customPublishedAt = null;
-    if (isCustomDate && customPublishedAtRaw) {
+    if (hidePublishDate) {
+      customPublishedAt = "1970-01-01 00:00:01";
+    } else if (isCustomDate && customPublishedAtRaw) {
       const parsed = new Date(customPublishedAtRaw);
       if (!isNaN(parsed.getTime())) {
         customPublishedAt = parsed.toISOString().slice(0, 19).replace("T", " ");
@@ -162,6 +165,7 @@ export async function createArticleAction(prevState, formData) {
       customAuthorName,
       location,
       isCustomDate,
+      hidePublishDate,
       customPublishedAt,
     });
 
@@ -385,10 +389,13 @@ export async function updateArticleAction(prevState, formData) {
       resolvedAuthorName = "";
     }
 
+    const hidePublishDate = formData.get("hidePublishDate") === "true";
     const isCustomDate = formData.get("isCustomDate") === "true";
     const customPublishedAtRaw = formData.get("customPublishedAt")?.toString().trim() || "";
     let customPublishedAt = null;
-    if (isCustomDate && customPublishedAtRaw) {
+    if (hidePublishDate) {
+      customPublishedAt = "1970-01-01 00:00:01";
+    } else if (isCustomDate && customPublishedAtRaw) {
       const parsed = new Date(customPublishedAtRaw);
       if (!isNaN(parsed.getTime())) {
         customPublishedAt = parsed.toISOString().slice(0, 19).replace("T", " ");
@@ -424,6 +431,7 @@ export async function updateArticleAction(prevState, formData) {
       customAuthorName,
       location,
       isCustomDate,
+      hidePublishDate,
       customPublishedAt,
     });
 

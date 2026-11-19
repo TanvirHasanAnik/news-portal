@@ -186,5 +186,6 @@ export const articleCreateSchema = z.object({
       message: "জেলার নাম সর্বোচ্চ ৪টি শব্দের মধ্যে হতে হবে।",
     }),
   isCustomDate: z.boolean().optional().default(false),
+  hidePublishDate: z.boolean().optional().default(false),
   customPublishedAt: z.string().trim().optional().nullable().default(null),
 });
