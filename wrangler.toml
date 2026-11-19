@@ -35,3 +35,7 @@ bucket_name = "news-portal-isr-cache"
 [[kv_namespaces]]
 binding = "REVALIDATE_RATE_LIMIT_KV"
 id = "d48561caa1e04a4b960c9253c6683daa"
+
+[triggers]
+crons = ["0 3 * * 0"]
+

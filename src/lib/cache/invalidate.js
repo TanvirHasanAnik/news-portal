@@ -81,3 +81,20 @@ export function invalidateSiteSettings() {
     console.error("invalidateSiteSettings error:", err);
   }
 }
+
+export function invalidateAllCaches() {
+  try {
+    revalidateTag(TAGS.HOMEPAGE);
+    revalidateTag(TAGS.ARTICLES_PUBLISHED);
+    revalidateTag(TAGS.CATEGORIES);
+    revalidateTag(TAGS.CURATION_BREAKING);
+    revalidateTag(TAGS.CURATION_HANDPICKED);
+    revalidateTag(TAGS.SOCIAL_LINKS);
+    revalidateTag(TAGS.SITE_SETTINGS);
+    revalidatePath("/", "layout");
+    return true;
+  } catch (err) {
+    console.error("invalidateAllCaches error:", err);
+    return false;
+  }
+}

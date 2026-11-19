@@ -3,9 +3,39 @@ import { TAGS } from "@/lib/cache/tags";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 const KV_KEY = "revalidate-all:last-call";
-const RATE_LIMIT_WINDOW_MS = 300000;
+const RATE_LIMIT_WINDOW_MS = 30000;
+
+async function getAdminSecretKey() {
+  try {
+    const cf = await getCloudflareContext({ async: true });
+    if (cf?.env?.ADMIN_SECRET_KEY) {
+      return cf.env.ADMIN_SECRET_KEY.trim();
+    }
+  } catch (_e) {}
+  return (process.env.ADMIN_SECRET_KEY || "").trim();
+}
 
 export async function POST(request) {
+  const configuredSecretKey = await getAdminSecretKey();
+  const headerSecretKey =
+    request.headers.get("x-secret-key") ||
+    request.headers.get("X-Secret-Key");
+
+  const authHeader = request.headers.get("authorization") || request.headers.get("Authorization");
+  let bearerToken = null;
+  if (authHeader && authHeader.toLowerCase().startsWith("bearer ")) {
+    bearerToken = authHeader.substring(7).trim();
+  }
+
+  const providedKey = (headerSecretKey || bearerToken || "").trim();
+
+  if (!configuredSecretKey || !providedKey || providedKey !== configuredSecretKey) {
+    return Response.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 403 }
+    );
+  }
+
   const now = Date.now();
   const isoTimestamp = new Date(now).toISOString();
   const ip =

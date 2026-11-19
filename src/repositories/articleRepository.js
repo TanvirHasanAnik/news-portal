@@ -909,6 +909,41 @@ export async function getAllArticlesCount(options = {}) {
   return Number(row?.total || 0);
 }
 
+function extractArticleImages(row) {
+  if (!row) return [];
+  const imageSet = new Set();
+  if (row.image) imageSet.add(row.image);
+
+  if (Array.isArray(row.images)) {
+    row.images.filter(Boolean).forEach((img) => imageSet.add(img));
+  } else if (typeof row.images === "string" && row.images.trim()) {
+    try {
+      const parsed = JSON.parse(row.images);
+      if (Array.isArray(parsed)) {
+        parsed.filter(Boolean).forEach((img) => imageSet.add(img));
+      } else if (parsed && typeof parsed === "string") {
+        imageSet.add(parsed);
+      }
+    } catch {
+      imageSet.add(row.images.trim());
+    }
+  }
+
+  if (typeof row.content === "string" && row.content) {
+    const apiMatches = row.content.match(/\/api\/images\/[^\s"'<>)]+/g) || [];
+    apiMatches.forEach((m) => imageSet.add(m));
+
+    const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+    if (r2PublicUrl) {
+      const escapedBase = r2PublicUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const publicMatches = row.content.match(new RegExp(`${escapedBase}/[^\\s"'<>)]+`, "g")) || [];
+      publicMatches.forEach((m) => imageSet.add(m));
+    }
+  }
+
+  return Array.from(imageSet);
+}
+
 export async function deleteArticle(id, editorId = "usr_superadmin", editorUsername = "admin") {
   let imagesToDelete = [];
 
@@ -918,41 +953,12 @@ export async function deleteArticle(id, editorId = "usr_superadmin", editorUsern
     const headline = row?.headline || "সংবাদ";
 
     if (row) {
-      const imageSet = new Set();
-      if (row.image) imageSet.add(row.image);
-
-      if (Array.isArray(row.images)) {
-        row.images.filter(Boolean).forEach((img) => imageSet.add(img));
-      } else if (typeof row.images === "string" && row.images.trim()) {
-        try {
-          const parsed = JSON.parse(row.images);
-          if (Array.isArray(parsed)) {
-            parsed.filter(Boolean).forEach((img) => imageSet.add(img));
-          } else if (parsed && typeof parsed === "string") {
-            imageSet.add(parsed);
-          }
-        } catch {
-          imageSet.add(row.images.trim());
-        }
-      }
-
-      if (typeof row.content === "string" && row.content) {
-        const apiMatches = row.content.match(/\/api\/images\/[^\s"'<>)]+/g) || [];
-        apiMatches.forEach((m) => imageSet.add(m));
-
-        const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
-        if (r2PublicUrl) {
-          const escapedBase = r2PublicUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const publicMatches = row.content.match(new RegExp(`${escapedBase}/[^\\s"'<>)]+`, "g")) || [];
-          publicMatches.forEach((m) => imageSet.add(m));
-        }
-      }
-
-      imagesToDelete = Array.from(imageSet);
+      imagesToDelete = extractArticleImages(row);
     }
 
     await tx.query("DELETE FROM curated_news WHERE article_id = ?", [id]);
     await tx.query("DELETE FROM analytics_page_views WHERE article_id = ?", [id]);
+    await tx.query("DELETE FROM article_revisions WHERE article_id = ?", [id]);
     const deleteResult = await tx.query("DELETE FROM articles WHERE id = ?", [id]);
 
     await tx.query(
@@ -978,6 +984,134 @@ export async function deleteArticle(id, editorId = "usr_superadmin", editorUsern
   }
 
   return result;
+}
+
+export async function cleanupExpiredOnlineDeskArticles({
+  daysOld = 30,
+  minRetentionCount = 10,
+  batchSize = 50,
+  operatorId = "usr_superadmin",
+  operatorUsername = "system",
+} = {}) {
+  let totalDeletedCount = 0;
+  let totalImagesDeleted = 0;
+
+  const latestRows = await query(
+    "SELECT id FROM articles ORDER BY created_at DESC LIMIT ?",
+    [Number(minRetentionCount) || 10]
+  );
+  const protectedIds = (latestRows || []).map((r) => r.id).filter(Boolean);
+
+  while (true) {
+    let sql = `
+      SELECT id, headline, image, images, content
+      FROM articles
+      WHERE representative_type = 'online_desk'
+        AND created_at <= NOW() - INTERVAL ? DAY
+    `;
+    const params = [Number(daysOld) || 30];
+
+    if (protectedIds.length > 0) {
+      const placeholders = protectedIds.map(() => "?").join(",");
+      sql += ` AND id NOT IN (${placeholders})`;
+      params.push(...protectedIds);
+    }
+
+    sql += ` ORDER BY created_at ASC LIMIT ?`;
+    params.push(Number(batchSize) || 50);
+
+    const rows = await query(sql, params);
+    if (!rows || rows.length === 0) {
+      break;
+    }
+
+    const batchIds = rows.map((r) => r.id);
+    const imagesToDeleteSet = new Set();
+    for (const r of rows) {
+      const imgs = extractArticleImages(r);
+      imgs.forEach((img) => imagesToDeleteSet.add(img));
+    }
+    const batchImagesToDelete = Array.from(imagesToDeleteSet);
+
+    await withTransaction(async (tx) => {
+      const placeholders = batchIds.map(() => "?").join(",");
+      await tx.query(`DELETE FROM curated_news WHERE article_id IN (${placeholders})`, batchIds);
+      await tx.query(`DELETE FROM analytics_page_views WHERE article_id IN (${placeholders})`, batchIds);
+      await tx.query(`DELETE FROM article_revisions WHERE article_id IN (${placeholders})`, batchIds);
+      await tx.query(`DELETE FROM articles WHERE id IN (${placeholders})`, batchIds);
+
+      await tx.query(
+        `INSERT INTO audit_logs (id, user_id, action, target_type, target_id, details, created_at)
+         VALUES (?, ?, 'cleanup_expired_articles', 'article', ?, ?, CURRENT_TIMESTAMP)`,
+        [
+          `log_cleanup_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          operatorId,
+          `batch_${Date.now()}`,
+          JSON.stringify({
+            deleted_count: batchIds.length,
+            images_deleted: batchImagesToDelete.length,
+            operator: operatorUsername,
+            representative_type: "online_desk",
+          }),
+        ]
+      );
+    });
+
+    if (batchImagesToDelete.length > 0) {
+      try {
+        await deleteMultipleFromR2(batchImagesToDelete);
+      } catch (err) {
+        console.error("Failed to delete images from R2 in batch cleanup:", err);
+      }
+    }
+
+    totalDeletedCount += batchIds.length;
+    totalImagesDeleted += batchImagesToDelete.length;
+
+    if (rows.length < (Number(batchSize) || 50)) {
+      break;
+    }
+  }
+
+  if (totalDeletedCount > 0) {
+    try {
+      invalidateHomepage();
+    } catch (_e) {}
+  }
+
+  return {
+    success: true,
+    deletedCount: totalDeletedCount,
+    imagesDeleted: totalImagesDeleted,
+  };
+}
+
+export async function getExpiredOnlineDeskArticlesCount({
+  daysOld = 30,
+  minRetentionCount = 10,
+} = {}) {
+  const latestRows = await query(
+    "SELECT id FROM articles ORDER BY created_at DESC LIMIT ?",
+    [Number(minRetentionCount) || 10]
+  );
+  const protectedIds = (latestRows || []).map((r) => r.id).filter(Boolean);
+
+  let sql = `
+    SELECT COUNT(*) AS total
+    FROM articles
+    WHERE representative_type = 'online_desk'
+      AND created_at <= NOW() - INTERVAL ? DAY
+  `;
+  const params = [Number(daysOld) || 30];
+
+  if (protectedIds.length > 0) {
+    const placeholders = protectedIds.map(() => "?").join(",");
+    sql += ` AND id NOT IN (${placeholders})`;
+    params.push(...protectedIds);
+  }
+
+  const result = await queryOne(sql, params);
+  return Number(result?.total || 0);
 }
 
 export async function getArticleAuditLogs(optionsOrLimit = 20, optionalOffset = 0) {

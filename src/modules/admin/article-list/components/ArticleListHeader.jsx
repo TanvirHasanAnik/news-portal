@@ -2,8 +2,9 @@ import React from "react";
 import Link from "next/link";
 import { FileText, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ArticleCleanupButton } from "./ArticleCleanupButton";
 
-export function ArticleListHeader({ totalCount = 0, isLowerRole = false }) {
+export function ArticleListHeader({ totalCount = 0, isLowerRole = false, currentUser }) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-200">
       <div>
@@ -22,7 +23,8 @@ export function ArticleListHeader({ totalCount = 0, isLowerRole = false }) {
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
+        <ArticleCleanupButton currentUser={currentUser} />
         <Link href="/admin?tab=create-article">
           <Button className="bg-red-600 hover:bg-red-700 text-white shadow-sm gap-1.5 cursor-pointer">
             <Plus className="w-4 h-4" />

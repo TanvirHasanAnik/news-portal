@@ -11,8 +11,9 @@ import { AnalyticsMetricCards } from "./components/AnalyticsMetricCards";
 import { CategoryViewsBreakdown } from "./components/CategoryViewsBreakdown";
 import { TopArticlesTable } from "./components/TopArticlesTable";
 import { AuditLogsTable } from "./components/AuditLogsTable";
+import { SystemMaintenanceSection } from "./components/SystemMaintenanceSection";
 
-export default async function AnalyticsModule({ searchParams }) {
+export default async function AnalyticsModule({ currentUser, searchParams }) {
   const resolvedParams = searchParams ? await searchParams : {};
   const logPage = Math.max(1, parseInt(resolvedParams?.logPage || "1", 10));
   const logPageSize = 20;
@@ -44,6 +45,7 @@ export default async function AnalyticsModule({ searchParams }) {
   return (
     <div className="space-y-6">
       <AnalyticsHeader />
+      <SystemMaintenanceSection currentUser={currentUser} />
       <AnalyticsMetricCards metrics={summary} />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <CategoryViewsBreakdown categoryStats={categoryStats} />
