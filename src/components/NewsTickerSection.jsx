@@ -61,9 +61,9 @@ export default function NewsTickerSection({ breakingNewsList = [], headlines = [
           <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2">
             <div className="flex items-center gap-2.5 sm:gap-3.5">
               <div className="flex items-center gap-1.5 px-3 py-1 bg-red-600 rounded text-white font-semibold text-xs sm:text-sm shrink-0 tracking-wide shadow-2xs">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex -inset-0.5 rounded-full bg-amber-300 opacity-90"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400"></span>
                 </span>
                 <span className="whitespace-nowrap">ব্রেকিং নিউজ</span>
               </div>
