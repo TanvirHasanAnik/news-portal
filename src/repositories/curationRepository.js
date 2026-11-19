@@ -1,5 +1,10 @@
 import { getDb, query, queryOne, withTransaction } from "@/lib/db";
-import { mapDbArticleToFrontend } from "./articleRepository";
+import {
+  mapDbArticleToFrontend,
+  toPublicArticleSummary,
+  PUBLIC_ARTICLE_SELECT_FIELDS,
+  PUBLIC_ARTICLE_SELECT_FIELDS_ALIASED,
+} from "./articleRepository";
 
 
 
@@ -215,7 +220,7 @@ export async function getActiveHandpickedArticles(limit = 4) {
   try {
     const curatedRows = await query(
       `SELECT c.id as curation_id, c.custom_title, c.custom_url, c.priority,
-              a.*
+              ${PUBLIC_ARTICLE_SELECT_FIELDS_ALIASED}
        FROM curated_news c
        LEFT JOIN articles a ON c.article_id = a.id
        WHERE c.type = 'handpicked' AND c.is_active = 1 AND (a.status = 'published' OR a.id IS NULL)
@@ -226,7 +231,7 @@ export async function getActiveHandpickedArticles(limit = 4) {
 
     const curatedArticles = (curatedRows || []).map((row) => {
       if (row.id && row.status === "published") {
-        const mapped = mapDbArticleToFrontend(row);
+        const mapped = toPublicArticleSummary(row);
         if (row.custom_title) {
           mapped.headline = row.custom_title;
         }
@@ -258,7 +263,7 @@ export async function getActiveHandpickedArticles(limit = 4) {
       const existingIds = new Set(curatedArticles.map((a) => a.dbId || a.id));
 
       const directRows = await query(
-        `SELECT * FROM articles 
+        `SELECT ${PUBLIC_ARTICLE_SELECT_FIELDS} FROM articles 
          WHERE status = 'published' AND is_handpicked = 1 
            AND id NOT IN (SELECT article_id FROM curated_news WHERE type = 'handpicked' AND is_active = 0 AND article_id IS NOT NULL)
          ORDER BY created_at DESC 
@@ -269,7 +274,7 @@ export async function getActiveHandpickedArticles(limit = 4) {
       (directRows || []).forEach((row) => {
         if (curatedArticles.length < safeLimit && !existingIds.has(row.id)) {
           existingIds.add(row.id);
-          const mapped = mapDbArticleToFrontend(row);
+          const mapped = toPublicArticleSummary(row);
           curatedArticles.push({ ...mapped, isHandpicked: true });
         }
       });

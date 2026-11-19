@@ -15,6 +15,7 @@ import {
   findArticleBySlugOrId,
   getPublishedArticles,
   mapDbArticleToFrontend,
+  toPublicArticleSummary,
 } from "@/repositories/articleRepository";
 import { getTopArticles } from "@/repositories/analyticsRepository";
 import { getCurrentUser } from "@/lib/auth/server";
@@ -79,7 +80,7 @@ export default async function AdminArticlePreviewPage({ params }) {
   try {
     const dbRelated = await getPublishedArticles({ categorySlug: article.categorySlug, limit: 6 });
     relatedArticles = (dbRelated || [])
-      .map(mapDbArticleToFrontend)
+      .map(toPublicArticleSummary)
       .filter((a) => a.id !== article.id && a.dbId !== article.dbId && a.slug !== article.slug)
       .slice(0, 4);
   } catch (err) {

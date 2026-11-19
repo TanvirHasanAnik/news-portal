@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 import { TAGS } from "@/lib/cache/tags";
 import { getActiveBreakingNews } from "@/repositories/curationRepository";
 import { getAllCategoriesWithSubcategories } from "@/repositories/categoryRepository";
-import { getPublishedArticles, mapDbArticleToFrontend } from "@/repositories/articleRepository";
+import { getPublishedArticles, toPublicArticleSummary } from "@/repositories/articleRepository";
 import { getSocialLinks } from "@/repositories/socialLinksRepository";
 
 const getCachedBreakingNews = unstable_cache(
@@ -51,7 +51,7 @@ export default async function SiteLayout({ children }) {
     ]);
     breakingNewsList = breaking || [];
     dbCategories = cats || [];
-    latestHeadlines = (rawHeadlines || []).map(mapDbArticleToFrontend);
+    latestHeadlines = (rawHeadlines || []).map(toPublicArticleSummary);
     if (sLinks) {
       socialLinks = sLinks;
     }

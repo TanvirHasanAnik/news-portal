@@ -7,7 +7,7 @@ import {
     getPublishedArticles,
     getPublishedArticlesCount,
     getPublishedSubcategories,
-    mapDbArticleToFrontend,
+    toPublicArticleSummary,
 } from "@/repositories/articleRepository";
 import {
     getCategoryBySlug,
@@ -81,7 +81,7 @@ const getCachedCategoryArticles = (category, selectedSub, page) =>
         offset,
       });
 
-      const displayedArticles = (raw || []).map(mapDbArticleToFrontend);
+      const displayedArticles = (raw || []).map(toPublicArticleSummary);
 
       return {
         totalCount,

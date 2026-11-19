@@ -166,6 +166,186 @@ export function mapDbArticleToFrontend(dbRow) {
   };
 }
 
+export const PUBLIC_ARTICLE_COLUMNS = [
+  "id",
+  "headline",
+  "slug",
+  "summary",
+  "category_id",
+  "category_name",
+  "category_slug",
+  "subcategory_id",
+  "subcategory_name",
+  "images",
+  "image",
+  "youtube_url",
+  "author_name",
+  "representative_type",
+  "location",
+  "read_time",
+  "status",
+  "is_breaking",
+  "is_lead",
+  "is_handpicked",
+  "view_count",
+  "published_at",
+  "custom_published_at",
+  "created_at",
+  "updated_at",
+];
+
+export const PUBLIC_ARTICLE_SELECT_FIELDS = PUBLIC_ARTICLE_COLUMNS.join(", ");
+export const PUBLIC_ARTICLE_SELECT_FIELDS_ALIASED = PUBLIC_ARTICLE_COLUMNS.map((col) => `a.${col}`).join(", ");
+
+export function toPublicArticleSummary(dbRow) {
+  if (!dbRow) return null;
+
+  let imagesArray = [];
+  if (Array.isArray(dbRow.images)) {
+    imagesArray = dbRow.images.filter(Boolean).slice(0, 3);
+  } else if (typeof dbRow.images === "string" && dbRow.images.trim()) {
+    try {
+      const parsed = JSON.parse(dbRow.images);
+      if (Array.isArray(parsed)) {
+        imagesArray = parsed.filter(Boolean).slice(0, 3);
+      } else if (parsed) {
+        imagesArray = [String(parsed)];
+      }
+    } catch {
+      imagesArray = [dbRow.images.trim()];
+    }
+  } else if (dbRow.image) {
+    imagesArray = [dbRow.image];
+  }
+
+  const primaryImage = imagesArray[0] || dbRow.image || null;
+  const rawRepType = dbRow.representative_type || dbRow.representativeType;
+  let representativeType = rawRepType;
+  if (!representativeType) {
+    if (dbRow.author_name === "বাসস") {
+      representativeType = "bss";
+    } else if (dbRow.author_name === "নিজস্ব প্রতিবেদক") {
+      representativeType = "reporter";
+    } else if (dbRow.author_name === "অনলাইন ডেস্ক") {
+      representativeType = "online_desk";
+    } else if (dbRow.author_name) {
+      representativeType = "custom";
+    } else {
+      representativeType = "none";
+    }
+  }
+
+  const rawAuthorName = (dbRow.author_name || dbRow.authorName || dbRow.author || "").trim();
+  const isUsername =
+    Boolean(rawAuthorName) &&
+    (rawAuthorName === dbRow.author_username ||
+      rawAuthorName === dbRow.created_by ||
+      rawAuthorName === dbRow.createdBy ||
+      rawAuthorName === "superadmin" ||
+      rawAuthorName === "admin" ||
+      rawAuthorName === "reporter" ||
+      rawAuthorName === "test_reporter" ||
+      rawAuthorName === "test_sub_editor");
+
+  let resolvedAuthorName = "";
+  if (representativeType === "none" || isUsername) {
+    resolvedAuthorName = "";
+  } else if (rawAuthorName) {
+    resolvedAuthorName = rawAuthorName;
+  } else if (rawRepType === "online_desk") {
+    resolvedAuthorName = "অনলাইন ডেস্ক";
+  } else if (rawRepType === "reporter") {
+    resolvedAuthorName = "নিজস্ব প্রতিবেদক";
+  } else if (rawRepType === "bss") {
+    resolvedAuthorName = "বাসস";
+  } else if (rawRepType === "author" && dbRow.author_full_name) {
+    resolvedAuthorName = dbRow.author_full_name.trim();
+  } else {
+    resolvedAuthorName = "";
+  }
+
+  const customPublishedAt = normalizeTimestamp(dbRow.custom_published_at || dbRow.customPublishedAt);
+  const isDateHidden = isPublishDateHidden(dbRow.custom_published_at || dbRow.customPublishedAt);
+  const fallbackTime = normalizeTimestamp(dbRow.published_at || dbRow.publishedAt || dbRow.created_at || dbRow.createdAt) || null;
+  const effectiveTime = isDateHidden ? null : (customPublishedAt || fallbackTime);
+  const formattedPublishDate = effectiveTime ? formatArticlePublishDate(effectiveTime) : "";
+
+  const rawSummary = (dbRow.summary || "").trim();
+  const headline = (dbRow.curation_custom_title || dbRow.custom_title || dbRow.headline || "").trim();
+  const isHeadlineAsSummary = rawSummary && (rawSummary === headline || rawSummary === headline.substring(0, 150));
+  const summary = (!isHeadlineAsSummary && rawSummary) || (dbRow.content ? extractSummaryFromContent(dbRow.content, 250) : "");
+
+  const result = {
+    id: dbRow.slug || dbRow.id,
+    dbId: dbRow.id || dbRow.dbId,
+    slug: dbRow.slug,
+    headline,
+    summary,
+    category: dbRow.category_name || dbRow.category || "অন্যান্য",
+    categorySlug: dbRow.category_slug || dbRow.categorySlug || "others",
+    category_name: dbRow.category_name || dbRow.category || "অন্যান্য",
+    category_slug: dbRow.category_slug || dbRow.categorySlug || "others",
+    subcategory: dbRow.subcategory_name || dbRow.subcategory || null,
+    subcategorySlug: dbRow.subcategory_name ? encodeURIComponent(dbRow.subcategory_name) : (dbRow.subcategory ? encodeURIComponent(dbRow.subcategory) : null),
+    image: primaryImage,
+    images: imagesArray,
+    youtubeUrl: dbRow.youtube_url || dbRow.youtubeUrl || null,
+    author: resolvedAuthorName,
+    authorName: resolvedAuthorName,
+    representativeType,
+    representative_type: representativeType,
+    location: dbRow.location || "",
+    readTime: dbRow.read_time || dbRow.readTime || "৩ মিনিট পাঠ",
+    read_time: dbRow.read_time || dbRow.readTime || "৩ মিনিট পাঠ",
+    time: effectiveTime,
+    publishedAt: fallbackTime,
+    customPublishedAt,
+    custom_published_at: customPublishedAt,
+    isDateHidden,
+    formattedPublishDate,
+    createdAt: normalizeTimestamp(dbRow.created_at || dbRow.createdAt),
+    created_at: normalizeTimestamp(dbRow.created_at || dbRow.createdAt),
+    updatedAt: normalizeTimestamp(dbRow.updated_at || dbRow.updatedAt || dbRow.created_at || dbRow.createdAt),
+    updated_at: normalizeTimestamp(dbRow.updated_at || dbRow.updatedAt || dbRow.created_at || dbRow.createdAt),
+    hasCustomImage: Boolean(primaryImage),
+    status: dbRow.status === "pending_approval" ? "pending" : (dbRow.status || "published"),
+    isLead: Boolean(dbRow.is_lead ?? dbRow.isLead),
+    isBreaking: Boolean(dbRow.is_breaking ?? dbRow.isBreaking),
+    isHandpicked: Boolean(
+      dbRow.is_handpicked ??
+      dbRow.isHandpicked ??
+      (dbRow.curation_priority !== undefined && dbRow.curation_priority !== null)
+    ),
+  };
+
+  if (dbRow.curationId || dbRow.curation_id) {
+    result.curationId = dbRow.curationId || dbRow.curation_id;
+  }
+  if (dbRow.view_count !== undefined && dbRow.view_count !== null) {
+    result.view_count = Number(dbRow.view_count);
+  }
+  if (dbRow.week_views !== undefined && dbRow.week_views !== null) {
+    result.week_views = Number(dbRow.week_views);
+  }
+  if (dbRow.views) {
+    result.views = dbRow.views;
+  }
+  if (dbRow.isWithinValidityWeek !== undefined && dbRow.isWithinValidityWeek !== null) {
+    result.isWithinValidityWeek = Boolean(dbRow.isWithinValidityWeek);
+  }
+
+  return result;
+}
+
+export function toPublicArticleDetail(dbRow) {
+  if (!dbRow) return null;
+  const summary = toPublicArticleSummary(dbRow);
+  return {
+    ...summary,
+    content: dbRow.content || "",
+  };
+}
+
 export async function createArticle(data) {
   const id = data.id || `art_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const slug = data.slug || `${Date.now()}`;
@@ -648,7 +828,7 @@ export async function getPublishedArticles({ categorySlug, subcategoryName, limi
       }
 
       const sql = `
-        SELECT a.*, c.priority AS curation_priority, c.custom_title AS curation_custom_title
+        SELECT ${PUBLIC_ARTICLE_SELECT_FIELDS_ALIASED}, c.priority AS curation_priority, c.custom_title AS curation_custom_title
         FROM articles a
         LEFT JOIN (
           SELECT article_id, MAX(priority) AS priority, MAX(custom_title) AS custom_title, MAX(created_at) AS created_at
@@ -667,7 +847,7 @@ export async function getPublishedArticles({ categorySlug, subcategoryName, limi
       params.push(safeLimit, safeOffset);
 
       const rows = await query(sql, params);
-      return rows || [];
+      return (rows || []).map(toPublicArticleSummary);
     }
 
     const conditions = ["status = 'published'"];
@@ -684,7 +864,7 @@ export async function getPublishedArticles({ categorySlug, subcategoryName, limi
     }
 
     const sql = `
-      SELECT * FROM articles
+      SELECT ${PUBLIC_ARTICLE_SELECT_FIELDS} FROM articles
       WHERE ${conditions.join(" AND ")}
       ORDER BY COALESCE(NULLIF(custom_published_at, '1970-01-01 00:00:01'), published_at, created_at) DESC
       LIMIT ? OFFSET ?
@@ -692,7 +872,7 @@ export async function getPublishedArticles({ categorySlug, subcategoryName, limi
     params.push(safeLimit, safeOffset);
 
     const rows = await query(sql, params);
-    return rows || [];
+    return (rows || []).map(toPublicArticleSummary);
   } catch (error) {
     console.error("[Article] Error in getPublishedArticles:", error?.message || error);
     return [];
@@ -1432,7 +1612,7 @@ export async function getMostReadArticles(limit = 10) {
 
   try {
     const sql = `
-      SELECT a.*,
+      SELECT ${PUBLIC_ARTICLE_SELECT_FIELDS_ALIASED},
              CASE 
                WHEN COALESCE(NULLIF(a.custom_published_at, '1970-01-01 00:00:01'), a.published_at, a.created_at) >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 
                ELSE 0 
@@ -1471,17 +1651,16 @@ export async function getMostReadArticles(limit = 10) {
   }
 
   return (dbRows || []).map((row) => {
-    const mapped = mapDbArticleToFrontend(row);
     const isWithinWeek = row.is_within_validity_week === 1;
     const displayViews = Number(row.display_views) || 0;
 
-    return {
-      ...mapped,
+    return toPublicArticleSummary({
+      ...row,
       view_count: displayViews,
       week_views: displayViews,
       views: displayViews > 0 ? `${displayViews.toLocaleString("bn-BD")} পঠিত` : "সর্বশেষ সংবাদ",
       isWithinValidityWeek: isWithinWeek,
-    };
+    });
   });
 }
 

@@ -5,7 +5,7 @@ import { unstable_cache } from "next/cache";
 import { TAGS } from "@/lib/cache/tags";
 import {
   getPublishedArticles,
-  mapDbArticleToFrontend,
+  toPublicArticleSummary,
 } from "@/repositories/articleRepository";
 import { getTopArticles } from "@/repositories/analyticsRepository";
 import { getActiveHandpickedArticles } from "@/repositories/curationRepository";
@@ -30,7 +30,7 @@ const getCachedHomepageData = unstable_cache(
             const catArticles = await getPublishedArticles({ categorySlug: cat.slug, limit: 4 });
             return {
               ...cat,
-              articles: (catArticles || []).map(mapDbArticleToFrontend),
+              articles: (catArticles || []).map(toPublicArticleSummary),
             };
           } catch {
             return { ...cat, articles: [] };
@@ -41,9 +41,9 @@ const getCachedHomepageData = unstable_cache(
     }
 
     return {
-      dbArticles: (raw || []).map(mapDbArticleToFrontend),
-      mostReadArticles: mostRead || [],
-      handpickedArticles: handpicked || [],
+      dbArticles: (raw || []).map(toPublicArticleSummary),
+      mostReadArticles: (mostRead || []).map(toPublicArticleSummary),
+      handpickedArticles: (handpicked || []).map(toPublicArticleSummary),
       categorySections,
     };
   },

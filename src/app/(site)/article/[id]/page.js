@@ -12,7 +12,8 @@ import { getTopArticles } from "@/repositories/analyticsRepository";
 import {
     findArticleBySlugOrId,
     getPublishedArticles,
-    mapDbArticleToFrontend,
+    toPublicArticleDetail,
+    toPublicArticleSummary,
 } from "@/repositories/articleRepository";
 import { categoryAccentMap } from "@/utils/categoryNews";
 import { DEFAULT_NEWS_IMAGE } from "@/utils/imageUtils";
@@ -48,7 +49,7 @@ const getCachedRelatedArticles = (categorySlug, currentArticleId, currentArticle
     async () => {
       const dbRelated = await getPublishedArticles({ categorySlug, limit: 6 });
       return (dbRelated || [])
-        .map(mapDbArticleToFrontend)
+        .map(toPublicArticleSummary)
         .filter((a) => a.id !== currentArticleId && a.dbId !== currentArticleId && a.slug !== currentArticleSlug)
         .slice(0, 4);
     },
@@ -70,7 +71,7 @@ export async function generateMetadata({ params }) {
   try {
     const dbRow = await getCachedPublishedArticle(decodedId);
     if (dbRow) {
-      article = mapDbArticleToFrontend(dbRow);
+      article = toPublicArticleDetail(dbRow);
     }
   } catch (err) {
     console.error("Error fetching db article for metadata:", err);
@@ -100,7 +101,7 @@ export default async function ArticlePage({ params }) {
   try {
     dbRow = await getCachedPublishedArticle(decodedId);
     if (dbRow) {
-      article = mapDbArticleToFrontend(dbRow);
+      article = toPublicArticleDetail(dbRow);
     }
   } catch (err) {
     console.error("Error fetching db article for page:", err);
