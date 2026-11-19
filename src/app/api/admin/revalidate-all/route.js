@@ -1,5 +1,4 @@
-import { revalidatePath, revalidateTag } from "next/cache";
-import { TAGS } from "@/lib/cache/tags";
+import { invalidateAllCaches } from "@/lib/cache/invalidate";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 const KV_KEY = "revalidate-all:last-call";
@@ -77,14 +76,17 @@ export async function POST(request) {
   }
 
   try {
-    revalidatePath("/", "layout");
-    revalidateTag(TAGS.HOMEPAGE);
-    revalidateTag(TAGS.ARTICLES_PUBLISHED);
-    revalidateTag(TAGS.CATEGORIES);
+    const success = invalidateAllCaches();
+    if (!success) {
+      return Response.json(
+        { ok: false, error: "Failed to revalidate caches" },
+        { status: 500 }
+      );
+    }
   } catch (revalidateErr) {
-    console.error("[REVALIDATE-ALL] revalidatePath failed:", revalidateErr);
+    console.error("[REVALIDATE-ALL] invalidateAllCaches failed:", revalidateErr);
     return Response.json(
-      { ok: false, error: revalidateErr.message || "Failed to revalidate layout" },
+      { ok: false, error: revalidateErr.message || "Failed to revalidate caches" },
       { status: 500 }
     );
   }
