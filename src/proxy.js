@@ -6,6 +6,10 @@ import { verifyJwtToken, AUTH_COOKIE_NAME } from "@/lib/auth/jwt";
 export async function proxy(request) {
   const { pathname, search } = request.nextUrl;
 
+  if (pathname === "/sitemap.xml" || pathname === "/robots.txt") {
+    return NextResponse.next();
+  }
+
   if (pathname.startsWith("/category")) {
     const url = request.nextUrl.clone();
     const searchParams = url.searchParams;

@@ -1484,3 +1484,22 @@ export async function getMostReadArticles(limit = 10) {
     };
   });
 }
+
+export async function getPublishedArticlesForSitemap(limit = 50000) {
+  try {
+    const safeLimit = Math.min(Math.max(1, Number(limit) || 50000), 50000);
+    const sql = `
+      SELECT id, slug, updated_at, created_at
+      FROM articles
+      WHERE status = 'published'
+      ORDER BY updated_at DESC
+      LIMIT ?
+    `;
+    const rows = await query(sql, [safeLimit]);
+    return rows || [];
+  } catch (error) {
+    console.error("getPublishedArticlesForSitemap query error:", error);
+    return [];
+  }
+}
+
