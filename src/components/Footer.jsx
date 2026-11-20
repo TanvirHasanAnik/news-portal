@@ -69,14 +69,14 @@ export default function Footer({ socialLinks = {} }) {
           <div className="flex items-center gap-4 sm:gap-6">
             <Link
               href="/about"
-              className="text-slate-600 hover:text-red-600 font-medium transition-colors"
+              className="text-slate-600 hover:text-blue-600 font-medium transition-colors"
             >
               আমাদের সম্পর্কে
             </Link>
             <span className="text-slate-300">•</span>
             <Link
               href="/privacy-policy"
-              className="text-slate-600 hover:text-red-600 font-medium transition-colors"
+              className="text-slate-600 hover:text-blue-600 font-medium transition-colors"
             >
               গোপনীয়তা নীতি
             </Link>
