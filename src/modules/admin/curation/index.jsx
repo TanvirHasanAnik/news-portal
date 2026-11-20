@@ -14,7 +14,11 @@ export default async function CurationModule() {
       getPublishedArticles({ limit: 40 }),
     ]);
     curatedItems = cItems || [];
-    publishedArticles = pArticles || [];
+    publishedArticles = (pArticles || []).map((art) => ({
+      id: art.id,
+      headline: art.headline,
+      category_name: art.category_name || art.category || "সাধারণ",
+    }));
   } catch (err) {
     console.error("[CurationModule error]:", err);
   }

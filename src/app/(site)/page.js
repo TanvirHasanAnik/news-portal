@@ -3,10 +3,7 @@ import HandpickedNewsSection from "@/components/HandpickedNewsSection";
 import CategoryScrollSection from "@/components/CategoryScrollSection";
 import { unstable_cache } from "next/cache";
 import { TAGS } from "@/lib/cache/tags";
-import {
-  getPublishedArticles,
-  toPublicArticleSummary,
-} from "@/repositories/articleRepository";
+import { getPublishedArticles } from "@/repositories/articleRepository";
 import { getTopArticles } from "@/repositories/analyticsRepository";
 import { getActiveHandpickedArticles } from "@/repositories/curationRepository";
 import { getDynamicCategoriesWithSubcategories } from "@/repositories/categoryRepository";
@@ -30,7 +27,7 @@ const getCachedHomepageData = unstable_cache(
             const catArticles = await getPublishedArticles({ categorySlug: cat.slug, limit: 4 });
             return {
               ...cat,
-              articles: (catArticles || []).map(toPublicArticleSummary),
+              articles: catArticles || [],
             };
           } catch {
             return { ...cat, articles: [] };
@@ -41,9 +38,9 @@ const getCachedHomepageData = unstable_cache(
     }
 
     return {
-      dbArticles: (raw || []).map(toPublicArticleSummary),
-      mostReadArticles: (mostRead || []).map(toPublicArticleSummary),
-      handpickedArticles: (handpicked || []).map(toPublicArticleSummary),
+      dbArticles: raw || [],
+      mostReadArticles: mostRead || [],
+      handpickedArticles: handpicked || [],
       categorySections,
     };
   },

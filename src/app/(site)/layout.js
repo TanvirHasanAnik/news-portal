@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 import { TAGS } from "@/lib/cache/tags";
 import { getActiveBreakingNews } from "@/repositories/curationRepository";
 import { getAllCategoriesWithSubcategories } from "@/repositories/categoryRepository";
-import { getPublishedArticles, toPublicArticleSummary } from "@/repositories/articleRepository";
+import { getPublishedArticles } from "@/repositories/articleRepository";
 import { getSocialLinks } from "@/repositories/socialLinksRepository";
 
 const getCachedBreakingNews = unstable_cache(
@@ -51,7 +51,13 @@ export default async function SiteLayout({ children }) {
     ]);
     breakingNewsList = breaking || [];
     dbCategories = cats || [];
-    latestHeadlines = (rawHeadlines || []).map(toPublicArticleSummary);
+    latestHeadlines = (rawHeadlines || []).map((art) => ({
+      id: art.id || art.slug,
+      slug: art.slug,
+      headline: art.headline,
+      category: art.category_name || art.category || "সংবাদ",
+      url: art.slug ? `/article/${art.slug}` : (art.id ? `/article/${art.id}` : "#"),
+    }));
     if (sLinks) {
       socialLinks = sLinks;
     }

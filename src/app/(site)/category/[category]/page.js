@@ -7,7 +7,6 @@ import {
     getPublishedArticles,
     getPublishedArticlesCount,
     getPublishedSubcategories,
-    toPublicArticleSummary,
 } from "@/repositories/articleRepository";
 import {
     getCategoryBySlug,
@@ -81,7 +80,7 @@ const getCachedCategoryArticles = (category, selectedSub, page) =>
         offset,
       });
 
-      const displayedArticles = (raw || []).map(toPublicArticleSummary);
+      const displayedArticles = raw || [];
 
       return {
         totalCount,

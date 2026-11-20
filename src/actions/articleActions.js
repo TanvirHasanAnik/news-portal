@@ -207,10 +207,13 @@ export async function createArticleAction(prevState, formData) {
     const slug = generateSlug(validated.headline);
     const readTime = calculateReadTime(validated.content);
 
+    const rawSummary = (validated.summary || "").trim();
+    const resolvedSummary = rawSummary || extractSummaryFromContent(validated.content, 250) || "";
+
     const result = await createArticle({
       headline: validated.headline,
       slug,
-      summary: validated.summary ? validated.summary.trim() : (extractSummaryFromContent(validated.content, 250) || ""),
+      summary: resolvedSummary,
       content: validated.content || "",
       categoryId,
       categoryName,
@@ -476,9 +479,12 @@ export async function updateArticleAction(prevState, formData) {
 
     const readTime = calculateReadTime(validated.content);
 
+    const rawSummary = (validated.summary || "").trim();
+    const resolvedSummary = rawSummary || extractSummaryFromContent(validated.content, 250) || "";
+
     const updateResult = await updateArticle(articleId, {
       headline: validated.headline,
-      summary: validated.summary ? validated.summary.trim() : (extractSummaryFromContent(validated.content, 250) || ""),
+      summary: resolvedSummary,
       content: validated.content || "",
       categoryId,
       categoryName,

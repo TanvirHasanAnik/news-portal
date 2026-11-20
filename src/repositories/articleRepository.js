@@ -393,6 +393,8 @@ export async function createArticle(data) {
 
   const customPublishedAt = data.customPublishedAt || null;
   const location = data.location !== undefined ? (data.location ? String(data.location).trim() : null) : null;
+  const rawSummary = (data.summary || "").trim();
+  const resolvedSummary = rawSummary || extractSummaryFromContent(data.content, 250) || "";
 
   const insertSql = `
     INSERT INTO articles (
@@ -427,7 +429,7 @@ export async function createArticle(data) {
     id,
     data.headline,
     slug,
-    data.summary || "",
+    resolvedSummary,
     data.content || "",
     data.categoryId || null,
     data.categoryName || "",
@@ -531,8 +533,15 @@ export async function updateArticle(id, data) {
     }
   };
 
+  let resolvedSummary = current.summary;
+  if (data.summary !== undefined) {
+    const rawSummary = (data.summary || "").trim();
+    const effectiveContent = data.content !== undefined ? data.content : current.content;
+    resolvedSummary = rawSummary || extractSummaryFromContent(effectiveContent, 250) || "";
+  }
+
   const headlineChanged = data.headline !== undefined && normalizeStr(data.headline) !== normalizeStr(current.headline);
-  const summaryChanged = data.summary !== undefined && normalizeStr(data.summary) !== normalizeStr(current.summary);
+  const summaryChanged = data.summary !== undefined && normalizeStr(resolvedSummary) !== normalizeStr(current.summary);
   const contentChanged = data.content !== undefined && normalizeStr(data.content) !== normalizeStr(current.content);
   const categoryChanged = data.categorySlug !== undefined && normalizeStr(data.categorySlug) !== normalizeStr(current.category_slug);
   const subcategoryChanged = data.subcategoryName !== undefined && normalizeStr(data.subcategoryName) !== normalizeStr(current.subcategory_name);
@@ -609,7 +618,7 @@ export async function updateArticle(id, data) {
 
   const bindParams = [
     data.headline !== undefined ? data.headline : current.headline,
-    data.summary !== undefined ? data.summary : current.summary,
+    resolvedSummary,
     data.content !== undefined ? data.content : current.content,
     data.categoryId !== undefined ? data.categoryId : current.category_id,
     data.categoryName !== undefined ? data.categoryName : current.category_name,
@@ -1060,7 +1069,27 @@ export async function getAllArticles(options = {}) {
   const { conditions, params } = buildArticleFilterConditions(options);
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
   const sql = `
-    SELECT a.*, 
+    SELECT a.id,
+           a.headline,
+           a.slug,
+           a.category_id,
+           a.category_name,
+           a.category_slug,
+           a.subcategory_id,
+           a.subcategory_name,
+           a.author_id,
+           a.author_name,
+           a.representative_type,
+           a.status,
+           a.rejection_reason,
+           a.is_breaking,
+           a.is_lead,
+           a.is_handpicked,
+           a.view_count,
+           a.published_at,
+           a.custom_published_at,
+           a.created_at,
+           a.updated_at,
            u.role AS author_role,
            COALESCE(NULLIF(NULLIF(a.created_by, ''), 'নিজস্ব প্রতিবেদক'), u.username, 'reporter') AS created_by,
            NULLIF(TRIM(a.last_edited_by), '') AS last_edited_by,

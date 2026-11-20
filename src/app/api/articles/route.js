@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPublishedArticles, toPublicArticleSummary } from "@/repositories/articleRepository";
+import { getPublishedArticles } from "@/repositories/articleRepository";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +21,7 @@ export async function GET(request) {
       offset,
     });
 
-    const articles = (rows || []).map(toPublicArticleSummary);
+    const articles = rows || [];
 
     return NextResponse.json(articles, { status: 200 });
   } catch (error) {
