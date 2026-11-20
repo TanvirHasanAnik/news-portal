@@ -16,7 +16,8 @@ import {
     toPublicArticleSummary,
 } from "@/repositories/articleRepository";
 import { categoryAccentMap } from "@/utils/categoryNews";
-import { DEFAULT_NEWS_IMAGE } from "@/utils/imageUtils";
+import { DEFAULT_NEWS_IMAGE, getYouTubeThumbnail } from "@/utils/imageUtils";
+import { extractSummaryFromContent } from "@/utils/textUtils";
 import { formatArticlePublishDate } from "@/utils/dateUtils";
 import { unstable_cache } from "next/cache";
 import Link from "next/link";
@@ -79,13 +80,52 @@ export async function generateMetadata({ params }) {
 
   if (!article) {
     return {
-      title: "সংবাদ পাওয়া যায়নি | আলো আসবে",
+      title: "সংবাদ পাওয়া যায়নি",
     };
   }
 
+  const canonicalUrl = `/article/${article.slug || article.id}`;
+
+  let allImages = [];
+  if (Array.isArray(article.images)) {
+    allImages = article.images.filter(Boolean).slice(0, 3);
+  } else if (typeof article.images === "string" && article.images.trim()) {
+    try {
+      const parsed = JSON.parse(article.images);
+      if (Array.isArray(parsed)) {
+        allImages = parsed.filter(Boolean).slice(0, 3);
+      } else if (parsed) {
+        allImages = [String(parsed)];
+      }
+    } catch {
+      allImages = [article.images.trim()];
+    }
+  } else if (article.image) {
+    allImages = [article.image];
+  }
+  const ytThumb = article.youtubeUrl ? getYouTubeThumbnail(article.youtubeUrl) : null;
+  const primaryImage = allImages[0] || article.image || ytThumb || "/opengraph-image.png";
+  const description = article.summary || (article.content ? extractSummaryFromContent(article.content, 200) : "") || "সত্যের পথে, মানুষের সাথে — আলো আসবে।";
+
   return {
-    title: `${article.headline} | আলো আসবে`,
-    description: article.summary,
+    title: article.headline,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      type: "article",
+      url: canonicalUrl,
+      title: article.headline,
+      description,
+      images: [primaryImage],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.headline,
+      description,
+      images: [primaryImage],
+    },
   };
 }
 
@@ -186,7 +226,7 @@ export default async function ArticlePage({ params }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-10 items-start">
           <main className="lg:col-span-2 space-y-6">
-            <h1 className="font-serif-bangla text-2xl sm:text-3xl lg:text-2xl xl:text-3xl font-semibold text-slate-950 leading-tight">
+            <h1 className="font-serif-bangla text-2xl sm:text-3xl lg:text-[32px] xl:text-4xl font-semibold text-slate-950 leading-tight">
               {article.headline}
             </h1>
 

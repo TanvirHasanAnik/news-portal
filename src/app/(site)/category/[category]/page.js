@@ -119,12 +119,28 @@ export async function generateMetadata({ params }) {
   }
 
   const pageTitle = categoryName.endsWith("সংবাদ")
-    ? `${categoryName} | আলো আসবে`
-    : `${categoryName} সংবাদ | আলো আসবে`;
+    ? categoryName
+    : `${categoryName} সংবাদ`;
+  const pageDescription = `${categoryName} বিভাগের সর্বশেষ ও তাজা সংবাদ সবার আগে জানুন।`;
+  const canonicalUrl = `/category/${category}`;
 
   return {
     title: pageTitle,
-    description: `${categoryName} বিভাগের সর্বশেষ ও তাজা সংবাদ সবার আগে জানুন।`,
+    description: pageDescription,
+    alternates: {
+      canonical: canonicalUrl,
+    },
+    openGraph: {
+      title: pageTitle,
+      description: pageDescription,
+      url: canonicalUrl,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: pageTitle,
+      description: pageDescription,
+    },
   };
 }
 

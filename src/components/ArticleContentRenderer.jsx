@@ -21,9 +21,11 @@ export default function ArticleContentRenderer({ content, className = "" }) {
   }
 
 
+  const containerClasses = className || "space-y-4 text-base sm:text-lg leading-relaxed text-slate-800";
+
   if (parsedDoc?.blocks && Array.isArray(parsedDoc.blocks)) {
     return (
-      <div className={`space-y-4 font-serif-bangla text-base sm:text-lg leading-relaxed text-slate-800 ${className}`}>
+      <div className={`font-serif-bangla ${containerClasses}`}>
         {parsedDoc.blocks.map((block, index) => {
           switch (block.type) {
             case "heading": {
@@ -87,7 +89,7 @@ export default function ArticleContentRenderer({ content, className = "" }) {
   if (typeof content === "string") {
     const paragraphs = content.trim().split("\n\n").filter(Boolean);
     return (
-      <div className={`space-y-4 font-serif-bangla text-base sm:text-lg leading-relaxed text-slate-800 ${className}`}>
+      <div className={`font-serif-bangla ${containerClasses}`}>
         {paragraphs.map((p, idx) => (
           <p key={idx} className="leading-relaxed text-slate-800">
             {p}
