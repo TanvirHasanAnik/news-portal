@@ -91,5 +91,25 @@ export default async function sitemap() {
     }
   }
 
-  return [homeEntry, ...Array.from(categoryEntriesMap.values()), ...articleEntries];
+  const staticEntries = [
+    {
+      url: `${BASE_URL}/about`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+    {
+      url: `${BASE_URL}/privacy-policy`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.5,
+    },
+  ];
+
+  return [
+    homeEntry,
+    ...staticEntries,
+    ...Array.from(categoryEntriesMap.values()),
+    ...articleEntries,
+  ];
 }

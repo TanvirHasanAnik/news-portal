@@ -65,7 +65,22 @@ export default function Footer({ socialLinks = {} }) {
           </div>
         </div>
 
-        <div className="pt-6 mt-6 border-t border-slate-100 text-center text-xs text-slate-500">
+        <div className="pt-6 mt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <Link
+              href="/about"
+              className="text-slate-600 hover:text-red-600 font-medium transition-colors"
+            >
+              আমাদের সম্পর্কে
+            </Link>
+            <span className="text-slate-300">•</span>
+            <Link
+              href="/privacy-policy"
+              className="text-slate-600 hover:text-red-600 font-medium transition-colors"
+            >
+              গোপনীয়তা নীতি
+            </Link>
+          </div>
           <p>© ২০২৬ আলো আসবে। সর্বস্বত্ব সংরক্ষিত।</p>
         </div>
       </div>
