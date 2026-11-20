@@ -8,6 +8,8 @@ import {
   getEnglishDateBangla,
   getBanglaDate,
   getHijriDate,
+  getDhakaDate,
+  getSyncedPortalDates,
 } from "../utils/dateUtils";
 
 export default function MobileDrawer({
@@ -27,11 +29,17 @@ export default function MobileDrawer({
     if (propDates && propDates.english) {
       setDates(propDates);
     } else {
-      const now = new Date();
+      const dhakaNow = getDhakaDate(new Date());
       setDates({
-        english: getEnglishDateBangla(now),
-        bangla: getBanglaDate(now),
-        hijri: getHijriDate(now),
+        english: getEnglishDateBangla(dhakaNow),
+        bangla: getBanglaDate(dhakaNow),
+        hijri: getHijriDate(dhakaNow),
+      });
+
+      getSyncedPortalDates().then((synced) => {
+        if (synced && synced.english) {
+          setDates(synced);
+        }
       });
     }
   }, [propDates]);

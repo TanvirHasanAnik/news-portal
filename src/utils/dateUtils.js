@@ -57,23 +57,174 @@ export function getBanglaDate(d = new Date()) {
   return `${toBengaliDigits(day)} ${months[monthIndex]} ${toBengaliDigits(banglaYear)} বঙ্গাব্দ`;
 }
 
+const HIJRI_MONTHS_BN = [
+  'মুহররম',
+  'সফর',
+  'রবিউল আউয়াল',
+  'রবিউস সানি',
+  'জমাদিউল আউয়াল',
+  'জমাদিউস সানি',
+  'রজব',
+  'শাবান',
+  'রমজান',
+  'শাওয়াল',
+  'জিলকদ',
+  'জিলহজ্জ',
+];
+
 export function getHijriDate(d = new Date()) {
   try {
-    const formatter = new Intl.DateTimeFormat('bn-BD-u-ca-islamic-umalqura', {
+    const dateObj = parseDateSafe(d) || new Date();
+    const formatter = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura-nu-latn', {
       day: 'numeric',
-      month: 'long',
+      month: 'numeric',
       year: 'numeric',
     });
-    let formatted = formatter.format(d);
+    const parts = formatter.formatToParts(dateObj);
+    let day = '';
+    let month = '';
+    let year = '';
 
-    formatted = formatted.replace(',', '').replace(/যুগ/g, 'হিজরি').trim();
-    if (!formatted.includes('হিজরি')) {
-      formatted += ' হিজরি';
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
+      if (p.type === 'day') day = p.value;
+      else if (p.type === 'month') month = p.value;
+      else if (p.type === 'year') year = p.value;
     }
-    return formatted;
+
+    const monthIndex = parseInt(month, 10) - 1;
+    const monthName = HIJRI_MONTHS_BN[monthIndex] || 'জমাদিউস সানি';
+
+    return `${toBengaliDigits(day)} ${monthName} ${toBengaliDigits(year)} হিজরি`;
   } catch (e) {
-    return '৪ জমাদিউল আউয়াল ১৪৪৮ হিজরি';
+    return '১০ জমাদিউস সানি ১৪৪৮ হিজরি';
   }
+}
+
+export function getDhakaDate(d = new Date()) {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Dhaka',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hour12: false,
+    });
+    const parts = formatter.formatToParts(d);
+    let year = 1970;
+    let month = 1;
+    let day = 1;
+    let hour = 0;
+    let minute = 0;
+    let second = 0;
+
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
+      if (p.type === 'year') year = parseInt(p.value, 10);
+      else if (p.type === 'month') month = parseInt(p.value, 10);
+      else if (p.type === 'day') day = parseInt(p.value, 10);
+      else if (p.type === 'hour') hour = parseInt(p.value, 10);
+      else if (p.type === 'minute') minute = parseInt(p.value, 10);
+      else if (p.type === 'second') second = parseInt(p.value, 10);
+    }
+    return new Date(year, month - 1, day, hour, minute, second);
+  } catch (_e) {
+    return d;
+  }
+}
+
+export async function getSyncedPortalDates() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const cached = window.sessionStorage.getItem('portal_dates_cache');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed?.english && parsed?.bangla && parsed?.hijri && parsed?.timestamp) {
+        if (Date.now() - parsed.timestamp < 3600000) {
+          return {
+            english: parsed.english,
+            bangla: parsed.bangla,
+            hijri: parsed.hijri,
+          };
+        }
+      }
+    }
+  } catch (_e) {}
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+    const res = await fetch('https://api.aladhan.com/v1/timingsByCity?city=Dhaka&country=Bangladesh', {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const json = await res.json();
+      const g = json?.data?.date?.gregorian;
+      const h = json?.data?.date?.hijri;
+
+      if (g && h) {
+        const year = parseInt(g.year, 10);
+        const month = parseInt(g.month?.number, 10);
+        const day = parseInt(g.day, 10);
+        const dateObj = new Date(year, month - 1, day);
+
+        const english = getEnglishDateBangla(dateObj);
+        const bangla = getBanglaDate(dateObj);
+
+        const hijriDay = parseInt(h.day, 10);
+        const hijriMonthIdx = parseInt(h.month?.number, 10) - 1;
+        const hijriYear = parseInt(h.year, 10);
+        const hijriMonthName = HIJRI_MONTHS_BN[hijriMonthIdx] || 'জমাদিউস সানি';
+        const hijri = `${toBengaliDigits(hijriDay)} ${hijriMonthName} ${toBengaliDigits(hijriYear)} হিজরি`;
+
+        const result = { english, bangla, hijri };
+        try {
+          window.sessionStorage.setItem(
+            'portal_dates_cache',
+            JSON.stringify({ ...result, timestamp: Date.now() })
+          );
+        } catch (_e) {}
+        return result;
+      }
+    }
+  } catch (_err) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch('https://timeapi.io/api/time/current/zone?timeZone=Asia/Dhaka', {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        const dateObj = new Date(data.year, data.month - 1, data.day);
+        const result = {
+          english: getEnglishDateBangla(dateObj),
+          bangla: getBanglaDate(dateObj),
+          hijri: getHijriDate(dateObj),
+        };
+        try {
+          window.sessionStorage.setItem(
+            'portal_dates_cache',
+            JSON.stringify({ ...result, timestamp: Date.now() })
+          );
+        } catch (_e) {}
+        return result;
+      }
+    } catch (_e2) {}
+  }
+
+  return null;
 }
 
 export function parseDateSafe(timestamp) {

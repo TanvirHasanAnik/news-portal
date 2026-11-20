@@ -13,6 +13,8 @@ import {
   getBanglaDate,
   getEnglishDateBangla,
   getHijriDate,
+  getDhakaDate,
+  getSyncedPortalDates,
 } from "../utils/dateUtils";
 import AdSlot from "./AdSlot";
 import MobileDrawer from "./MobileDrawer";
@@ -165,11 +167,17 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
   }, []);
 
   useEffect(() => {
-    const now = new Date();
+    const dhakaNow = getDhakaDate(new Date());
     setDates({
-      english: getEnglishDateBangla(now),
-      bangla: getBanglaDate(now),
-      hijri: getHijriDate(now),
+      english: getEnglishDateBangla(dhakaNow),
+      bangla: getBanglaDate(dhakaNow),
+      hijri: getHijriDate(dhakaNow),
+    });
+
+    getSyncedPortalDates().then((synced) => {
+      if (synced && synced.english) {
+        setDates(synced);
+      }
     });
   }, []);
 
