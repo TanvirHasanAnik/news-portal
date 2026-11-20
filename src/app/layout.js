@@ -1,3 +1,4 @@
+import Script from "next/script";
 import localFont from "next/font/local";
 import "./globals.css";
 
@@ -26,10 +27,6 @@ export const metadata = {
   },
   description:
     "সত্যের পথে, মানুষের সাথে — আলো আসবে। জাতীয়, রাজনীতি, অর্থনীতি, আন্তর্জাতিক, খেলাধুলা, বিনোদন ও প্রযুক্তির সর্বশেষ সংবাদ ও বিশ্লেষণ।",
-  icons: {
-    icon: "/icon.png",
-    apple: "/icon.png",
-  },
   openGraph: {
     title: "আলো আসবে - সত্যের পথে, মানুষের সাথে",
     description:
@@ -50,15 +47,13 @@ export default function RootLayout({ children }) {
       lang="bn"
       className={`${solaimanLipi.variable} font-sans h-full antialiased`}
     >
-      <head>
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4867645898526862"
-          crossOrigin="anonymous"
-        ></script>
-      </head>
       <body className="min-h-full font-sans bg-slate-50 text-slate-900 selection:bg-red-500 selection:text-white flex flex-col">
         {children}
+        <Script
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4867645898526862"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
