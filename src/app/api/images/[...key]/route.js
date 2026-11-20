@@ -4,8 +4,9 @@ import { getR2Bucket } from "@/lib/r2";
 
 export async function GET(request, { params }) {
   try {
-    const { key } = await params;
-    const imageKey = Array.isArray(key) ? key.join("/") : key;
+    const resolvedParams = await params;
+    const rawKey = resolvedParams?.key || resolvedParams?.path;
+    const imageKey = Array.isArray(rawKey) ? rawKey.join("/") : rawKey;
 
     if (!imageKey) {
       return new Response("Image key required", { status: 400 });
@@ -23,6 +24,21 @@ export async function GET(request, { params }) {
       object.writeHttpMetadata(headers);
     } else if (object.httpMetadata?.contentType) {
       headers.set("content-type", object.httpMetadata.contentType);
+    }
+
+    if (!headers.get("content-type")) {
+      const lowerKey = imageKey.toLowerCase();
+      if (lowerKey.endsWith(".webp")) {
+        headers.set("content-type", "image/webp");
+      } else if (lowerKey.endsWith(".png")) {
+        headers.set("content-type", "image/png");
+      } else if (lowerKey.endsWith(".jpg") || lowerKey.endsWith(".jpeg")) {
+        headers.set("content-type", "image/jpeg");
+      } else if (lowerKey.endsWith(".svg")) {
+        headers.set("content-type", "image/svg+xml");
+      } else {
+        headers.set("content-type", "image/jpeg");
+      }
     }
 
     if (object.httpEtag) {

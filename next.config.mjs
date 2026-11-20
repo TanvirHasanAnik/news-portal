@@ -2,9 +2,9 @@ import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 
 initOpenNextCloudflareForDev();
 
-/** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  htmlLimitedBots:
+    /WhatsApp|facebookexternalhit|Facebot|Twitterbot|TelegramBot|LinkedInBot|Slackbot|Discordbot/i,
   reactCompiler: true,
 
   turbopack: {

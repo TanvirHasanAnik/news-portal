@@ -346,9 +346,18 @@ export function toPublicArticleDetail(dbRow) {
   };
 }
 
+function generateShortSlug() {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let slug = "";
+  for (let i = 0; i < 10; i++) {
+    slug += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return slug;
+}
+
 export async function createArticle(data) {
   const id = data.id || `art_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const slug = data.slug || `${Date.now()}`;
+  const slug = data.slug || generateShortSlug();
   const isPublished = data.status === "published";
 
   let imagesJson = null;

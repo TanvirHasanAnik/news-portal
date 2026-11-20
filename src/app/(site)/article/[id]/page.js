@@ -62,6 +62,21 @@ const getCachedRelatedArticles = (categorySlug, currentArticleId, currentArticle
 
 
 
+function toAbsoluteImageUrl(url) {
+  if (!url || typeof url !== "string") {
+    return "https://aloashbe.com/opengraph-image.png";
+  }
+  const trimmed = url.trim();
+  if (trimmed.startsWith("https://") || trimmed.startsWith("http://")) {
+    return trimmed;
+  }
+  if (trimmed.startsWith("//")) {
+    return `https:${trimmed}`;
+  }
+  const cleanPath = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+  return `https://aloashbe.com${cleanPath}`;
+}
+
 export async function generateMetadata({ params }) {
   const { id } = await params;
   let decodedId = id;
@@ -84,7 +99,7 @@ export async function generateMetadata({ params }) {
     };
   }
 
-  const canonicalUrl = `/article/${article.slug || article.id}`;
+  const canonicalUrl = `https://aloashbe.com/article/${article.slug || article.id}`;
 
   let allImages = [];
   if (Array.isArray(article.images)) {
@@ -105,6 +120,7 @@ export async function generateMetadata({ params }) {
   }
   const ytThumb = article.youtubeUrl ? getYouTubeThumbnail(article.youtubeUrl) : null;
   const primaryImage = allImages[0] || article.image || ytThumb || "/opengraph-image.png";
+  const absoluteImageUrl = toAbsoluteImageUrl(primaryImage);
   const description = article.summary || (article.content ? extractSummaryFromContent(article.content, 200) : "") || "সত্যের পথে, মানুষের সাথে — আলো আসবে।";
 
   return {
@@ -118,13 +134,27 @@ export async function generateMetadata({ params }) {
       url: canonicalUrl,
       title: article.headline,
       description,
-      images: [primaryImage],
+      images: [
+        {
+          url: absoluteImageUrl,
+          width: 1200,
+          height: 630,
+          alt: article.headline,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title: article.headline,
       description,
-      images: [primaryImage],
+      images: [
+        {
+          url: absoluteImageUrl,
+          width: 1200,
+          height: 630,
+          alt: article.headline,
+        },
+      ],
     },
   };
 }

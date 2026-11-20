@@ -48,17 +48,13 @@ function calculateReadTime(text) {
   return `${bnMinutes} মিনিট পাঠ`;
 }
 
-function generateSlug(headline) {
-  if (!headline) return `news-${Date.now()}`;
-
-  const cleaned = headline
-    .trim()
-    .replace(/[^\p{L}\p{N}\s-]/gu, "")
-    .replace(/\s+/g, "-")
-    .substring(0, 80);
-
-  const suffix = Math.random().toString(36).substring(2, 6);
-  return cleaned ? `${cleaned}-${suffix}` : `news-${Date.now()}-${suffix}`;
+function generateSlug() {
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let slug = "";
+  for (let i = 0; i < 10; i++) {
+    slug += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return slug;
 }
 
 export async function createArticleAction(prevState, formData) {
