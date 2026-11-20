@@ -7,6 +7,7 @@ export function getEnglishDateBangla(d = new Date()) {
   try {
     const dateObj = parseDateSafe(d) || new Date();
     const formatter = new Intl.DateTimeFormat('bn-BD', {
+      timeZone: 'Asia/Dhaka',
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -287,21 +288,65 @@ const BENGALI_MONTHS = [
   'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
 ];
 
+export function getDhakaParts(timestamp) {
+  const d = parseDateSafe(timestamp);
+  if (!d || isNaN(d.getTime())) return null;
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Dhaka',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hourCycle: 'h23',
+    });
+    const parts = formatter.formatToParts(d);
+    let year = 1970;
+    let month = 1;
+    let day = 1;
+    let hour = 0;
+    let minute = 0;
+    let second = 0;
+
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
+      if (p.type === 'year') year = parseInt(p.value, 10);
+      else if (p.type === 'month') month = parseInt(p.value, 10);
+      else if (p.type === 'day') day = parseInt(p.value, 10);
+      else if (p.type === 'hour') hour = parseInt(p.value, 10);
+      else if (p.type === 'minute') minute = parseInt(p.value, 10);
+      else if (p.type === 'second') second = parseInt(p.value, 10);
+    }
+    return { year, month, day, hour, minute, second };
+  } catch (_e) {
+    return {
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      day: d.getDate(),
+      hour: d.getHours(),
+      minute: d.getMinutes(),
+      second: d.getSeconds(),
+    };
+  }
+}
+
 export function formatStaticDateTime(timestamp) {
   if (!timestamp) return '—';
   try {
-    const d = parseDateSafe(timestamp);
-    if (!d || isNaN(d.getTime())) return '—';
+    const parts = getDhakaParts(timestamp);
+    if (!parts) return '—';
 
-    const day = toBengaliDigits(d.getDate());
-    const month = BENGALI_MONTHS[d.getMonth()] || '';
-    const year = toBengaliDigits(d.getFullYear());
+    const day = toBengaliDigits(parts.day);
+    const month = BENGALI_MONTHS[parts.month - 1] || '';
+    const year = toBengaliDigits(parts.year);
 
-    let hours = d.getHours();
+    let hours = parts.hour;
     const ampm = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12 || 12;
     const bnHours = toBengaliDigits(hours);
-    const bnMinutes = toBengaliDigits(String(d.getMinutes()).padStart(2, '0'));
+    const bnMinutes = toBengaliDigits(String(parts.minute).padStart(2, '0'));
 
     return `${day} ${month} ${year}, ${bnHours}:${bnMinutes} ${ampm}`;
   } catch (_e) {
@@ -326,15 +371,15 @@ export function isPublishDateHidden(val) {
 export function formatArticlePublishDate(timestamp, includePrefix = true) {
   if (!timestamp || isPublishDateHidden(timestamp)) return '';
   try {
-    const d = parseDateSafe(timestamp);
-    if (!d || isNaN(d.getTime())) return '';
+    const parts = getDhakaParts(timestamp);
+    if (!parts) return '';
 
-    const day = toBengaliDigits(d.getDate());
-    const month = BENGALI_MONTHS[d.getMonth()] || '';
-    const year = toBengaliDigits(d.getFullYear());
+    const day = toBengaliDigits(parts.day);
+    const month = BENGALI_MONTHS[parts.month - 1] || '';
+    const year = toBengaliDigits(parts.year);
 
-    const hours = toBengaliDigits(String(d.getHours()).padStart(2, '0'));
-    const minutes = toBengaliDigits(String(d.getMinutes()).padStart(2, '0'));
+    const hours = toBengaliDigits(String(parts.hour).padStart(2, '0'));
+    const minutes = toBengaliDigits(String(parts.minute).padStart(2, '0'));
 
     const formatted = `${day} ${month} ${year}, ${hours}:${minutes}`;
     return includePrefix ? `প্রকাশ: ${formatted}` : formatted;
@@ -346,17 +391,30 @@ export function formatArticlePublishDate(timestamp, includePrefix = true) {
 export function formatDateForInput(timestamp) {
   if (!timestamp) return '';
   try {
-    const d = parseDateSafe(timestamp);
-    if (!d || isNaN(d.getTime())) return '';
+    const parts = getDhakaParts(timestamp);
+    if (!parts) return '';
 
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const year = parts.year;
+    const month = String(parts.month).padStart(2, '0');
+    const day = String(parts.day).padStart(2, '0');
+    const hours = String(parts.hour).padStart(2, '0');
+    const minutes = String(parts.minute).padStart(2, '0');
 
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   } catch (_e) {
     return '';
   }
+}
+
+export function parseDhakaDateInput(val) {
+  if (!val) return null;
+  let str = String(val).trim();
+  if (!str) return null;
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(str)) {
+    str += ':00+06:00';
+  } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(str)) {
+    str += '+06:00';
+  }
+  const d = new Date(str);
+  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 19).replace('T', ' ');
 }

@@ -25,6 +25,7 @@ import { articleCreateSchema } from "@/schemas/articleSchema";
 import { getCurrentUser } from "@/lib/auth/server";
 import { isUpperRole, isLowerRole } from "@/config/roles";
 import { extractSummaryFromContent } from "@/utils/textUtils";
+import { parseDhakaDateInput } from "@/utils/dateUtils";
 
 function calculateReadTime(text) {
   if (!text) return "১ মিনিট পাঠ";
@@ -126,10 +127,7 @@ export async function createArticleAction(prevState, formData) {
     if (hidePublishDate) {
       customPublishedAt = "1970-01-01 00:00:01";
     } else if (isCustomDate && customPublishedAtRaw) {
-      const parsed = new Date(customPublishedAtRaw);
-      if (!isNaN(parsed.getTime())) {
-        customPublishedAt = parsed.toISOString().slice(0, 19).replace("T", " ");
-      }
+      customPublishedAt = parseDhakaDateInput(customPublishedAtRaw);
     }
 
     let requestedStatus = formData.get("status")?.toString().trim() || "published";
@@ -395,10 +393,7 @@ export async function updateArticleAction(prevState, formData) {
     if (hidePublishDate) {
       customPublishedAt = "1970-01-01 00:00:01";
     } else if (isCustomDate && customPublishedAtRaw) {
-      const parsed = new Date(customPublishedAtRaw);
-      if (!isNaN(parsed.getTime())) {
-        customPublishedAt = parsed.toISOString().slice(0, 19).replace("T", " ");
-      }
+      customPublishedAt = parseDhakaDateInput(customPublishedAtRaw);
     }
 
     let targetStatus = formData.get("status")?.toString().trim() || existingArticle.status;
