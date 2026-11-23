@@ -1,6 +1,20 @@
 "use client";
 
-import { ArrowUp, Mail, MapPin } from "lucide-react";
+import {
+  CONTACT_EMAIL,
+  CONTACT_PHONE,
+  COPYRIGHT_TEXT,
+  DIRECTOR_LABEL,
+  DIRECTOR_NAME,
+  OFFICE_ADDRESS,
+  OFFICE_LABEL,
+  PHONE_LABEL,
+  PUBLISHER_LABEL,
+  PUBLISHER_NAME,
+  SITE_NAME,
+  SITE_TAGLINE,
+} from "@/config/siteInfo";
+import { ArrowUp, Mail, MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import SocialMediaLinks from "./SocialMediaLinks";
 
@@ -16,7 +30,7 @@ export default function Footer({ socialLinks = {} }) {
           <Link href="/" className="inline-block group focus:outline-none">
             <img
               src="/brand-logo.svg"
-              alt="আলো আসবে - সত্যের পথে, মানুষের সাথে"
+              alt={`${SITE_NAME} - ${SITE_TAGLINE}`}
               className="h-12 sm:h-14 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
             />
           </Link>
@@ -38,28 +52,37 @@ export default function Footer({ socialLinks = {} }) {
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
               <p>
-                <strong className="text-slate-800">পরিচালক:</strong> মো: ফুয়াদ হাসান
+                <strong className="text-slate-800">{DIRECTOR_LABEL}:</strong> {DIRECTOR_NAME}
               </p>
               <p>
-                <strong className="text-slate-800">প্রকাশক:</strong> মোঃ তৌহিদুল ইসলাম
+                <strong className="text-slate-800">{PUBLISHER_LABEL}:</strong> {PUBLISHER_NAME}
               </p>
             </div>
             <p className="flex items-start sm:items-center gap-1.5">
               <MapPin className="w-4 h-4 text-red-600 shrink-0 mt-0.5 sm:mt-0" />
               <span>
-                <strong className="text-slate-800">সম্পাদকীয় ও বাণিজ্য বিভাগ:</strong> ইস্ট কাফরুল,ঢাকা ক্যান্টনমেন্ট, ঢাকা -১২০৬।
+                <strong className="text-slate-800">{OFFICE_LABEL}:</strong> {OFFICE_ADDRESS}
               </span>
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 lg:justify-end">
             <a
-              href="mailto:aloashbenews@gmail.com"
+              href={`tel:${CONTACT_PHONE}`}
+              className="flex items-center gap-1.5 hover:text-red-600 transition-colors"
+            >
+              <Phone className="w-4 h-4 text-red-600 shrink-0" />
+              <span>
+                <strong className="text-slate-800">{PHONE_LABEL}:</strong> {CONTACT_PHONE}
+              </span>
+            </a>
+            <a
+              href={`mailto:${CONTACT_EMAIL}`}
               className="flex items-center gap-1.5 hover:text-red-600 transition-colors"
             >
               <Mail className="w-4 h-4 text-red-600 shrink-0" />
               <span>
-                <strong className="text-slate-800">ইমেইলঃ</strong> aloashbenews@gmail.com
+                <strong className="text-slate-800">ইমেইল:</strong> {CONTACT_EMAIL}
               </span>
             </a>
           </div>
@@ -81,7 +104,7 @@ export default function Footer({ socialLinks = {} }) {
               গোপনীয়তা নীতি
             </Link>
           </div>
-          <p>© ২০২৬ আলো আসবে। সর্বস্বত্ব সংরক্ষিত।</p>
+          <p>{COPYRIGHT_TEXT}</p>
         </div>
       </div>
     </footer>

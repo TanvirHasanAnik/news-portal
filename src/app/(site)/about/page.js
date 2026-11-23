@@ -1,9 +1,22 @@
 import Link from "next/link";
+import {
+  SITE_NAME,
+  SITE_TAGLINE,
+  DIRECTOR_LABEL,
+  DIRECTOR_NAME,
+  PUBLISHER_LABEL,
+  PUBLISHER_NAME,
+  OFFICE_LABEL,
+  OFFICE_ADDRESS,
+  PHONE_LABEL,
+  CONTACT_PHONE,
+  CONTACT_EMAIL,
+  SITE_DOMAIN,
+} from "@/config/siteInfo";
 
 export const metadata = {
   title: "আমাদের সম্পর্কে",
-  description:
-    "আলো আসবে - সত্যের পথে, মানুষের সাথে। একটি স্বাধীন, দায়িত্বশীল ও তথ্যবহুল ডিজিটাল সংবাদ মাধ্যম।",
+  description: `${SITE_NAME} - ${SITE_TAGLINE}। একটি স্বাধীন, দায়িত্বশীল ও তথ্যবহুল ডিজিটাল সংবাদ মাধ্যম।`,
   alternates: {
     canonical: "/about",
   },
@@ -17,10 +30,10 @@ export default function AboutPage() {
           আমাদের পরিচিতি
         </span>
         <h1 className="text-2xl sm:text-4xl font-bold text-slate-900 tracking-tight mb-4">
-          সত্যের পথে, মানুষের সাথে
+          {SITE_TAGLINE}
         </h1>
         <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-3xl">
-          &ldquo;আলো আসবে&rdquo; একটি স্বাধীন, নিরপেক্ষ ও দায়িত্বশীল ডিজিটাল সংবাদ মাধ্যম। নির্ভুল তথ্য, সৎ বিশ্লেষণ এবং সত্যনিষ্ঠ সংবাদ পাঠকের কাছে পৌঁছে দেওয়াই আমাদের মূল লক্ষ্য।
+          &ldquo;{SITE_NAME}&rdquo; একটি স্বাধীন, নিরপেক্ষ ও দায়িত্বশীল ডিজিটাল সংবাদ মাধ্যম। নির্ভুল তথ্য, সৎ বিশ্লেষণ এবং সত্যনিষ্ঠ সংবাদ পাঠকের কাছে পৌঁছে দেওয়াই আমাদের মূল লক্ষ্য।
         </p>
       </div>
 
@@ -82,30 +95,36 @@ export default function AboutPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 pb-6 border-b border-slate-200">
             <div className="p-4 bg-white rounded-lg border border-slate-200">
-              <span className="text-xs text-slate-500 font-medium block mb-1">পরিচালক</span>
-              <span className="text-base font-bold text-slate-900">মো: ফুয়াদ হাসান</span>
+              <span className="text-xs text-slate-500 font-medium block mb-1">{DIRECTOR_LABEL}</span>
+              <span className="text-base font-bold text-slate-900">{DIRECTOR_NAME}</span>
             </div>
 
             <div className="p-4 bg-white rounded-lg border border-slate-200">
-              <span className="text-xs text-slate-500 font-medium block mb-1">প্রকাশক</span>
-              <span className="text-base font-bold text-slate-900">মোঃ তৌহিদুল ইসলাম</span>
+              <span className="text-xs text-slate-500 font-medium block mb-1">{PUBLISHER_LABEL}</span>
+              <span className="text-base font-bold text-slate-900">{PUBLISHER_NAME}</span>
             </div>
           </div>
 
           <div className="space-y-3 text-sm text-slate-600">
             <p>
-              <strong className="text-slate-800">সম্পাদকীয় ও বাণিজ্য বিভাগ:</strong> ইস্ট কাফরুল, ঢাকা ক্যান্টনমেন্ট, ঢাকা -১২০৬।
+              <strong className="text-slate-800">{OFFICE_LABEL}:</strong> {OFFICE_ADDRESS}
+            </p>
+            <p>
+              <strong className="text-slate-800">{PHONE_LABEL}:</strong>{" "}
+              <a href={`tel:${CONTACT_PHONE}`} className="text-blue-600 hover:text-blue-700 hover:underline">
+                {CONTACT_PHONE}
+              </a>
             </p>
             <p>
               <strong className="text-slate-800">ইমেইল:</strong>{" "}
-              <a href="mailto:aloashbenews@gmail.com" className="text-blue-600 hover:text-blue-700 hover:underline">
-                aloashbenews@gmail.com
+              <a href={`mailto:${CONTACT_EMAIL}`} className="text-blue-600 hover:text-blue-700 hover:underline">
+                {CONTACT_EMAIL}
               </a>
             </p>
             <p>
               <strong className="text-slate-800">ওয়েবসাইট:</strong>{" "}
               <Link href="/" className="text-blue-600 hover:text-blue-700 hover:underline font-medium">
-                aloashbe.com
+                {SITE_DOMAIN}
               </Link>
             </p>
           </div>
