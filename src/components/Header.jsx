@@ -294,7 +294,7 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
 
 
           <div className="flex items-center justify-end">
-            <SocialMediaLinks links={socialLinks} variant="header" />
+            <SocialMediaLinks links={socialLinks} />
           </div>
         </div>
       </div>

@@ -302,7 +302,7 @@ export function SocialLinksManager({ initialLinks = {} }) {
                   হেডার প্রিভিউ
                 </span>
                 <div className="bg-white p-3 rounded-lg border border-slate-200 flex items-center justify-center">
-                  <SocialMediaLinks links={formData} variant="header" />
+                  <SocialMediaLinks links={formData} />
                 </div>
               </div>
 
@@ -311,7 +311,7 @@ export function SocialLinksManager({ initialLinks = {} }) {
                   ফুটার প্রিভিউ
                 </span>
                 <div className="bg-white p-3 rounded-lg border border-slate-200 flex items-center justify-center">
-                  <SocialMediaLinks links={formData} variant="footer" />
+                  <SocialMediaLinks links={formData} />
                 </div>
               </div>
             </div>

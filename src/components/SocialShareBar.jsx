@@ -73,13 +73,12 @@ export default function SocialShareBar({
       aria-label="সামাজিক যোগাযোগ মাধ্যম ও শেয়ার অপশন"
       className={`flex items-center gap-1.5 sm:gap-2 flex-wrap ${className}`}
     >
-
       <button
         type="button"
         onClick={() => handleShare("facebook")}
         title="ফেসবুকে শেয়ার করুন"
         aria-label="ফেসবুকে শেয়ার করুন"
-        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-none bg-slate-100 hover:bg-[#1877F2] text-slate-700 hover:text-white transition-colors cursor-pointer select-none"
+        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-md bg-[#1877F2] hover:bg-[#166fe5] text-white transition-all shadow-xs hover:scale-105 cursor-pointer select-none"
       >
         <FacebookIcon className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
       </button>
@@ -89,7 +88,7 @@ export default function SocialShareBar({
         onClick={() => handleShare("twitter")}
         title="এক্স (টুইটার)-এ শেয়ার করুন"
         aria-label="এক্স (টুইটার)-এ শেয়ার করুন"
-        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-none bg-slate-100 hover:bg-black text-slate-700 hover:text-white transition-colors cursor-pointer select-none"
+        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-md bg-slate-900 hover:bg-black text-white transition-all shadow-xs hover:scale-105 cursor-pointer select-none"
       >
         <TwitterXIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
       </button>
@@ -99,7 +98,7 @@ export default function SocialShareBar({
         onClick={() => handleShare("whatsapp")}
         title="হোয়াটসঅ্যাপে শেয়ার করুন"
         aria-label="হোয়াটসঅ্যাপে শেয়ার করুন"
-        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-none bg-slate-100 hover:bg-[#25D366] text-slate-700 hover:text-white transition-colors cursor-pointer select-none"
+        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-md bg-[#25D366] hover:bg-[#20ba5a] text-white transition-all shadow-xs hover:scale-105 cursor-pointer select-none"
       >
         <WhatsAppIcon className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
       </button>
@@ -109,7 +108,7 @@ export default function SocialShareBar({
         onClick={() => handleShare("linkedin")}
         title="লিংকডইন-এ শেয়ার করুন"
         aria-label="লিংকডইন-এ শেয়ার করুন"
-        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-none bg-slate-100 hover:bg-[#0A66C2] text-slate-700 hover:text-white transition-colors cursor-pointer select-none"
+        className="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-md bg-[#0A66C2] hover:bg-[#084e96] text-white transition-all shadow-xs hover:scale-105 cursor-pointer select-none"
       >
         <LinkedinIcon className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
       </button>
@@ -120,10 +119,10 @@ export default function SocialShareBar({
           onClick={handleCopyLink}
           title={copied ? "লিংক কপি হয়েছে!" : "লিংক কপি করুন"}
           aria-label={copied ? "লিংক কপি হয়েছে!" : "লিংক কপি করুন"}
-          className={`h-8 sm:h-9 px-2.5 sm:px-3 flex items-center gap-1.5 rounded-none text-xs sm:text-sm font-serif-bangla font-semibold transition-colors cursor-pointer select-none ${
+          className={`h-8 sm:h-9 px-2.5 sm:px-3 flex items-center gap-1.5 rounded-md text-xs sm:text-sm font-serif-bangla font-semibold transition-all cursor-pointer select-none shadow-xs ${
             copied
               ? "bg-emerald-600 text-white"
-              : "bg-slate-100 hover:bg-slate-200 text-slate-800"
+              : "bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-200"
           }`}
         >
           {copied ? (
@@ -142,4 +141,3 @@ export default function SocialShareBar({
     </div>
   );
 }
-

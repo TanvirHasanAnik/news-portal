@@ -36,7 +36,7 @@ export default function Footer({ socialLinks = {} }) {
           </Link>
 
           <div className="flex items-center gap-4 flex-wrap">
-            <SocialMediaLinks links={socialLinks} variant="footer" />
+            <SocialMediaLinks links={socialLinks} />
 
             <button
               onClick={scrollToTop}
