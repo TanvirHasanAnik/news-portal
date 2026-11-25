@@ -1,5 +1,13 @@
 import Script from "next/script";
 import localFont from "next/font/local";
+import {
+  SITE_NAME,
+  SITE_TITLE,
+  SITE_DESCRIPTION,
+  SITE_URL,
+  SITE_ALTERNATE_NAMES,
+  SITE_KEYWORDS,
+} from "@/config/siteInfo";
 import "./globals.css";
 
 const solaimanLipi = localFont({
@@ -20,19 +28,26 @@ const solaimanLipi = localFont({
 });
 
 export const metadata = {
-  metadataBase: new URL("https://aloashbe.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "আলো আসবে - সত্যের পথে, মানুষের সাথে",
-    template: "%s | আলো আসবে",
+    default: SITE_TITLE,
+    template: `%s | ${SITE_NAME}`,
   },
-  description:
-    "সত্যের পথে, মানুষের সাথে — আলো আসবে। জাতীয়, রাজনীতি, অর্থনীতি, আন্তর্জাতিক, খেলাধুলা, বিনোদন ও প্রযুক্তির সর্বশেষ সংবাদ ও বিশ্লেষণ।",
+  description: SITE_DESCRIPTION,
+  keywords: SITE_KEYWORDS,
+  applicationName: `${SITE_NAME} (Alo Ashbe)`,
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", type: "image/png", sizes: "192x192" },
+    ],
+    apple: "/icon.png",
+  },
   openGraph: {
-    title: "আলো আসবে - সত্যের পথে, মানুষের সাথে",
-    description:
-      "সত্যের পথে, মানুষের সাথে — জাতীয়, রাজনীতি, অর্থনীতি, আন্তর্জাতিক, খেলাধুলা ও প্রযুক্তির সর্বশেষ সংবাদ।",
-    url: "https://aloashbe.com",
-    siteName: "আলো আসবে",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: SITE_URL,
+    siteName: `${SITE_NAME} | Alo Ashbe`,
     locale: "bn_BD",
     type: "website",
   },
@@ -44,6 +59,38 @@ export const metadata = {
   },
 };
 
+const jsonLdData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "NewsMediaOrganization",
+      "@id": `${SITE_URL}/#organization`,
+      name: SITE_NAME,
+      alternateName: SITE_ALTERNATE_NAMES,
+      url: SITE_URL,
+      logo: {
+        "@type": "ImageObject",
+        url: `${SITE_URL}/brand-logo.svg`,
+      },
+      sameAs: [
+        "https://www.facebook.com/aloashbe",
+      ],
+    },
+    {
+      "@type": "WebSite",
+      "@id": `${SITE_URL}/#website`,
+      url: SITE_URL,
+      name: SITE_NAME,
+      alternateName: SITE_ALTERNATE_NAMES,
+      description: SITE_DESCRIPTION,
+      publisher: {
+        "@id": `${SITE_URL}/#organization`,
+      },
+      inLanguage: "bn-BD",
+    },
+  ],
+};
+
 export default function RootLayout({ children }) {
   return (
     <html
@@ -51,6 +98,10 @@ export default function RootLayout({ children }) {
       className={`${solaimanLipi.variable} font-sans h-full antialiased`}
     >
       <body className="min-h-full font-sans bg-slate-50 text-slate-900 selection:bg-red-500 selection:text-white flex flex-col">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdData) }}
+        />
         {children}
         <Script
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4867645898526862"

@@ -247,7 +247,7 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
             <Link href="/" className="inline-block">
               <img
                 src="/brand-logo.svg"
-                alt="আলো আসবে"
+                alt="আলো আসবে (Alo Ashbe)"
                 className="h-10 sm:h-12 w-auto max-w-[240px] sm:max-w-[290px] object-contain"
               />
             </Link>
@@ -286,7 +286,7 @@ export default function Header({ breakingNewsList = [], latestHeadlines = [], ca
             <Link href="/" className="inline-block group focus:outline-none">
               <img
                 src="/brand-logo.svg"
-                alt="আলো আসবে - সত্যের পথে, মানুষের সাথে"
+                alt="আলো আসবে (Alo Ashbe) - সত্যের পথে, মানুষের সাথে"
                 className="h-14 xl:h-16 w-auto object-contain transition-transform duration-200 group-hover:scale-[1.02]"
               />
             </Link>

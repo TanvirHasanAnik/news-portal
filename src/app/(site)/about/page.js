@@ -33,7 +33,7 @@ export default function AboutPage() {
           {SITE_TAGLINE}
         </h1>
         <p className="text-base sm:text-lg text-slate-600 leading-relaxed max-w-3xl">
-          &ldquo;{SITE_NAME}&rdquo; একটি স্বাধীন, নিরপেক্ষ ও দায়িত্বশীল ডিজিটাল সংবাদ মাধ্যম। নির্ভুল তথ্য, সৎ বিশ্লেষণ এবং সত্যনিষ্ঠ সংবাদ পাঠকের কাছে পৌঁছে দেওয়াই আমাদের মূল লক্ষ্য।
+          &ldquo;{SITE_NAME}&rdquo; (Alo Ashbe) একটি স্বাধীন, নিরপেক্ষ ও দায়িত্বশীল ডিজিটাল সংবাদ মাধ্যম। নির্ভুল তথ্য, সৎ বিশ্লেষণ এবং সত্যনিষ্ঠ সংবাদ পাঠকের কাছে পৌঁছে দেওয়াই আমাদের মূল লক্ষ্য।
         </p>
       </div>
 

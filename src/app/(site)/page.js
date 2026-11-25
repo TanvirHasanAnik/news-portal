@@ -7,6 +7,7 @@ import { getPublishedArticles } from "@/repositories/articleRepository";
 import { getTopArticles } from "@/repositories/analyticsRepository";
 import { getActiveHandpickedArticles } from "@/repositories/curationRepository";
 import { getDynamicCategoriesWithSubcategories } from "@/repositories/categoryRepository";
+import { SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION } from "@/config/siteInfo";
 
 export const revalidate = false;
 
@@ -73,6 +74,9 @@ export default async function Home() {
 
   return (
     <>
+      <h1 className="sr-only">
+        {SITE_NAME} (Alo Ashbe / Alo Asbe) - {SITE_TAGLINE} | {SITE_DESCRIPTION}
+      </h1>
       <LatestMixedSection dbArticles={dbArticles} />
 
       <HandpickedNewsSection
